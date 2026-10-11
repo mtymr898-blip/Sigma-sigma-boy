@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>صرافی من — داشبورد شخصی ارز دیجیتال</title>
-<meta name="description" content="داشبورد شخصی مدیریت و تحلیل دارایی‌های ارز دیجیتال، متصل به حساب نوبیتکس">
-<meta name="theme-color" content="#0a0e17">
+<meta name="description" content="داشبورد شخصی مدیریت و تحلیل دارایی‌های ارز دیجیتال">
+<meta name="theme-color" content="#080b13">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
 <style>
@@ -13,69 +13,100 @@
    توکن‌های طراحی
    =================================================================== */
 :root{
-  --bg:            #0a0e17;
-  --bg-soft:       #0d1220;
-  --surface:       #121a2b;
-  --surface-2:     #17203399;
-  --surface-hover: #1a2338;
-  --border:        #202a40;
-  --border-soft:   #192234;
+  --bg:            #080b13;
+  --bg-soft:       #0c1019;
+  --surface:       #141c2e;
+  --surface-raised:#182236;
+  --surface-2:     #1a243899;
+  --surface-hover: #1e2a42;
+  --border:        #2a3550;
+  --border-soft:   #212c44;
+  --border-strong: #37456655;
 
-  --accent:        #17c3b2;
-  --accent-strong: #0ea89a;
-  --accent-soft:   #17c3b21a;
-  --blue:          #4f8cff;
-  --blue-soft:     #4f8cff1a;
+  --accent:        #1ed4bf;
+  --accent-strong: #0eb8a3;
+  --accent-dim:    #129688;
+  --accent-soft:   #1ed4bf1f;
+  --accent-soft-strong: #1ed4bf33;
+  --blue:          #5b93ff;
+  --blue-soft:     #5b93ff1f;
 
-  --green:         #2ecc82;
-  --green-soft:    #2ecc821a;
-  --red:           #f0555f;
-  --red-soft:      #f0555f1a;
-  --amber:         #e7a33e;
-  --amber-soft:    #e7a33e1a;
+  --green:         #29c080;
+  --green-strong:  #1fa06a;
+  --green-soft:    #29c0801f;
+  --red:           #ea4f60;
+  --red-strong:    #d23f50;
+  --red-soft:      #ea4f601f;
+  --amber:         #e2a23c;
+  --amber-soft:    #e2a23c1f;
 
-  --text:          #e9eef6;
-  --text-dim:      #93a0b8;
-  --text-faint:    #5c6680;
+  --text:          #eef2f9;
+  --text-dim:      #9aa7c4;
+  --text-faint:    #4d5872;
 
-  --radius-sm:     8px;
-  --radius-md:     12px;
-  --radius-lg:     16px;
+  --radius-sm:     9px;
+  --radius-md:     13px;
+  --radius-lg:     18px;
 
-  --shadow-card:   0 1px 0 0 #ffffff05 inset, 0 8px 24px -12px #00000080;
+  --shadow-card:   0 1px 0 0 #ffffff08 inset, 0 1px 0 0 #00000030, 0 14px 34px -16px #000000a0;
+  --shadow-raised: 0 1px 0 0 #ffffff0c inset, 0 24px 60px -20px #000000c0, 0 2px 8px -2px #00000090;
+  --shadow-pop:    0 30px 80px -24px #000000e0, 0 2px 10px -2px #000000a0;
 
   --sidebar-w:     248px;
   --topbar-h:      64px;
 
   --ease: cubic-bezier(.4,0,.2,1);
+  --ease-pop: cubic-bezier(.2,.9,.3,1.2);
 }
 
 [data-theme="light"]{
-  --bg:            #f4f6fa;
-  --bg-soft:       #eef1f6;
+  --bg:            #eef1f7;
+  --bg-soft:       #e7ebf3;
   --surface:       #ffffff;
+  --surface-raised:#ffffff;
   --surface-2:     #ffffffcc;
-  --surface-hover: #f1f4f9;
-  --border:        #e2e7f0;
-  --border-soft:   #ebeef4;
-  --text:          #121a2b;
-  --text-dim:      #5c6680;
-  --text-faint:    #8a93a8;
-  --shadow-card:   0 1px 0 0 #ffffff inset, 0 8px 24px -14px #0f172a26;
+  --surface-hover: #f1f4fa;
+  --border:        #d8dfec;
+  --border-soft:   #e4e9f2;
+  --border-strong: #c4ccdd88;
+  --accent:        #0ea89a;
+  --accent-strong: #0b8f84;
+  --accent-dim:    #0a7a71;
+  --accent-soft:   #0ea89a1f;
+  --accent-soft-strong: #0ea89a38;
+  --blue-soft:     #3568e01f;
+  --green:         #1aa366;
+  --green-strong:  #148a56;
+  --green-soft:    #1aa3661e;
+  --red:           #d8394d;
+  --red-strong:    #c22b3e;
+  --red-soft:      #d8394d1a;
+  --amber-soft:    #c7860f22;
+  --text:          #141b2c;
+  --text-dim:      #5c6782;
+  --text-faint:    #8891a8;
+  --shadow-card:   0 1px 0 0 #ffffff inset, 0 1px 2px 0 #1a233a10, 0 16px 32px -18px #1a233a30;
+  --shadow-raised: 0 1px 0 0 #ffffff inset, 0 30px 60px -20px #1a233a40;
+  --shadow-pop:    0 30px 70px -20px #1a233a55;
 }
 
 *,*::before,*::after{ box-sizing:border-box; }
-html,body{ height:100%; }
+html,body{ height:100%; max-width:100%; overflow-x:hidden; }
 body{
   margin:0;
-  background:var(--bg);
+  width:100%;
+  background:
+    radial-gradient(1200px 600px at 100% -8%, #1ed4bf0d, transparent 55%),
+    radial-gradient(900px 500px at -10% 15%, #5b93ff08, transparent 55%),
+    var(--bg);
+  background-attachment:fixed;
   color:var(--text);
   font-family:"Vazirmatn", "Vazirmatn FD", sans-serif;
   font-size:15px;
   line-height:1.7;
   direction:rtl;
   -webkit-font-smoothing:antialiased;
-  transition:background .25s var(--ease), color .25s var(--ease);
+  transition:background-color .25s var(--ease), color .25s var(--ease);
 }
 
 img{ max-width:100%; display:block; }
@@ -83,7 +114,7 @@ button{ font-family:inherit; }
 input,select{ font-family:inherit; }
 a{ color:inherit; text-decoration:none; }
 
-::selection{ background:var(--accent-soft); color:var(--accent); }
+::selection{ background:var(--accent-soft-strong); color:var(--accent); }
 
 ::-webkit-scrollbar{ width:8px; height:8px; }
 ::-webkit-scrollbar-track{ background:transparent; }
@@ -94,6 +125,7 @@ a{ color:inherit; text-decoration:none; }
   outline:2px solid var(--accent);
   outline-offset:2px;
   border-radius:4px;
+  transition:outline-offset .1s var(--ease);
 }
 
 .num{
@@ -108,7 +140,7 @@ a{ color:inherit; text-decoration:none; }
   font-variant-numeric:tabular-nums;
 }
 
-h1,h2,h3,h4{ margin:0; font-weight:700; letter-spacing:-.01em; }
+h1,h2,h3,h4{ margin:0; font-weight:700; letter-spacing:0; }
 p{ margin:0; }
 
 .text-dim{ color:var(--text-dim); }
@@ -131,7 +163,10 @@ p{ margin:0; }
 /* ===================================================================
    اسکلت برنامه
    =================================================================== */
-#app{ min-height:100%; }
+#app{ min-height:100%; max-width:100vw; overflow-x:hidden; }
+
+@keyframes page-enter-anim{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
+.page-enter{ animation:page-enter-anim .36s var(--ease-pop); }
 
 /* ---------- صفحه اتصال (بدون سایدبار) ---------- */
 .connect-shell{
@@ -141,9 +176,9 @@ p{ margin:0; }
   justify-content:center;
   padding:24px;
   background:
-    radial-gradient(1100px 500px at 85% -10%, #17c3b214, transparent 60%),
-    radial-gradient(900px 500px at 10% 110%, #4f8cff10, transparent 60%),
-    var(--bg);
+    radial-gradient(1100px 500px at 85% -10%, #1ed4bf1c, transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, #5b93ff14, transparent 60%),
+    transparent;
 }
 
 /* ---------- داشبورد (با سایدبار) ---------- */
@@ -156,7 +191,7 @@ p{ margin:0; }
 .sidebar{
   grid-column:2;
   border-inline-start:1px solid var(--border-soft);
-  background:var(--bg-soft);
+  background:linear-gradient(180deg, var(--bg-soft), var(--bg));
   padding:20px 16px;
   display:flex;
   flex-direction:column;
@@ -170,44 +205,51 @@ p{ margin:0; }
 .brand{
   display:flex;
   align-items:center;
-  gap:10px;
-  padding:8px 10px 20px;
+  gap:11px;
+  padding:8px 10px 22px;
 }
 .brand-mark{
-  width:34px; height:34px; border-radius:10px;
+  width:36px; height:36px; border-radius:11px;
   background:linear-gradient(135deg, var(--accent), var(--blue));
   display:flex; align-items:center; justify-content:center;
-  color:#061513; font-weight:700; font-size:15px;
+  color:#04201c; font-weight:700; font-size:15px;
   flex:none;
+  box-shadow:0 1px 0 0 #ffffff40 inset, 0 6px 16px -6px #1ed4bf80;
 }
 .brand-name{ font-weight:700; font-size:15px; }
-.brand-sub{ font-size:11px; color:var(--text-faint); }
+.brand-sub{ font-size:11px; color:var(--text-faint); margin-top:1px; }
 
 .nav-group{ margin-bottom:10px; }
 .nav-label{
   font-size:11px; color:var(--text-faint); padding:10px 10px 6px;
 }
 .nav-item{
-  display:flex; align-items:center; gap:10px;
-  padding:10px 12px;
+  display:flex; align-items:center; gap:11px;
+  padding:11px 13px;
   border-radius:var(--radius-sm);
   color:var(--text-dim);
   font-size:13.5px;
+  font-weight:500;
   cursor:pointer;
-  transition:background .15s var(--ease), color .15s var(--ease);
+  transition:background .15s var(--ease), color .15s var(--ease), transform .15s var(--ease);
   position:relative;
 }
-.nav-item .ic{ width:18px; height:18px; flex:none; opacity:.9; }
-.nav-item:hover{ background:var(--surface-hover); color:var(--text); }
+.nav-item .ic{ width:18px; height:18px; flex:none; opacity:.75; transition:opacity .15s var(--ease); }
+.nav-item:hover{ background:var(--surface-hover); color:var(--text); transform:translateX(-2px); }
+[dir="rtl"] .nav-item:hover{ transform:translateX(2px); }
+.nav-item:hover .ic{ opacity:1; }
 .nav-item.active{
-  background:var(--accent-soft);
+  background:linear-gradient(90deg, var(--accent-soft-strong), var(--accent-soft) 70%, transparent);
   color:var(--accent);
+  font-weight:700;
 }
+.nav-item.active .ic{ opacity:1; }
 .nav-item.active::before{
   content:"";
   position:absolute; inset-inline-end:-16px; top:50%; transform:translateY(-50%);
-  width:3px; height:18px; border-radius:3px;
+  width:3px; height:20px; border-radius:3px;
   background:var(--accent);
+  box-shadow:0 0 10px 1px var(--accent-soft-strong);
 }
 
 .sidebar-foot{
@@ -229,26 +271,29 @@ p{ margin:0; }
   position:sticky; top:0; z-index:20;
   display:flex; align-items:center; justify-content:space-between;
   gap:14px;
-  padding:0 24px;
-  background:color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter:blur(10px);
+  padding:0 26px;
+  background:color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter:blur(14px);
   border-bottom:1px solid var(--border-soft);
 }
-.topbar-left{ display:flex; align-items:center; gap:12px; min-width:0; }
-.topbar-title{ font-size:16px; font-weight:700; white-space:nowrap; }
-.topbar-right{ display:flex; align-items:center; gap:10px; }
+.topbar-left{ display:flex; align-items:center; gap:12px; min-width:0; flex:1 1 auto; overflow:hidden; }
+.topbar-title{
+  font-size:16.5px; font-weight:700; white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis; min-width:0;
+}
+.topbar-right{ display:flex; align-items:center; gap:9px; flex:none; }
 
 .menu-btn{
   display:none;
-  width:36px; height:36px; border-radius:var(--radius-sm);
+  width:38px; height:38px; border-radius:var(--radius-sm);
   align-items:center; justify-content:center;
-  background:var(--surface); border:1px solid var(--border);
+  background:var(--surface-hover); border:1px solid var(--border);
   color:var(--text); cursor:pointer;
 }
 
 .content{
   flex:1;
-  padding:22px 24px 90px;
+  padding:26px 26px 96px;
   max-width:1280px;
   width:100%;
   margin:0 auto;
@@ -256,28 +301,31 @@ p{ margin:0; }
 
 .page-head{
   display:flex; align-items:flex-end; justify-content:space-between;
-  gap:12px; margin-bottom:18px; flex-wrap:wrap;
+  gap:12px; margin-bottom:22px; flex-wrap:wrap;
 }
-.page-head h1{ font-size:20px; }
-.page-head .sub{ font-size:13px; color:var(--text-dim); margin-top:4px; }
+.page-head h1{ font-size:23px; letter-spacing:-.01em; }
+.page-head .sub{ font-size:13px; color:var(--text-faint); margin-top:5px; }
 
 /* ---------- نوار پایین موبایل ---------- */
 .bottom-nav{
   display:none;
   position:fixed; inset-inline:0; bottom:0; z-index:30;
-  background:color-mix(in srgb, var(--bg-soft) 92%, transparent);
-  backdrop-filter:blur(10px);
+  background:color-mix(in srgb, var(--bg-soft) 85%, transparent);
+  backdrop-filter:blur(14px);
   border-top:1px solid var(--border-soft);
-  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  padding:7px 4px calc(7px + env(safe-area-inset-bottom));
   justify-content:space-around;
+  box-shadow:0 -10px 30px -16px #000000a0;
 }
 .bottom-nav .bn-item{
-  display:flex; flex-direction:column; align-items:center; gap:3px;
-  font-size:10.5px; color:var(--text-faint);
-  padding:6px 8px; border-radius:10px; cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; gap:4px;
+  font-size:10.5px; color:var(--text-faint); font-weight:600;
+  padding:7px 10px; border-radius:12px; cursor:pointer;
+  transition:background .15s var(--ease), color .15s var(--ease);
 }
-.bottom-nav .bn-item.active{ color:var(--accent); }
+.bottom-nav .bn-item.active{ color:var(--accent); background:var(--accent-soft); }
 .bottom-nav .bn-item .ic{ width:19px; height:19px; }
+.bottom-nav .bn-item .ic *{ stroke-width:2.2; }
 
 /* ---------- واکنش‌گرایی ---------- */
 @media (max-width: 1020px){
@@ -307,55 +355,70 @@ p{ margin:0; }
 }
 
 @media (max-width: 520px){
-  .topbar{ padding:0 14px; }
+  .topbar{ padding:0 14px; gap:8px; }
   .topbar-title{ font-size:14.5px; }
+  #lastUpdate{ display:none; }
+}
+
+@media (max-width: 400px){
+  .topbar-right{ gap:6px; }
+  #connBadge .badge-label{ display:none; }
+  #connBadge .badge{ padding:7px; }
 }
 /* ===================================================================
    کامپوننت‌های پایه
    =================================================================== */
 
 .card{
-  background:var(--surface);
+  background:linear-gradient(180deg, var(--surface-raised), var(--surface));
   border:1px solid var(--border-soft);
   border-radius:var(--radius-lg);
   box-shadow:var(--shadow-card);
+  transition:border-color .2s var(--ease), box-shadow .2s var(--ease), transform .2s var(--ease);
 }
-.card-pad{ padding:18px; }
+.card-pad{ padding:22px; }
 .card-head{
   display:flex; align-items:center; justify-content:space-between;
-  gap:10px; margin-bottom:14px;
+  gap:10px; margin-bottom:16px;
 }
-.card-title{ font-size:14px; font-weight:700; }
+.card-title{ font-size:14.5px; font-weight:600; letter-spacing:.01em; }
 .card-title .sub{ font-size:11.5px; color:var(--text-faint); font-weight:400; margin-top:2px; }
+
+.kpi-card{ transition:transform .2s var(--ease-pop), border-color .2s var(--ease), box-shadow .2s var(--ease); }
+.kpi-card:hover{ transform:translateY(-3px); border-color:var(--border-strong); box-shadow:var(--shadow-raised); }
 
 /* ---------- دکمه‌ها ---------- */
 .btn{
   display:inline-flex; align-items:center; justify-content:center; gap:7px;
-  height:38px; padding:0 16px;
+  height:40px; padding:0 17px;
   border-radius:var(--radius-sm);
   border:1px solid transparent;
   font-size:13.5px; font-weight:600;
   cursor:pointer;
-  transition:transform .12s var(--ease), background .15s var(--ease), border-color .15s var(--ease), opacity .15s;
+  transition:transform .14s var(--ease), background .15s var(--ease), border-color .15s var(--ease), box-shadow .15s var(--ease), opacity .15s, filter .15s;
   white-space:nowrap;
 }
-.btn:active{ transform:scale(.97); }
-.btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+.btn:active{ transform:scale(.96); }
+.btn:disabled{ opacity:.42; filter:saturate(.5); cursor:not-allowed; transform:none; box-shadow:none; }
 
-.btn-primary{ background:var(--accent); color:#06231f; }
-.btn-primary:hover:not(:disabled){ background:var(--accent-strong); }
+.btn-primary{
+  background:linear-gradient(180deg, var(--accent), var(--accent-strong));
+  color:#04201c;
+  box-shadow:0 1px 0 0 #ffffff33 inset, 0 8px 20px -10px #1ed4bf70;
+}
+.btn-primary:hover:not(:disabled){ filter:brightness(1.07); box-shadow:0 1px 0 0 #ffffff33 inset, 0 10px 26px -10px #1ed4bf90; transform:translateY(-1px); }
 
 .btn-ghost{ background:var(--surface-hover); color:var(--text); border-color:var(--border); }
-.btn-ghost:hover:not(:disabled){ background:var(--border-soft); }
+.btn-ghost:hover:not(:disabled){ background:var(--border-soft); border-color:var(--border-strong); }
 
 .btn-outline{ background:transparent; color:var(--text-dim); border-color:var(--border); }
-.btn-outline:hover:not(:disabled){ color:var(--text); border-color:var(--text-faint); }
+.btn-outline:hover:not(:disabled){ color:var(--text); border-color:var(--accent-dim); background:var(--accent-soft); }
 
 .btn-danger-ghost{ background:var(--red-soft); color:var(--red); }
-.btn-danger-ghost:hover:not(:disabled){ background:#f0555f2b; }
+.btn-danger-ghost:hover:not(:disabled){ background:#ea4f602e; }
 
-.btn-sm{ height:32px; padding:0 12px; font-size:12.5px; }
-.btn-icon{ width:38px; padding:0; flex:none; }
+.btn-sm{ height:33px; padding:0 13px; font-size:12.5px; }
+.btn-icon{ width:40px; padding:0; flex:none; }
 .btn-block{ width:100%; }
 
 .btn .spin{
@@ -373,7 +436,7 @@ p{ margin:0; }
 
 .input-wrap{ position:relative; display:flex; align-items:center; }
 .input{
-  width:100%; height:44px;
+  width:100%; height:46px;
   background:var(--bg-soft);
   border:1px solid var(--border);
   border-radius:var(--radius-sm);
@@ -381,10 +444,10 @@ p{ margin:0; }
   padding:0 14px;
   font-size:13.5px;
   outline:none;
-  transition:border-color .15s var(--ease), background .15s var(--ease);
+  transition:border-color .15s var(--ease), background .15s var(--ease), box-shadow .15s var(--ease);
 }
 .input::placeholder{ color:var(--text-faint); }
-.input:focus{ border-color:var(--accent); background:var(--surface); }
+.input:focus{ border-color:var(--accent); background:var(--surface); box-shadow:0 0 0 3px var(--accent-soft); }
 .input.has-error{ border-color:var(--red); }
 .input-wrap.api-field .input{ padding-left:84px; font-family:monospace; letter-spacing:.3px; direction:ltr; text-align:left; }
 .input-actions{
@@ -395,30 +458,34 @@ p{ margin:0; }
   width:28px; height:28px; border-radius:7px;
   display:flex; align-items:center; justify-content:center;
   background:transparent; border:none; color:var(--text-faint);
-  cursor:pointer;
+  cursor:pointer; transition:background .15s var(--ease), color .15s var(--ease);
 }
 .input-icon-btn:hover{ background:var(--surface-hover); color:var(--text); }
 
 .select{
-  height:38px; border-radius:var(--radius-sm);
+  height:40px; border-radius:var(--radius-sm);
   background:var(--bg-soft); border:1px solid var(--border);
-  color:var(--text); padding:0 10px; font-size:13px; outline:none;
+  color:var(--text); padding:0 11px; font-size:13px; outline:none;
+  transition:border-color .15s var(--ease);
 }
+.select:focus{ border-color:var(--accent); }
 
 .search-wrap{ position:relative; flex:1; min-width:180px; }
-.search-wrap .ic{
+.search-wrap > span{
   position:absolute; inset-inline-start:13px; top:50%; transform:translateY(-50%);
   width:16px; height:16px; color:var(--text-faint); pointer-events:none;
+  display:flex;
 }
 .search-wrap .input{ padding-inline-start:38px; }
 
 /* ---------- نشان‌ها ---------- */
 .badge{
   display:inline-flex; align-items:center; gap:6px;
-  font-size:11.5px; font-weight:600;
-  padding:5px 10px; border-radius:999px;
+  font-size:11.5px; font-weight:700;
+  padding:6px 12px; border-radius:999px;
+  letter-spacing:.01em;
 }
-.badge-dot{ width:6px; height:6px; border-radius:50%; background:currentColor; flex:none; }
+.badge-dot{ width:7px; height:7px; border-radius:50%; background:currentColor; flex:none; box-shadow:0 0 0 3px currentColor22; }
 .badge-green{ background:var(--green-soft); color:var(--green); }
 .badge-red{ background:var(--red-soft); color:var(--red); }
 .badge-amber{ background:var(--amber-soft); color:var(--amber); }
@@ -427,43 +494,54 @@ p{ margin:0; }
 
 .chip{
   display:inline-flex; align-items:center; gap:6px;
-  height:32px; padding:0 13px; border-radius:999px;
+  height:33px; padding:0 14px; border-radius:999px;
   background:var(--surface-hover); border:1px solid var(--border);
   color:var(--text-dim); font-size:12.5px; cursor:pointer;
   transition:all .15s var(--ease);
 }
-.chip.active{ background:var(--accent-soft); color:var(--accent); border-color:transparent; }
-.chip:hover:not(.active){ color:var(--text); }
+.chip.active{ background:var(--accent-soft-strong); color:var(--accent); border-color:transparent; box-shadow:inset 0 0 0 1px var(--accent-dim)44; }
+.chip:hover:not(.active){ color:var(--text); border-color:var(--border-strong); }
 
 /* ---------- جدول ---------- */
-.table-wrap{ overflow-x:auto; }
+.table-wrap{
+  overflow-x:auto;
+  background:
+    linear-gradient(to left, var(--surface) 0%, transparent 24px) left / 24px 100% no-repeat local,
+    linear-gradient(to right, var(--surface) 0%, transparent 24px) right / 24px 100% no-repeat local,
+    linear-gradient(to left, #0007, transparent 24px) left / 24px 100% no-repeat scroll,
+    linear-gradient(to right, #0007, transparent 24px) right / 24px 100% no-repeat scroll;
+}
 table.tbl{ width:100%; border-collapse:collapse; font-size:13px; min-width:640px; }
 .tbl thead th{
   text-align:start; font-weight:600; color:var(--text-faint);
-  font-size:11.5px; padding:0 14px 10px; white-space:nowrap;
+  font-size:11px; letter-spacing:.03em;
+  padding:0 15px 12px; white-space:nowrap;
+  border-bottom:1px solid var(--border-soft);
 }
-.tbl tbody td{ padding:13px 14px; border-top:1px solid var(--border-soft); white-space:nowrap; }
+.tbl tbody td{ padding:15px; border-top:1px solid var(--border-soft); white-space:nowrap; }
 .tbl tbody tr{ transition:background .12s var(--ease); cursor:pointer; }
 .tbl tbody tr:hover{ background:var(--surface-hover); }
+.tbl tbody tr:hover td:first-child{ box-shadow:inset 2px 0 0 var(--accent); }
 .tbl .cell-asset{ display:flex; align-items:center; gap:10px; cursor:pointer; }
 .coin-ic{
-  width:28px; height:28px; border-radius:50%; flex:none;
+  width:29px; height:29px; border-radius:50%; flex:none;
   display:flex; align-items:center; justify-content:center;
-  font-size:11px; font-weight:700; color:#061513;
-  background:linear-gradient(135deg, var(--accent), var(--blue));
+  font-size:10.5px; font-weight:700; color:#fff;
+  box-shadow:0 2px 6px -1px #00000060, inset 0 1px 0 #ffffff30;
 }
-.tbl th.sortable{ cursor:pointer; user-select:none; }
-.tbl th.sortable .ic{ width:11px; height:11px; opacity:.5; vertical-align:middle; margin-inline-start:3px; }
+.tbl th.sortable{ cursor:pointer; user-select:none; transition:color .15s var(--ease); }
+.tbl th.sortable:hover{ color:var(--text); }
+.tbl th.sortable .ic{ width:11px; height:11px; opacity:.6; vertical-align:middle; margin-inline-start:3px; }
 
 /* ---------- وضعیت‌های خالی / خطا / بارگذاری ---------- */
 .state-box{
   display:flex; flex-direction:column; align-items:center; justify-content:center;
   text-align:center; gap:10px;
-  padding:46px 20px;
+  padding:50px 20px;
   color:var(--text-dim);
 }
-.state-box .ic{ width:34px; height:34px; color:var(--text-faint); margin-bottom:4px; }
-.state-box .title{ font-size:14px; font-weight:700; color:var(--text); }
+.state-box .ic{ width:36px; height:36px; color:var(--text-faint); margin-bottom:4px; }
+.state-box .title{ font-size:14.5px; font-weight:700; color:var(--text); }
 .state-box .desc{ font-size:12.5px; color:var(--text-faint); max-width:320px; }
 
 .skel{
@@ -476,18 +554,18 @@ table.tbl{ width:100%; border-collapse:collapse; font-size:13px; min-width:640px
 
 .toast-host{
   position:fixed; bottom:22px; inset-inline-end:22px; z-index:200;
-  display:flex; flex-direction:column; gap:8px; max-width:340px;
+  display:flex; flex-direction:column; gap:9px; max-width:340px;
 }
 @media (max-width:860px){ .toast-host{ bottom:76px; inset-inline-end:14px; inset-inline-start:14px; max-width:none; } }
 .toast{
   display:flex; align-items:flex-start; gap:10px;
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius-md); padding:13px 14px;
-  box-shadow:0 12px 30px -10px #000000aa;
+  background:var(--surface-raised); border:1px solid var(--border);
+  border-radius:var(--radius-md); padding:14px 15px;
+  box-shadow:var(--shadow-pop);
   font-size:12.5px;
-  animation:toast-in .22s var(--ease);
+  animation:toast-in .32s var(--ease-pop);
 }
-@keyframes toast-in{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+@keyframes toast-in{ from{ opacity:0; transform:translateY(14px) scale(.96); } to{ opacity:1; transform:none; } }
 .toast .ic{ width:17px; height:17px; flex:none; margin-top:1px; }
 .toast.success .ic{ color:var(--green); }
 .toast.error .ic{ color:var(--red); }
@@ -495,127 +573,148 @@ table.tbl{ width:100%; border-collapse:collapse; font-size:13px; min-width:640px
 
 /* ---------- نشانگر داده آزمایشی ---------- */
 .mock-flag{
-  display:inline-flex; align-items:center; gap:5px;
-  font-size:10.5px; color:var(--amber);
-  background:var(--amber-soft); padding:3px 8px; border-radius:6px;
-  font-weight:600;
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:10px; color:var(--amber);
+  background:var(--amber-soft); padding:3px 7px; border-radius:6px;
+  font-weight:600; letter-spacing:.01em;
+  line-height:1;
 }
+.mock-flag .ic{ width:10px; height:10px; }
+.mock-flag .ic *{ stroke-width:2.4; }
 
 /* ---------- تب‌ها ---------- */
-.tabs{ display:flex; gap:4px; background:var(--bg-soft); padding:4px; border-radius:10px; border:1px solid var(--border-soft); width:fit-content; }
+.tabs{ display:flex; gap:4px; background:var(--bg-soft); padding:4px; border-radius:11px; border:1px solid var(--border-soft); width:fit-content; }
 .tab-btn{
-  padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:600;
+  padding:9px 15px; border-radius:8px; font-size:12.5px; font-weight:600;
   color:var(--text-faint); cursor:pointer; border:none; background:transparent;
+  display:flex; align-items:center; gap:6px;
+  transition:background .15s var(--ease), color .15s var(--ease);
 }
-.tab-btn.active{ background:var(--surface); color:var(--text); box-shadow:0 1px 0 var(--border); }
+.tab-btn .ic{ width:14px; height:14px; }
+.tab-btn.active{ background:var(--surface-raised); color:var(--text); box-shadow:0 1px 0 var(--border), 0 4px 10px -4px #00000060; }
 
 /* ---------- سوییچ ---------- */
-.switch{ position:relative; width:42px; height:24px; flex:none; }
+.switch{ position:relative; width:44px; height:25px; flex:none; }
 .switch input{ opacity:0; width:0; height:0; position:absolute; }
 .switch .track{
   position:absolute; inset:0; background:var(--border); border-radius:999px;
   cursor:pointer; transition:background .18s var(--ease);
 }
 .switch .thumb{
-  position:absolute; width:18px; height:18px; border-radius:50%; background:#fff;
-  top:3px; inset-inline-start:3px; transition:inset-inline-start .18s var(--ease);
+  position:absolute; width:19px; height:19px; border-radius:50%; background:#fff;
+  top:3px; inset-inline-start:3px; transition:inset-inline-start .18s var(--ease-pop);
+  box-shadow:0 2px 4px -1px #00000050;
 }
 .switch input:checked + .track{ background:var(--accent); }
-.switch input:checked + .track .thumb{ inset-inline-start:21px; }
+.switch input:checked + .track .thumb{ inset-inline-start:22px; }
 
 /* ---------- ردیف تنظیمات ---------- */
 .set-row{
   display:flex; align-items:center; justify-content:space-between;
-  gap:14px; padding:15px 2px;
+  gap:14px; padding:17px 2px;
   border-top:1px solid var(--border-soft);
 }
 .set-row:first-child{ border-top:none; }
 .set-row .label{ font-size:13.5px; font-weight:600; }
-.set-row .desc{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+.set-row .desc{ font-size:11.5px; color:var(--text-faint); margin-top:3px; }
 
 /* ---------- مودال ---------- */
 .modal-backdrop{
-  position:fixed; inset:0; background:#060a12cc; backdrop-filter:blur(3px);
+  position:fixed; inset:0; background:#050811dd; backdrop-filter:blur(4px);
   display:flex; align-items:center; justify-content:center; z-index:300;
   padding:20px;
+  animation:backdrop-in .2s var(--ease);
 }
+@keyframes backdrop-in{ from{ opacity:0; } to{ opacity:1; } }
 .modal{
-  background:var(--surface); border:1px solid var(--border);
+  background:var(--surface-raised); border:1px solid var(--border);
   border-radius:var(--radius-lg); width:100%; max-width:420px;
-  padding:22px; box-shadow:0 30px 70px -20px #000000cc;
-  animation:modal-in .18s var(--ease);
+  padding:24px; box-shadow:var(--shadow-pop);
+  animation:modal-in .28s var(--ease-pop);
 }
-@keyframes modal-in{ from{ opacity:0; transform:scale(.96); } to{ opacity:1; transform:none; } }
-.modal h3{ font-size:15.5px; margin-bottom:8px; }
-.modal p{ font-size:13px; color:var(--text-dim); line-height:1.8; }
-.modal-actions{ display:flex; gap:10px; margin-top:20px; }
+@keyframes modal-in{ from{ opacity:0; transform:scale(.92) translateY(8px); } to{ opacity:1; transform:none; } }
+.modal h3{ font-size:16px; margin-bottom:9px; }
+.modal p{ font-size:13px; color:var(--text-dim); line-height:1.85; }
+.modal-actions{ display:flex; gap:10px; margin-top:22px; }
 .modal-actions .btn{ flex:1; }
 
 .icon-btn{
-  width:34px; height:34px; border-radius:var(--radius-sm);
+  width:38px; height:38px; border-radius:var(--radius-sm);
   display:inline-flex; align-items:center; justify-content:center;
   background:var(--surface-hover); border:1px solid var(--border);
   color:var(--text-dim); cursor:pointer;
+  transition:background .15s var(--ease), color .15s var(--ease), border-color .15s var(--ease), transform .15s var(--ease);
 }
-.icon-btn:hover{ color:var(--text); }
+.icon-btn:hover{ color:var(--text); border-color:var(--border-strong); transform:translateY(-1px); }
+.icon-btn:active{ transform:scale(.94); }
 .icon-btn .ic{ width:17px; height:17px; }
 
-hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:16px 0; }
+hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:18px 0; }
 /* ===================================================================
    صفحه اتصال
    =================================================================== */
-.connect-card{ width:100%; max-width:460px; }
+.connect-card{ width:100%; max-width:460px; animation:card-rise .4s var(--ease-pop); }
+@keyframes card-rise{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+
 .connect-logo{
-  display:flex; align-items:center; gap:10px; justify-content:center;
-  margin-bottom:22px;
+  display:flex; align-items:center; gap:11px; justify-content:center;
+  margin-bottom:24px;
 }
-.connect-logo .brand-mark{ width:40px; height:40px; border-radius:12px; font-size:17px; }
+.connect-logo .brand-mark{ width:42px; height:42px; border-radius:13px; font-size:18px; }
 .connect-logo-text{ text-align:right; }
 .connect-logo-text b{ font-size:16px; display:block; }
 .connect-logo-text span{ font-size:11px; color:var(--text-faint); }
 
-.connect-title{ text-align:center; font-size:19px; margin-bottom:6px; }
-.connect-desc{ text-align:center; font-size:13px; color:var(--text-dim); margin-bottom:24px; line-height:1.9; }
+.connect-title{ text-align:center; font-size:20px; margin-bottom:7px; }
+.connect-desc{ text-align:center; font-size:13px; color:var(--text-dim); margin-bottom:26px; line-height:1.95; }
 
 .guide-toggle{
   display:flex; align-items:center; justify-content:space-between;
-  padding:13px 14px; background:var(--bg-soft); border:1px solid var(--border-soft);
-  border-radius:var(--radius-sm); cursor:pointer; font-size:12.5px; font-weight:600;
+  padding:14px 15px; background:var(--bg-soft); border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm); cursor:pointer; font-size:12.5px; font-weight:700;
   color:var(--text-dim); margin-bottom:14px;
+  transition:border-color .15s var(--ease), color .15s var(--ease);
 }
+.guide-toggle:hover{ color:var(--text); border-color:var(--border-strong); }
 .guide-steps{
-  list-style:none; margin:0 0 16px; padding:0;
-  display:flex; flex-direction:column; gap:10px;
+  list-style:none; margin:-2px 0 18px; padding:15px 15px 13px;
+  display:flex; flex-direction:column; gap:13px;
+  border-inline-start:2px solid var(--accent-soft-strong);
+  margin-inline-start:4px;
+  background:var(--bg-soft);
+  border-start-end-radius:var(--radius-sm);
+  border-end-end-radius:var(--radius-sm);
 }
 .guide-steps li{
-  display:flex; gap:10px; font-size:12.5px; color:var(--text-dim); line-height:1.9;
+  display:flex; gap:11px; font-size:12.5px; color:var(--text-dim); line-height:1.9;
 }
 .guide-num{
-  flex:none; width:20px; height:20px; border-radius:50%;
-  background:var(--accent-soft); color:var(--accent); font-size:10.5px; font-weight:700;
+  flex:none; width:21px; height:21px; border-radius:50%;
+  background:var(--accent-soft-strong); color:var(--accent); font-size:10.5px; font-weight:700;
   display:flex; align-items:center; justify-content:center; margin-top:1px;
 }
 
 .notice-box{
-  display:flex; gap:10px; padding:12px 13px;
-  background:var(--amber-soft); border:1px solid #e7a33e30;
-  border-radius:var(--radius-sm); margin-bottom:18px;
+  display:flex; gap:11px; padding:14px 15px;
+  background:linear-gradient(135deg, var(--amber-soft), transparent);
+  border:1px solid #e2a23c35;
+  border-radius:var(--radius-sm); margin-bottom:20px;
 }
-.notice-box .ic{ width:16px; height:16px; color:var(--amber); flex:none; margin-top:1px; }
-.notice-box p{ font-size:12px; color:var(--text-dim); line-height:1.9; }
-.notice-box ul{ margin:6px 0 0; padding-inline-start:18px; font-size:12px; color:var(--text-dim); line-height:2; }
+.notice-box .ic{ width:17px; height:17px; color:var(--amber); flex:none; margin-top:1px; }
+.notice-box p{ font-size:12px; color:var(--text-dim); line-height:1.9; font-weight:600; }
+.notice-box ul{ margin:7px 0 0; padding-inline-start:18px; font-size:12px; color:var(--text-dim); line-height:2.05; font-weight:400; }
 
 .connect-status{
   display:flex; align-items:center; gap:10px;
-  padding:12px 13px; border-radius:var(--radius-sm);
-  font-size:12.5px; margin-top:14px;
+  padding:13px 14px; border-radius:var(--radius-sm);
+  font-size:12.5px; margin-top:16px; font-weight:600;
 }
 .connect-status.loading{ background:var(--blue-soft); color:var(--blue); }
 .connect-status.success{ background:var(--green-soft); color:var(--green); }
 .connect-status.error{ background:var(--red-soft); color:var(--red); }
 
 .connect-foot{
-  text-align:center; margin-top:18px; font-size:11.5px; color:var(--text-faint);
+  text-align:center; margin-top:20px; font-size:11.5px; color:var(--text-faint);
 }
 .connect-foot a{ color:var(--accent); font-weight:600; }
 
@@ -623,108 +722,111 @@ hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:16px 0; }
    داشبورد
    =================================================================== */
 .kpi-grid{
-  display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:16px;
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:18px;
 }
-.kpi-card{ padding:16px 18px; }
-.kpi-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.kpi-card{ padding:19px 20px; }
+.kpi-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
 .kpi-ic{
-  width:34px; height:34px; border-radius:10px;
+  width:38px; height:38px; border-radius:12px;
   display:flex; align-items:center; justify-content:center;
   background:var(--accent-soft); color:var(--accent);
+  box-shadow:inset 0 0 0 1px var(--accent-dim)33;
 }
-.kpi-ic.blue{ background:var(--blue-soft); color:var(--blue); }
-.kpi-ic.green{ background:var(--green-soft); color:var(--green); }
-.kpi-ic.amber{ background:var(--amber-soft); color:var(--amber); }
-.kpi-label{ font-size:12px; color:var(--text-faint); margin-bottom:6px; }
-.kpi-value{ font-size:21px; font-weight:700; }
-.kpi-change{ font-size:11.5px; margin-top:6px; display:flex; align-items:center; gap:4px; }
+.kpi-ic.blue{ background:var(--blue-soft); color:var(--blue); box-shadow:inset 0 0 0 1px #5b93ff33; }
+.kpi-ic.green{ background:var(--green-soft); color:var(--green); box-shadow:inset 0 0 0 1px var(--green-strong)33; }
+.kpi-ic.amber{ background:var(--amber-soft); color:var(--amber); box-shadow:inset 0 0 0 1px #e2a23c33; }
+.kpi-label{ font-size:12px; color:var(--text-faint); margin-bottom:8px; font-weight:500; }
+.kpi-value{ font-size:25px; font-weight:800; letter-spacing:-.01em; }
+.kpi-change{ font-size:11.5px; margin-top:8px; display:flex; align-items:center; gap:4px; font-weight:700; }
 
-.dash-grid{ display:grid; grid-template-columns:2fr 1fr; gap:14px; align-items:start; }
+.dash-grid{ display:grid; grid-template-columns:2fr 1fr; gap:16px; align-items:start; }
 
 .chart-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px; }
-.chart-value{ font-size:24px; font-weight:700; }
-.chart-value-sub{ font-size:12.5px; margin-top:3px; }
-.chart-canvas-wrap{ height:260px; margin-top:14px; position:relative; }
+.chart-value{ font-size:27px; font-weight:800; letter-spacing:-.01em; }
+.chart-value-sub{ font-size:12.5px; margin-top:4px; font-weight:700; }
+.chart-canvas-wrap{ height:260px; margin-top:16px; position:relative; }
 .range-tabs{ display:flex; gap:4px; }
 
 .mini-list{ display:flex; flex-direction:column; }
 .mini-row{
   display:flex; align-items:center; justify-content:space-between;
-  padding:11px 0; border-top:1px solid var(--border-soft);
+  padding:14px 9px; border-top:1px solid var(--border-soft);
+  border-radius:9px; margin:0 -9px; cursor:pointer;
+  transition:background .15s var(--ease);
 }
-.mini-row:first-child{ border-top:none; padding-top:2px; }
-.mini-left{ display:flex; align-items:center; gap:10px; min-width:0; }
-.mini-name{ font-size:13px; font-weight:600; }
-.mini-sym{ font-size:11px; color:var(--text-faint); }
+.mini-row:hover{ background:var(--surface-hover); }
+.mini-row:first-child{ border-top:none; padding-top:3px; }
+.mini-left{ display:flex; align-items:center; gap:11px; min-width:0; }
+.mini-name{ font-size:13px; font-weight:700; }
+.mini-sym{ font-size:11px; color:var(--text-faint); margin-top:1px; }
 .mini-right{ text-align:left; }
-.mini-price{ font-size:13px; font-weight:600; }
+.mini-price{ font-size:13px; font-weight:700; margin-bottom:5px; }
 
 /* ===================================================================
    بازار
    =================================================================== */
 .market-toolbar{
-  display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:18px;
 }
-.sparkline{ width:84px; height:30px; }
+.sparkline{ width:88px; height:32px; }
 
 /* ===================================================================
    صفحه ارز
    =================================================================== */
-.coin-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
-.coin-id{ display:flex; align-items:center; gap:12px; }
-.coin-ic-lg{
-  width:44px; height:44px; border-radius:50%;
-  display:flex; align-items:center; justify-content:center;
-  font-size:15px; font-weight:700; color:#061513;
-  background:linear-gradient(135deg, var(--accent), var(--blue));
-}
-.coin-price-row{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
-.coin-price{ font-size:28px; font-weight:700; }
-.coin-stats-row{ display:flex; gap:22px; flex-wrap:wrap; margin-top:14px; }
-.coin-stat .lbl{ font-size:11px; color:var(--text-faint); margin-bottom:4px; }
-.coin-stat .val{ font-size:13.5px; font-weight:600; }
+.coin-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:20px; }
+.coin-id{ display:flex; align-items:center; gap:13px; }
+.coin-price-row{ display:flex; align-items:baseline; gap:11px; flex-wrap:wrap; }
+.coin-price{ font-size:31px; font-weight:800; letter-spacing:-.01em; }
+.coin-stats-row{ display:flex; gap:26px; flex-wrap:wrap; margin-top:16px; }
+.coin-stat .lbl{ font-size:11px; color:var(--text-faint); margin-bottom:5px; font-weight:500; }
+.coin-stat .val{ font-size:14px; font-weight:700; }
 
-.coin-grid{ display:grid; grid-template-columns:2fr 1fr; gap:14px; align-items:start; }
-.coin-chart-controls{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.coin-grid{ display:grid; grid-template-columns:2fr 1fr; gap:16px; align-items:start; }
+.coin-chart-controls{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:14px; }
 
 /* ===================================================================
    کیف پول
    =================================================================== */
-.wallet-summary{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px; }
+.wallet-summary{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:18px; }
 .wallet-head-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
 /* ===================================================================
    پروفایل
    =================================================================== */
-.profile-head{ display:flex; align-items:center; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+.profile-head{ display:flex; align-items:center; gap:17px; margin-bottom:24px; flex-wrap:wrap; }
 .avatar{
-  width:58px; height:58px; border-radius:50%;
+  width:60px; height:60px; border-radius:50%;
   background:linear-gradient(135deg, var(--accent), var(--blue));
   display:flex; align-items:center; justify-content:center;
-  font-size:20px; font-weight:700; color:#061513; flex:none;
+  font-size:21px; font-weight:700; color:#fff; flex:none;
+  box-shadow:0 4px 14px -4px #1ed4bf60, inset 0 1px 0 #ffffff30;
 }
-.info-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 2px; border-top:1px solid var(--border-soft); }
+.info-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 2px; border-top:1px solid var(--border-soft); }
 .info-row:first-child{ border-top:none; }
-.info-row .k{ font-size:12.5px; color:var(--text-faint); }
-.info-row .v{ font-size:13px; font-weight:600; }
+.info-row .k{ font-size:12.5px; color:var(--text-faint); font-weight:500; }
+.info-row .v{ font-size:13.5px; font-weight:700; }
 
-.profile-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+.profile-grid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
 
 /* ===================================================================
    واکنش‌گرایی صفحات
    =================================================================== */
 @media (max-width:1020px){
-  .kpi-grid{ grid-template-columns:repeat(2,1fr); }
+  .kpi-grid{ grid-template-columns:repeat(2,1fr); gap:14px; }
   .dash-grid{ grid-template-columns:1fr; }
   .coin-grid{ grid-template-columns:1fr; }
   .profile-grid{ grid-template-columns:1fr; }
-  .wallet-summary{ grid-template-columns:repeat(3,1fr); }
+  .wallet-summary{ grid-template-columns:repeat(3,1fr); gap:12px; }
+}
+@media (max-width:860px){
+  .kpi-grid{ gap:12px; }
+  .wallet-summary{ gap:10px; }
 }
 @media (max-width:620px){
-  .kpi-grid{ grid-template-columns:1fr 1fr; gap:10px; }
-  .wallet-summary{ grid-template-columns:1fr; }
-  .coin-price{ font-size:23px; }
-  .chart-value{ font-size:20px; }
+  .kpi-grid{ grid-template-columns:1fr 1fr; gap:13px; }
+  .wallet-summary{ grid-template-columns:1fr; gap:12px; }
+  .coin-price{ font-size:24px; }
+  .chart-value{ font-size:21px; }
 }
 </style>
 </head>
@@ -961,7 +1063,8 @@ const State = (() => {
   }
 
   const store = {
-    route: { name:"connect", params:{} },
+    route: { name:"auth-phone", params:{} },
+    account: { loggedIn:false, phone:null },
     connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null },
     settings: loadSettings(),
     sidebarOpen: false,
@@ -1229,6 +1332,71 @@ const Api = (() => {
   };
 })();
 // ===================================================================
+// لایه حساب کاربری برنامه (جدا از اتصال صرافی)
+// -------------------------------------------------------------------
+// این بخش مسئول ثبت‌نام/ورود با شماره موبایل ایرانی است — کاملاً
+// مجزا از اتصال به صرافی (که در api.js مدیریت می‌شود). در نسخه واقعی
+// باید با یک سرویس پیامکی و بک‌اند احراز هویت واقعی جایگزین شود؛
+// اینجا فقط رفتار و قرارداد توابع شبیه‌سازی شده است.
+// ===================================================================
+
+const AuthFlow = {
+  phone: null,
+  otpVerified: false,
+};
+
+const AppAuth = (() => {
+  const LATENCY = 700;
+  function delay(ms = LATENCY){ return new Promise(res => setTimeout(res, ms)); }
+
+  function isValidIranianPhone(phone){
+    return /^09\d{9}$/.test((phone || "").trim());
+  }
+
+  async function sendOtp(phone){
+    if(!isValidIranianPhone(phone)){
+      const err = new Error("شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.");
+      err.code = "INVALID_PHONE";
+      throw err;
+    }
+    await delay(900);
+    AuthFlow.phone = phone.trim();
+    AuthFlow.otpVerified = false;
+    // --- در نسخه واقعی: درخواست ارسال پیامک به سرویس احراز هویت ---
+    return { ok:true };
+  }
+
+  async function verifyOtp(code){
+    if(!/^\d{4,6}$/.test((code || "").trim())){
+      const err = new Error("کد تایید را به‌درستی وارد کنید.");
+      err.code = "INVALID_OTP";
+      throw err;
+    }
+    await delay(700);
+    AuthFlow.otpVerified = true;
+    return { ok:true };
+  }
+
+  async function createAccount(password){
+    if(!password || password.length < 8){
+      const err = new Error("رمز عبور باید حداقل ۸ کاراکتر باشد.");
+      err.code = "WEAK_PASSWORD";
+      throw err;
+    }
+    await delay(900);
+    State.set({ account: { loggedIn:true, phone: AuthFlow.phone } });
+    return { ok:true };
+  }
+
+  function logout(){
+    AuthFlow.phone = null;
+    AuthFlow.otpVerified = false;
+    State.set({ account: { loggedIn:false, phone:null } });
+  }
+
+  return { isValidIranianPhone, sendOtp, verifyOtp, createAccount, logout };
+})();
+// ===================================================================
 // اعلان‌های کوتاه (Toast)
 // ===================================================================
 
@@ -1295,7 +1463,8 @@ const Charts = (() => {
 
     const ctx = canvas.getContext("2d");
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.clientHeight || 220);
-    gradient.addColorStop(0, accent + "33");
+    gradient.addColorStop(0, accent + "55");
+    gradient.addColorStop(0.6, accent + "14");
     gradient.addColorStop(1, accent + "00");
 
     const chart = new Chart(ctx, {
@@ -1307,8 +1476,11 @@ const Charts = (() => {
           borderColor: accent,
           backgroundColor: fill ? gradient : "transparent",
           borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
+          pointRadius: (ctx) => ctx.dataIndex === points.length - 1 ? 4 : 0,
+          pointBackgroundColor: accent,
+          pointBorderColor: "#fff",
+          pointBorderWidth: 1.5,
+          pointHoverRadius: 5,
           pointHoverBackgroundColor: accent,
           pointHoverBorderColor: "#fff",
           tension: 0.35,
@@ -1340,7 +1512,18 @@ const Charts = (() => {
         },
         scales:{
           x:{ display:false },
-          y:{ display:false }
+          y:{
+            display:true,
+            position:"right",
+            grid:{ color: grid, drawTicks:false },
+            border:{ display:false },
+            ticks:{
+              color: textFaint,
+              font:{ family:"Vazirmatn", size:10 },
+              maxTicksLimit:4,
+              callback:(v) => Utils.formatNumber(v, { compact:true }),
+            }
+          }
         },
         elements:{ line:{ capBezierPoints:true } }
       }
@@ -1353,12 +1536,16 @@ const Charts = (() => {
     if(!canvas || typeof Chart === "undefined") return null;
     const key = "spark_" + (canvas.dataset.key || Math.random());
     destroy(key);
-    const color = positive ? (cssVar("--green") || "#2ecc82") : (cssVar("--red") || "#f0555f");
-    const chart = new Chart(canvas.getContext("2d"), {
+    const color = positive ? (cssVar("--green") || "#29c080") : (cssVar("--red") || "#ea4f60");
+    const sCtx = canvas.getContext("2d");
+    const sGrad = sCtx.createLinearGradient(0, 0, 0, canvas.clientHeight || 32);
+    sGrad.addColorStop(0, color + "40");
+    sGrad.addColorStop(1, color + "00");
+    const chart = new Chart(sCtx, {
       type:"line",
       data:{
         labels:points.map((_,i) => i),
-        datasets:[{ data:points.map(p => p.v), borderColor:color, borderWidth:1.6, pointRadius:0, tension:0.4 }]
+        datasets:[{ data:points.map(p => p.v), borderColor:color, backgroundColor:sGrad, fill:true, borderWidth:2, pointRadius:0, tension:0.4 }]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
@@ -1434,9 +1621,23 @@ const UI = (() => {
     ]);
   }
 
+  // تولید یک رنگ ثابت و متمایز برای هر نماد ارز (حس برند بیشتر نسبت به رنگ یکسان)
+  function coinHue(symbol){
+    const s = symbol || "?";
+    let hash = 0;
+    for(let i=0;i<s.length;i++) hash = (hash * 31 + s.charCodeAt(i)) % 360;
+    return hash;
+  }
+
   function coinAvatar(symbol, size = 28){
     const letters = (symbol || "?").replace(/[^A-Za-z]/g,"").slice(0,3) || "?";
-    return Utils.el("div", { class:"coin-ic", style:`width:${size}px;height:${size}px;font-size:${Math.round(size*0.36)}px;` }, letters);
+    const hue = coinHue(symbol);
+    const bg = `linear-gradient(135deg, hsl(${hue} 72% 52%), hsl(${(hue+40)%360} 72% 42%))`;
+    const glow = `0 3px 10px -2px hsl(${hue} 72% 45% / .55), inset 0 1px 0 #ffffff30`;
+    return Utils.el("div", {
+      class:"coin-ic",
+      style:`width:${size}px;height:${size}px;font-size:${Math.round(size*0.36)}px;background:${bg};box-shadow:${glow};color:#ffffffe8;`,
+    }, letters);
   }
 
   function statusBadge(status){
@@ -1447,7 +1648,7 @@ const UI = (() => {
     const labelMap = { connected:"متصل", disconnected:"قطع شده", checking:"در حال بررسی" };
     return Utils.el("span", { class:`badge ${map[status] || "badge-gray"}` }, [
       Utils.el("span", { class:"badge-dot" }),
-      labelMap[status] || status,
+      Utils.el("span", { class:"badge-label" }, labelMap[status] || status),
     ]);
   }
 
@@ -1459,6 +1660,9 @@ const UI = (() => {
 
 const Router = (() => {
   const routes = [
+    { pattern: /^auth-phone$/,     name:"auth-phone",    page:() => PageAuthPhone },
+    { pattern: /^auth-otp$/,       name:"auth-otp",      page:() => PageAuthOtp },
+    { pattern: /^auth-password$/,  name:"auth-password", page:() => PageAuthPassword },
     { pattern: /^connect$/,        name:"connect",  page:() => PageConnect },
     { pattern: /^dashboard$/,      name:"dashboard",page:() => PageDashboard },
     { pattern: /^market$/,         name:"market",   page:() => PageMarket },
@@ -1470,7 +1674,7 @@ const Router = (() => {
   ];
 
   function current(){
-    const hash = (location.hash || "#connect").replace(/^#\/?/, "");
+    const hash = (location.hash || "#auth-phone").replace(/^#\/?/, "");
     for(const r of routes){
       const m = hash.match(r.pattern);
       if(m) return { name:r.name, page:r.page(), params:{ id: m[1] } };
@@ -1489,6 +1693,240 @@ const Router = (() => {
 
   return { go, current, start };
 })();
+// ===================================================================
+// جریان ثبت‌نام/ورود به حساب برنامه (شماره موبایل → کد تایید → رمز عبور)
+// ===================================================================
+
+function authShellStart(container){
+  container.innerHTML = "";
+  container.className = "connect-shell";
+  const card = Utils.el("div", { class:"card card-pad connect-card" });
+  container.appendChild(card);
+  card.appendChild(Utils.el("div", { class:"connect-logo" }, [
+    Utils.el("div", { class:"brand-mark", html: ic("logo") }),
+    Utils.el("div", { class:"connect-logo-text" }, [
+      Utils.el("b", {}, "صرافی من"),
+      Utils.el("span", {}, "داشبورد شخصی مدیریت دارایی"),
+    ]),
+  ]));
+  return card;
+}
+
+const PageAuthPhone = {
+  mount(container){
+    let status = "idle";
+    let errorMsg = "";
+    const card = authShellStart(container);
+
+    function paint(){
+      // پاک‌کردن محتوای زیر لوگو (که همیشه ثابت می‌ماند)
+      while(card.children.length > 1) card.removeChild(card.lastChild);
+
+      card.appendChild(Utils.el("h1", { class:"connect-title" }, "ورود یا ثبت‌نام"));
+      card.appendChild(Utils.el("p", { class:"connect-desc" },
+        "برای استفاده از برنامه، ابتدا با شماره موبایل خود وارد شوید. یک کد تایید برای شما پیامک می‌شود."
+      ));
+
+      const field = Utils.el("div", { class:"field" }, [
+        Utils.el("label", { for:"phoneInput" }, "شماره موبایل"),
+        Utils.el("div", { class:"input-wrap" }, [
+          Utils.el("input", {
+            id:"phoneInput", class:"input", type:"tel", inputmode:"numeric",
+            placeholder:"09xxxxxxxxx", maxlength:"11", autocomplete:"tel",
+            style:"direction:ltr;text-align:left;font-family:inherit;letter-spacing:.5px;",
+          }),
+        ]),
+        status === "error" ? Utils.el("span", { class:"field-error" }, [Utils.el("span",{html:ic("alert")}), errorMsg]) : null,
+      ]);
+      card.appendChild(field);
+
+      const btn = Utils.el("button", {
+        class:"btn btn-primary btn-block", style:"margin-top:16px;height:44px;",
+        disabled: status === "loading" ? "true" : false,
+        onClick: handleSend,
+      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال ارسال کد…"] : "ارسال کد تایید");
+      card.appendChild(btn);
+
+      card.appendChild(Utils.el("div", { class:"connect-foot" },
+        "با ادامه، شما قوانین و حریم خصوصی برنامه را می‌پذیرید."
+      ));
+    }
+
+    async function handleSend(){
+      const input = card.querySelector("#phoneInput");
+      const phone = input.value.trim();
+      status = "loading"; errorMsg = ""; paint();
+      try{
+        await AppAuth.sendOtp(phone);
+        status = "idle"; paint();
+        Toast.success("کد ارسال شد", "کد تایید به شماره شما پیامک شد.");
+        Router.go("auth-otp");
+      }catch(e){
+        status = "error";
+        errorMsg = e && e.message ? e.message : "ارسال کد با خطا مواجه شد.";
+        paint();
+      }
+    }
+
+    paint();
+  }
+};
+
+const PageAuthOtp = {
+  mount(container){
+    let status = "idle";
+    let errorMsg = "";
+    let countdown = 60;
+    let timer = null;
+    const card = authShellStart(container);
+
+    function startCountdown(){
+      clearInterval(timer);
+      countdown = 60;
+      timer = setInterval(() => {
+        countdown -= 1;
+        const el = card.querySelector("#resendBtn");
+        if(el) el.textContent = countdown > 0 ? `ارسال مجدد (${countdown})` : "ارسال مجدد کد";
+        if(countdown <= 0) clearInterval(timer);
+      }, 1000);
+    }
+
+    function paint(){
+      while(card.children.length > 1) card.removeChild(card.lastChild);
+
+      card.appendChild(Utils.el("h1", { class:"connect-title" }, "کد تایید را وارد کنید"));
+      card.appendChild(Utils.el("p", { class:"connect-desc" },
+        `کد ۵ رقمی ارسال‌شده به شماره ${AuthFlow.phone || ""} را وارد کنید.`
+      ));
+
+      const field = Utils.el("div", { class:"field" }, [
+        Utils.el("label", { for:"otpInput" }, "کد تایید"),
+        Utils.el("div", { class:"input-wrap" }, [
+          Utils.el("input", {
+            id:"otpInput", class:"input", type:"text", inputmode:"numeric",
+            placeholder:"— — — — —", maxlength:"6", autocomplete:"one-time-code",
+            style:"direction:ltr;text-align:center;letter-spacing:8px;font-size:18px;font-weight:700;",
+          }),
+        ]),
+        status === "error" ? Utils.el("span", { class:"field-error" }, [Utils.el("span",{html:ic("alert")}), errorMsg]) : null,
+      ]);
+      card.appendChild(field);
+
+      const btn = Utils.el("button", {
+        class:"btn btn-primary btn-block", style:"margin-top:16px;height:44px;",
+        disabled: status === "loading" ? "true" : false,
+        onClick: handleVerify,
+      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال بررسی…"] : "تایید کد");
+      card.appendChild(btn);
+
+      card.appendChild(Utils.el("div", { style:"display:flex;justify-content:space-between;margin-top:16px;" }, [
+        Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: () => { clearInterval(timer); Router.go("auth-phone"); } }, "تغییر شماره"),
+        Utils.el("button", {
+          id:"resendBtn", class:"btn btn-outline btn-sm",
+          disabled: countdown > 0 ? "true" : false,
+          onClick: handleResend,
+        }, countdown > 0 ? `ارسال مجدد (${countdown})` : "ارسال مجدد کد"),
+      ]));
+
+      startCountdown();
+    }
+
+    async function handleVerify(){
+      const input = card.querySelector("#otpInput");
+      const code = input.value.trim();
+      status = "loading"; errorMsg = ""; paint();
+      try{
+        await AppAuth.verifyOtp(code);
+        clearInterval(timer);
+        Router.go("auth-password");
+      }catch(e){
+        status = "error";
+        errorMsg = e && e.message ? e.message : "کد وارد شده نامعتبر است.";
+        paint();
+      }
+    }
+
+    async function handleResend(){
+      try{
+        await AppAuth.sendOtp(AuthFlow.phone);
+        Toast.info("کد دوباره ارسال شد", "");
+        startCountdown();
+      }catch(e){ /* نادیده گرفته می‌شود */ }
+    }
+
+    paint();
+  }
+};
+
+const PageAuthPassword = {
+  mount(container){
+    let status = "idle";
+    let errorMsg = "";
+    let showPw = false;
+    const card = authShellStart(container);
+
+    function paint(){
+      while(card.children.length > 1) card.removeChild(card.lastChild);
+
+      card.appendChild(Utils.el("h1", { class:"connect-title" }, "انتخاب رمز عبور"));
+      card.appendChild(Utils.el("p", { class:"connect-desc" },
+        "یک رمز عبور برای ورودهای بعدی به حساب خود انتخاب کنید."
+      ));
+
+      const pwField = Utils.el("div", { class:"field" }, [
+        Utils.el("label", { for:"pwInput" }, "رمز عبور"),
+        Utils.el("div", { class:"input-wrap" }, [
+          Utils.el("input", { id:"pwInput", class:"input", type: showPw ? "text" : "password", placeholder:"حداقل ۸ کاراکتر", autocomplete:"new-password" }),
+          Utils.el("div", { class:"input-actions" }, [
+            Utils.el("button", {
+              class:"input-icon-btn", type:"button", html: ic(showPw ? "eyeOff" : "eye"),
+              onClick: () => { showPw = !showPw; paint(); },
+            }),
+          ]),
+        ]),
+      ]);
+      const pwConfirmField = Utils.el("div", { class:"field", style:"margin-top:14px;" }, [
+        Utils.el("label", { for:"pwConfirmInput" }, "تکرار رمز عبور"),
+        Utils.el("div", { class:"input-wrap" }, [
+          Utils.el("input", { id:"pwConfirmInput", class:"input", type: showPw ? "text" : "password", placeholder:"رمز عبور را دوباره وارد کنید", autocomplete:"new-password" }),
+        ]),
+        status === "error" ? Utils.el("span", { class:"field-error" }, [Utils.el("span",{html:ic("alert")}), errorMsg]) : null,
+      ]);
+      card.appendChild(pwField);
+      card.appendChild(pwConfirmField);
+
+      const btn = Utils.el("button", {
+        class:"btn btn-primary btn-block", style:"margin-top:16px;height:44px;",
+        disabled: status === "loading" ? "true" : false,
+        onClick: handleSubmit,
+      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال ساخت حساب…"] : "ثبت‌نام و ورود");
+      card.appendChild(btn);
+    }
+
+    async function handleSubmit(){
+      const pw = card.querySelector("#pwInput").value;
+      const pwConfirm = card.querySelector("#pwConfirmInput").value;
+
+      if(pw !== pwConfirm){
+        status = "error"; errorMsg = "رمز عبور و تکرار آن یکسان نیستند."; paint();
+        return;
+      }
+
+      status = "loading"; errorMsg = ""; paint();
+      try{
+        await AppAuth.createAccount(pw);
+        Toast.success("خوش آمدید", "حساب شما با موفقیت ساخته شد.");
+        Router.go("connect");
+      }catch(e){
+        status = "error";
+        errorMsg = e && e.message ? e.message : "ساخت حساب با خطا مواجه شد.";
+        paint();
+      }
+    }
+
+    paint();
+  }
+};
 // ===================================================================
 // صفحه اتصال حساب نوبیتکس
 // ===================================================================
@@ -1721,11 +2159,11 @@ const PageDashboard = {
         { label:"تعداد دارایی‌ها", value:Utils.formatNumber(s.assetCount), ic:"market", color:"green" },
         { label:"سفارش‌های باز", value:Utils.formatNumber(s.openOrders), ic:"history", color:"amber" },
       ];
-      items.forEach(it => {
+      items.forEach((it, idx) => {
         const card = Utils.el("div", { class:"card kpi-card" }, [
           Utils.el("div", { class:"kpi-top" }, [
             Utils.el("div", { class:`kpi-ic ${it.color}`, html: ic(it.ic) }),
-            summaryRes.isMock ? UI.mockFlag() : null,
+            (idx === 0 && summaryRes.isMock) ? UI.mockFlag() : null,
           ]),
           Utils.el("div", { class:"kpi-label" }, it.label),
           Utils.el("div", { class:"kpi-value num" }, it.value),
@@ -1869,7 +2307,7 @@ const PageMarket = {
     container.appendChild(Utils.el("div", { class:"page-head" }, [
       Utils.el("div", {}, [
         Utils.el("h1", {}, "بازار ارزهای دیجیتال"),
-        Utils.el("div", { class:"sub" }, "قیمت لحظه‌ای ارزهای پشتیبانی‌شده توسط نوبیتکس"),
+        Utils.el("div", { class:"sub" }, "قیمت لحظه‌ای ارزهای پشتیبانی‌شده در حساب متصل‌شده"),
       ]),
       Utils.el("button", { class:"btn btn-ghost btn-sm", id:"mkRefresh", html:"" }, [Utils.el("span",{html:ic("refresh")}), " به‌روزرسانی"]),
     ]));
@@ -2056,7 +2494,7 @@ const PageCoin = {
       headCard.innerHTML = "";
       headCard.appendChild(Utils.el("div", { class:"coin-head" }, [
         Utils.el("div", { class:"coin-id" }, [
-          Utils.el("div", { class:"coin-ic-lg" }, coin.symbol.replace(/[^A-Za-z]/g,"").slice(0,3)),
+          UI.coinAvatar(coin.symbol, 46),
           Utils.el("div", {}, [
             Utils.el("div", { style:"display:flex;align-items:center;gap:8px;" }, [
               Utils.el("h2", { style:"font-size:17px;" }, coin.name),
@@ -2211,11 +2649,11 @@ const PageWallet = {
         { label:"موجودی قابل‌استفاده", value:availValue, ic:"zap", color:"blue" },
         { label:"موجودی درگیر سفارش", value:lockedValue, ic:"clock", color:"amber" },
       ];
-      items.forEach(it => {
+      items.forEach((it, idx) => {
         summary.appendChild(Utils.el("div", { class:"card kpi-card" }, [
           Utils.el("div", { class:"kpi-top" }, [
             Utils.el("div", { class:`kpi-ic ${it.color||""}`, html: ic(it.ic) }),
-            isMock ? UI.mockFlag() : null,
+            (idx === 0 && isMock) ? UI.mockFlag() : null,
           ]),
           Utils.el("div", { class:"kpi-label" }, it.label),
           Utils.el("div", { class:"kpi-value num" }, hideValues ? "••••••" : Utils.formatPrice(it.value, "")),
@@ -2279,14 +2717,14 @@ const PageWallet = {
     function openChargeModal(){
       const backdrop = Utils.el("div", { class:"modal-backdrop", onClick:(e) => { if(e.target===backdrop) backdrop.remove(); } });
       backdrop.appendChild(Utils.el("div", { class:"modal" }, [
-        Utils.el("h3", {}, "انتقال به وب‌سایت نوبیتکس"),
-        Utils.el("p", {}, "برای شارژ حساب، به وب‌سایت رسمی نوبیتکس هدایت می‌شوید. این برنامه هیچ اطلاعات بانکی یا پرداختی را دریافت نمی‌کند."),
+        Utils.el("h3", {}, "انتقال به وب‌سایت صرافی"),
+        Utils.el("p", {}, "برای شارژ حساب، به وب‌سایت رسمی صرافی متصل‌شده هدایت می‌شوید. این برنامه هیچ اطلاعات بانکی یا پرداختی را دریافت نمی‌کند."),
         Utils.el("div", { class:"modal-actions" }, [
           Utils.el("button", { class:"btn btn-outline", onClick: () => backdrop.remove() }, "انصراف"),
           Utils.el("button", { class:"btn btn-primary", onClick: () => {
             window.open(NOBITEX_OFFICIAL_URL, "_blank", "noopener");
             backdrop.remove();
-          }}, [Utils.el("span",{html:ic("externalLink")}), " رفتن به نوبیتکس"]),
+          }}, [Utils.el("span",{html:ic("externalLink")}), " رفتن به وب‌سایت صرافی"]),
         ]),
       ]));
       document.body.appendChild(backdrop);
@@ -2306,7 +2744,7 @@ const PageHistory = {
     container.appendChild(Utils.el("div", { class:"page-head" }, [
       Utils.el("div", {}, [
         Utils.el("h1", {}, "تاریخچه تراکنش‌ها"),
-        Utils.el("div", { class:"sub" }, "فهرست تراکنش‌های دریافت‌شده از حساب نوبیتکس"),
+        Utils.el("div", { class:"sub" }, "فهرست تراکنش‌های دریافت‌شده از حساب صرافی متصل"),
       ]),
     ]));
 
@@ -2442,7 +2880,6 @@ const PageProfile = {
         Utils.el("div", { class:"card-title" }, "اطلاعات صرافی"),
       ]);
       card.appendChild(Utils.el("div", { style:"margin-top:10px;" }, [
-        row2("صرافی متصل", conn.exchangeName || "نوبیتکس"),
         row2("وضعیت اتصال", null, UI.statusBadge(conn.status)),
         row2("آخرین بررسی اتصال", Utils.timeAgo(conn.lastChecked)),
       ]));
@@ -2485,14 +2922,14 @@ const PageProfile = {
     function confirmDisconnect(){
       const backdrop = Utils.el("div", { class:"modal-backdrop", onClick:(e) => { if(e.target===backdrop) backdrop.remove(); } });
       backdrop.appendChild(Utils.el("div", { class:"modal" }, [
-        Utils.el("h3", {}, "قطع اتصال حساب نوبیتکس؟"),
+        Utils.el("h3", {}, "قطع اتصال حساب صرافی؟"),
         Utils.el("p", {}, "پس از قطع اتصال، برای مشاهده دوباره اطلاعات باید کلید API را مجدداً وارد کنید."),
         Utils.el("div", { class:"modal-actions" }, [
           Utils.el("button", { class:"btn btn-outline", onClick: () => backdrop.remove() }, "انصراف"),
           Utils.el("button", { class:"btn btn-danger-ghost", onClick: async () => {
             await Api.disconnect();
             backdrop.remove();
-            Toast.info("اتصال قطع شد", "حساب نوبیتکس شما از برنامه جدا شد.");
+            Toast.info("اتصال قطع شد", "حساب صرافی شما از برنامه جدا شد.");
             Router.go("connect");
           }}, "قطع اتصال"),
         ]),
@@ -2577,8 +3014,9 @@ const PageSettings = {
 
     async function logout(){
       await Api.disconnect();
-      Toast.info("خارج شدید", "برای ورود دوباره، کلید API را وارد کنید.");
-      Router.go("connect");
+      AppAuth.logout();
+      Toast.info("خارج شدید", "برای ورود دوباره، شماره موبایل خود را وارد کنید.");
+      Router.go("auth-phone");
     }
 
     paint();
@@ -2710,8 +3148,16 @@ const App = (() => {
 
   async function handleLogout(){
     await Api.disconnect();
+    AppAuth.logout();
     closeSidebar();
-    Router.go("connect");
+    Router.go("auth-phone");
+  }
+
+  function playPageEnter(el){
+    if(!el) return;
+    el.classList.remove("page-enter");
+    void el.offsetWidth; // اجبار به reflow تا انیمیشن دوباره اجرا شود
+    el.classList.add("page-enter");
   }
 
   function startAutoRefresh(){
@@ -2724,13 +3170,36 @@ const App = (() => {
     }, sec * 1000);
   }
 
-  function onRouteChange(route){
-    const connected = State.get().connection.status === "connected";
+  const AUTH_ROUTES = ["auth-phone", "auth-otp", "auth-password"];
 
-    if(route.name === "connect" || !connected){
+  function onRouteChange(route){
+    const accountReady = State.get().account.loggedIn;
+    const exchangeConnected = State.get().connection.status === "connected";
+
+    // مرحله ۱: ابتدا باید وارد حساب برنامه شود (شماره موبایل → کد → رمز)
+    if(!accountReady){
+      if(refreshTimer) clearInterval(refreshTimer);
+      if(route.name === "auth-otp" && !AuthFlow.phone){ Router.go("auth-phone"); return; }
+      if(route.name === "auth-password" && !AuthFlow.otpVerified){ Router.go("auth-phone"); return; }
+      root.innerHTML = "";
+      const page = route.name === "auth-otp" ? PageAuthOtp
+        : route.name === "auth-password" ? PageAuthPassword
+        : PageAuthPhone;
+      page.mount(root);
+      return;
+    }
+
+    // مرحله ۲: بعد از ورود، باید حساب صرافی متصل شود
+    if(!exchangeConnected){
       if(refreshTimer) clearInterval(refreshTimer);
       root.innerHTML = "";
       PageConnect.mount(root);
+      return;
+    }
+
+    // مرحله ۳: هر دو انجام شده — اگر کاربر دستی به مسیرهای ورود/اتصال برگردد، به داشبورد هدایتش کن
+    if(AUTH_ROUTES.includes(route.name) || route.name === "connect"){
+      Router.go("dashboard");
       return;
     }
 
@@ -2740,6 +3209,7 @@ const App = (() => {
     updateConnBadge();
     const content = document.getElementById("pageContent");
     route.page.mount(content, route.params);
+    playPageEnter(content);
   }
 
   function init(){
