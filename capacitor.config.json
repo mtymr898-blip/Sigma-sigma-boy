@@ -1,8 +1,7 @@
 {
   "appId": "ir.mynobitex.dashboard",
   "appName": "صرافی من",
-  "webDir": ".",
-  "bundledWebRuntime": false,
+  "webDir": "www",
   "android": {
     "allowMixedContent": false
   },
