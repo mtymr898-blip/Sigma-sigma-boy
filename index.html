@@ -1419,7 +1419,10 @@ const UI = (() => {
   }
 
   function mockFlag(){
-    return Utils.el("span", { class:"mock-flag" }, [ic("info"), "داده آزمایشی"]);
+    return Utils.el("span", { class:"mock-flag" }, [
+      Utils.el("span", { html: ic("info") }),
+      "داده آزمایشی",
+    ]);
   }
 
   function changeBadge(value){
