@@ -1,0 +1,2757 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>صرافی من — داشبورد شخصی ارز دیجیتال</title>
+<meta name="description" content="داشبورد شخصی مدیریت و تحلیل دارایی‌های ارز دیجیتال، متصل به حساب نوبیتکس">
+<meta name="theme-color" content="#0a0e17">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+<style>
+/* ===================================================================
+   توکن‌های طراحی
+   =================================================================== */
+:root{
+  --bg:            #0a0e17;
+  --bg-soft:       #0d1220;
+  --surface:       #121a2b;
+  --surface-2:     #17203399;
+  --surface-hover: #1a2338;
+  --border:        #202a40;
+  --border-soft:   #192234;
+
+  --accent:        #17c3b2;
+  --accent-strong: #0ea89a;
+  --accent-soft:   #17c3b21a;
+  --blue:          #4f8cff;
+  --blue-soft:     #4f8cff1a;
+
+  --green:         #2ecc82;
+  --green-soft:    #2ecc821a;
+  --red:           #f0555f;
+  --red-soft:      #f0555f1a;
+  --amber:         #e7a33e;
+  --amber-soft:    #e7a33e1a;
+
+  --text:          #e9eef6;
+  --text-dim:      #93a0b8;
+  --text-faint:    #5c6680;
+
+  --radius-sm:     8px;
+  --radius-md:     12px;
+  --radius-lg:     16px;
+
+  --shadow-card:   0 1px 0 0 #ffffff05 inset, 0 8px 24px -12px #00000080;
+
+  --sidebar-w:     248px;
+  --topbar-h:      64px;
+
+  --ease: cubic-bezier(.4,0,.2,1);
+}
+
+[data-theme="light"]{
+  --bg:            #f4f6fa;
+  --bg-soft:       #eef1f6;
+  --surface:       #ffffff;
+  --surface-2:     #ffffffcc;
+  --surface-hover: #f1f4f9;
+  --border:        #e2e7f0;
+  --border-soft:   #ebeef4;
+  --text:          #121a2b;
+  --text-dim:      #5c6680;
+  --text-faint:    #8a93a8;
+  --shadow-card:   0 1px 0 0 #ffffff inset, 0 8px 24px -14px #0f172a26;
+}
+
+*,*::before,*::after{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--text);
+  font-family:"Vazirmatn", "Vazirmatn FD", sans-serif;
+  font-size:15px;
+  line-height:1.7;
+  direction:rtl;
+  -webkit-font-smoothing:antialiased;
+  transition:background .25s var(--ease), color .25s var(--ease);
+}
+
+img{ max-width:100%; display:block; }
+button{ font-family:inherit; }
+input,select{ font-family:inherit; }
+a{ color:inherit; text-decoration:none; }
+
+::selection{ background:var(--accent-soft); color:var(--accent); }
+
+::-webkit-scrollbar{ width:8px; height:8px; }
+::-webkit-scrollbar-track{ background:transparent; }
+::-webkit-scrollbar-thumb{ background:var(--border); border-radius:8px; }
+::-webkit-scrollbar-thumb:hover{ background:var(--text-faint); }
+
+:focus-visible{
+  outline:2px solid var(--accent);
+  outline-offset:2px;
+  border-radius:4px;
+}
+
+.num{
+  direction:ltr;
+  unicode-bidi:isolate;
+  font-variant-numeric:tabular-nums;
+}
+
+.mono-num{
+  direction:ltr;
+  unicode-bidi:isolate;
+  font-variant-numeric:tabular-nums;
+}
+
+h1,h2,h3,h4{ margin:0; font-weight:700; letter-spacing:-.01em; }
+p{ margin:0; }
+
+.text-dim{ color:var(--text-dim); }
+.text-faint{ color:var(--text-faint); }
+.text-green{ color:var(--green); }
+.text-red{ color:var(--red); }
+
+.up{ color:var(--green); }
+.down{ color:var(--red); }
+
+.sr-only{
+  position:absolute; width:1px; height:1px;
+  padding:0; margin:-1px; overflow:hidden;
+  clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation-duration:.001ms !important; transition-duration:.001ms !important; }
+}
+/* ===================================================================
+   اسکلت برنامه
+   =================================================================== */
+#app{ min-height:100%; }
+
+/* ---------- صفحه اتصال (بدون سایدبار) ---------- */
+.connect-shell{
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  background:
+    radial-gradient(1100px 500px at 85% -10%, #17c3b214, transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, #4f8cff10, transparent 60%),
+    var(--bg);
+}
+
+/* ---------- داشبورد (با سایدبار) ---------- */
+.shell{
+  display:grid;
+  grid-template-columns: 1fr var(--sidebar-w);
+  min-height:100vh;
+}
+
+.sidebar{
+  grid-column:2;
+  border-inline-start:1px solid var(--border-soft);
+  background:var(--bg-soft);
+  padding:20px 16px;
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  position:sticky;
+  top:0;
+  height:100vh;
+  overflow-y:auto;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 10px 20px;
+}
+.brand-mark{
+  width:34px; height:34px; border-radius:10px;
+  background:linear-gradient(135deg, var(--accent), var(--blue));
+  display:flex; align-items:center; justify-content:center;
+  color:#061513; font-weight:700; font-size:15px;
+  flex:none;
+}
+.brand-name{ font-weight:700; font-size:15px; }
+.brand-sub{ font-size:11px; color:var(--text-faint); }
+
+.nav-group{ margin-bottom:10px; }
+.nav-label{
+  font-size:11px; color:var(--text-faint); padding:10px 10px 6px;
+}
+.nav-item{
+  display:flex; align-items:center; gap:10px;
+  padding:10px 12px;
+  border-radius:var(--radius-sm);
+  color:var(--text-dim);
+  font-size:13.5px;
+  cursor:pointer;
+  transition:background .15s var(--ease), color .15s var(--ease);
+  position:relative;
+}
+.nav-item .ic{ width:18px; height:18px; flex:none; opacity:.9; }
+.nav-item:hover{ background:var(--surface-hover); color:var(--text); }
+.nav-item.active{
+  background:var(--accent-soft);
+  color:var(--accent);
+}
+.nav-item.active::before{
+  content:"";
+  position:absolute; inset-inline-end:-16px; top:50%; transform:translateY(-50%);
+  width:3px; height:18px; border-radius:3px;
+  background:var(--accent);
+}
+
+.sidebar-foot{
+  margin-top:auto;
+  padding-top:14px;
+  border-top:1px solid var(--border-soft);
+}
+
+/* ---------- محتوای اصلی ---------- */
+.main{
+  grid-column:1;
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+}
+
+.topbar{
+  height:var(--topbar-h);
+  position:sticky; top:0; z-index:20;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px;
+  padding:0 24px;
+  background:color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border-soft);
+}
+.topbar-left{ display:flex; align-items:center; gap:12px; min-width:0; }
+.topbar-title{ font-size:16px; font-weight:700; white-space:nowrap; }
+.topbar-right{ display:flex; align-items:center; gap:10px; }
+
+.menu-btn{
+  display:none;
+  width:36px; height:36px; border-radius:var(--radius-sm);
+  align-items:center; justify-content:center;
+  background:var(--surface); border:1px solid var(--border);
+  color:var(--text); cursor:pointer;
+}
+
+.content{
+  flex:1;
+  padding:22px 24px 90px;
+  max-width:1280px;
+  width:100%;
+  margin:0 auto;
+}
+
+.page-head{
+  display:flex; align-items:flex-end; justify-content:space-between;
+  gap:12px; margin-bottom:18px; flex-wrap:wrap;
+}
+.page-head h1{ font-size:20px; }
+.page-head .sub{ font-size:13px; color:var(--text-dim); margin-top:4px; }
+
+/* ---------- نوار پایین موبایل ---------- */
+.bottom-nav{
+  display:none;
+  position:fixed; inset-inline:0; bottom:0; z-index:30;
+  background:color-mix(in srgb, var(--bg-soft) 92%, transparent);
+  backdrop-filter:blur(10px);
+  border-top:1px solid var(--border-soft);
+  padding:6px 4px calc(6px + env(safe-area-inset-bottom));
+  justify-content:space-around;
+}
+.bottom-nav .bn-item{
+  display:flex; flex-direction:column; align-items:center; gap:3px;
+  font-size:10.5px; color:var(--text-faint);
+  padding:6px 8px; border-radius:10px; cursor:pointer;
+}
+.bottom-nav .bn-item.active{ color:var(--accent); }
+.bottom-nav .bn-item .ic{ width:19px; height:19px; }
+
+/* ---------- واکنش‌گرایی ---------- */
+@media (max-width: 1020px){
+  .sidebar{ width:220px; }
+}
+
+@media (max-width: 860px){
+  .shell{ grid-template-columns:1fr; }
+  .sidebar{
+    position:fixed; inset-inline-end:0; top:0; height:100vh;
+    width:260px; z-index:50;
+    transform:translateX(104%);
+    transition:transform .28s var(--ease);
+    box-shadow:-20px 0 50px -20px #00000080;
+  }
+  [dir="rtl"] .sidebar{ transform:translateX(-104%); }
+  .sidebar.open{ transform:translateX(0); }
+  .sidebar-scrim{
+    display:none; position:fixed; inset:0; background:#00000066;
+    z-index:40;
+  }
+  .sidebar-scrim.open{ display:block; }
+  .menu-btn{ display:inline-flex; }
+  .main{ grid-column:1; }
+  .content{ padding:16px 14px 90px; }
+  .bottom-nav{ display:flex; }
+}
+
+@media (max-width: 520px){
+  .topbar{ padding:0 14px; }
+  .topbar-title{ font-size:14.5px; }
+}
+/* ===================================================================
+   کامپوننت‌های پایه
+   =================================================================== */
+
+.card{
+  background:var(--surface);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-card);
+}
+.card-pad{ padding:18px; }
+.card-head{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:10px; margin-bottom:14px;
+}
+.card-title{ font-size:14px; font-weight:700; }
+.card-title .sub{ font-size:11.5px; color:var(--text-faint); font-weight:400; margin-top:2px; }
+
+/* ---------- دکمه‌ها ---------- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:7px;
+  height:38px; padding:0 16px;
+  border-radius:var(--radius-sm);
+  border:1px solid transparent;
+  font-size:13.5px; font-weight:600;
+  cursor:pointer;
+  transition:transform .12s var(--ease), background .15s var(--ease), border-color .15s var(--ease), opacity .15s;
+  white-space:nowrap;
+}
+.btn:active{ transform:scale(.97); }
+.btn:disabled{ opacity:.5; cursor:not-allowed; transform:none; }
+
+.btn-primary{ background:var(--accent); color:#06231f; }
+.btn-primary:hover:not(:disabled){ background:var(--accent-strong); }
+
+.btn-ghost{ background:var(--surface-hover); color:var(--text); border-color:var(--border); }
+.btn-ghost:hover:not(:disabled){ background:var(--border-soft); }
+
+.btn-outline{ background:transparent; color:var(--text-dim); border-color:var(--border); }
+.btn-outline:hover:not(:disabled){ color:var(--text); border-color:var(--text-faint); }
+
+.btn-danger-ghost{ background:var(--red-soft); color:var(--red); }
+.btn-danger-ghost:hover:not(:disabled){ background:#f0555f2b; }
+
+.btn-sm{ height:32px; padding:0 12px; font-size:12.5px; }
+.btn-icon{ width:38px; padding:0; flex:none; }
+.btn-block{ width:100%; }
+
+.btn .spin{
+  width:14px; height:14px; border-radius:50%;
+  border:2px solid currentColor; border-inline-end-color:transparent;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{ to{ transform:rotate(360deg); } }
+
+/* ---------- فرم‌ها ---------- */
+.field{ display:flex; flex-direction:column; gap:7px; }
+.field label{ font-size:12.5px; color:var(--text-dim); font-weight:600; }
+.field-hint{ font-size:11.5px; color:var(--text-faint); }
+.field-error{ font-size:11.5px; color:var(--red); display:flex; align-items:center; gap:5px; }
+
+.input-wrap{ position:relative; display:flex; align-items:center; }
+.input{
+  width:100%; height:44px;
+  background:var(--bg-soft);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  padding:0 14px;
+  font-size:13.5px;
+  outline:none;
+  transition:border-color .15s var(--ease), background .15s var(--ease);
+}
+.input::placeholder{ color:var(--text-faint); }
+.input:focus{ border-color:var(--accent); background:var(--surface); }
+.input.has-error{ border-color:var(--red); }
+.input-wrap.api-field .input{ padding-left:84px; font-family:monospace; letter-spacing:.3px; direction:ltr; text-align:left; }
+.input-actions{
+  position:absolute; left:8px; top:50%; transform:translateY(-50%);
+  display:flex; gap:4px;
+}
+.input-icon-btn{
+  width:28px; height:28px; border-radius:7px;
+  display:flex; align-items:center; justify-content:center;
+  background:transparent; border:none; color:var(--text-faint);
+  cursor:pointer;
+}
+.input-icon-btn:hover{ background:var(--surface-hover); color:var(--text); }
+
+.select{
+  height:38px; border-radius:var(--radius-sm);
+  background:var(--bg-soft); border:1px solid var(--border);
+  color:var(--text); padding:0 10px; font-size:13px; outline:none;
+}
+
+.search-wrap{ position:relative; flex:1; min-width:180px; }
+.search-wrap .ic{
+  position:absolute; inset-inline-start:13px; top:50%; transform:translateY(-50%);
+  width:16px; height:16px; color:var(--text-faint); pointer-events:none;
+}
+.search-wrap .input{ padding-inline-start:38px; }
+
+/* ---------- نشان‌ها ---------- */
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:11.5px; font-weight:600;
+  padding:5px 10px; border-radius:999px;
+}
+.badge-dot{ width:6px; height:6px; border-radius:50%; background:currentColor; flex:none; }
+.badge-green{ background:var(--green-soft); color:var(--green); }
+.badge-red{ background:var(--red-soft); color:var(--red); }
+.badge-amber{ background:var(--amber-soft); color:var(--amber); }
+.badge-blue{ background:var(--blue-soft); color:var(--blue); }
+.badge-gray{ background:var(--surface-hover); color:var(--text-dim); }
+
+.chip{
+  display:inline-flex; align-items:center; gap:6px;
+  height:32px; padding:0 13px; border-radius:999px;
+  background:var(--surface-hover); border:1px solid var(--border);
+  color:var(--text-dim); font-size:12.5px; cursor:pointer;
+  transition:all .15s var(--ease);
+}
+.chip.active{ background:var(--accent-soft); color:var(--accent); border-color:transparent; }
+.chip:hover:not(.active){ color:var(--text); }
+
+/* ---------- جدول ---------- */
+.table-wrap{ overflow-x:auto; }
+table.tbl{ width:100%; border-collapse:collapse; font-size:13px; min-width:640px; }
+.tbl thead th{
+  text-align:start; font-weight:600; color:var(--text-faint);
+  font-size:11.5px; padding:0 14px 10px; white-space:nowrap;
+}
+.tbl tbody td{ padding:13px 14px; border-top:1px solid var(--border-soft); white-space:nowrap; }
+.tbl tbody tr{ transition:background .12s var(--ease); cursor:pointer; }
+.tbl tbody tr:hover{ background:var(--surface-hover); }
+.tbl .cell-asset{ display:flex; align-items:center; gap:10px; cursor:pointer; }
+.coin-ic{
+  width:28px; height:28px; border-radius:50%; flex:none;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:700; color:#061513;
+  background:linear-gradient(135deg, var(--accent), var(--blue));
+}
+.tbl th.sortable{ cursor:pointer; user-select:none; }
+.tbl th.sortable .ic{ width:11px; height:11px; opacity:.5; vertical-align:middle; margin-inline-start:3px; }
+
+/* ---------- وضعیت‌های خالی / خطا / بارگذاری ---------- */
+.state-box{
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  text-align:center; gap:10px;
+  padding:46px 20px;
+  color:var(--text-dim);
+}
+.state-box .ic{ width:34px; height:34px; color:var(--text-faint); margin-bottom:4px; }
+.state-box .title{ font-size:14px; font-weight:700; color:var(--text); }
+.state-box .desc{ font-size:12.5px; color:var(--text-faint); max-width:320px; }
+
+.skel{
+  background:linear-gradient(90deg, var(--surface-hover) 25%, var(--border-soft) 37%, var(--surface-hover) 63%);
+  background-size:400% 100%;
+  animation:skel-sheen 1.4s ease infinite;
+  border-radius:8px;
+}
+@keyframes skel-sheen{ 0%{ background-position:100% 50%; } 100%{ background-position:0 50%; } }
+
+.toast-host{
+  position:fixed; bottom:22px; inset-inline-end:22px; z-index:200;
+  display:flex; flex-direction:column; gap:8px; max-width:340px;
+}
+@media (max-width:860px){ .toast-host{ bottom:76px; inset-inline-end:14px; inset-inline-start:14px; max-width:none; } }
+.toast{
+  display:flex; align-items:flex-start; gap:10px;
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-md); padding:13px 14px;
+  box-shadow:0 12px 30px -10px #000000aa;
+  font-size:12.5px;
+  animation:toast-in .22s var(--ease);
+}
+@keyframes toast-in{ from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:none; } }
+.toast .ic{ width:17px; height:17px; flex:none; margin-top:1px; }
+.toast.success .ic{ color:var(--green); }
+.toast.error .ic{ color:var(--red); }
+.toast.info .ic{ color:var(--blue); }
+
+/* ---------- نشانگر داده آزمایشی ---------- */
+.mock-flag{
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:10.5px; color:var(--amber);
+  background:var(--amber-soft); padding:3px 8px; border-radius:6px;
+  font-weight:600;
+}
+
+/* ---------- تب‌ها ---------- */
+.tabs{ display:flex; gap:4px; background:var(--bg-soft); padding:4px; border-radius:10px; border:1px solid var(--border-soft); width:fit-content; }
+.tab-btn{
+  padding:8px 14px; border-radius:7px; font-size:12.5px; font-weight:600;
+  color:var(--text-faint); cursor:pointer; border:none; background:transparent;
+}
+.tab-btn.active{ background:var(--surface); color:var(--text); box-shadow:0 1px 0 var(--border); }
+
+/* ---------- سوییچ ---------- */
+.switch{ position:relative; width:42px; height:24px; flex:none; }
+.switch input{ opacity:0; width:0; height:0; position:absolute; }
+.switch .track{
+  position:absolute; inset:0; background:var(--border); border-radius:999px;
+  cursor:pointer; transition:background .18s var(--ease);
+}
+.switch .thumb{
+  position:absolute; width:18px; height:18px; border-radius:50%; background:#fff;
+  top:3px; inset-inline-start:3px; transition:inset-inline-start .18s var(--ease);
+}
+.switch input:checked + .track{ background:var(--accent); }
+.switch input:checked + .track .thumb{ inset-inline-start:21px; }
+
+/* ---------- ردیف تنظیمات ---------- */
+.set-row{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; padding:15px 2px;
+  border-top:1px solid var(--border-soft);
+}
+.set-row:first-child{ border-top:none; }
+.set-row .label{ font-size:13.5px; font-weight:600; }
+.set-row .desc{ font-size:11.5px; color:var(--text-faint); margin-top:2px; }
+
+/* ---------- مودال ---------- */
+.modal-backdrop{
+  position:fixed; inset:0; background:#060a12cc; backdrop-filter:blur(3px);
+  display:flex; align-items:center; justify-content:center; z-index:300;
+  padding:20px;
+}
+.modal{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-lg); width:100%; max-width:420px;
+  padding:22px; box-shadow:0 30px 70px -20px #000000cc;
+  animation:modal-in .18s var(--ease);
+}
+@keyframes modal-in{ from{ opacity:0; transform:scale(.96); } to{ opacity:1; transform:none; } }
+.modal h3{ font-size:15.5px; margin-bottom:8px; }
+.modal p{ font-size:13px; color:var(--text-dim); line-height:1.8; }
+.modal-actions{ display:flex; gap:10px; margin-top:20px; }
+.modal-actions .btn{ flex:1; }
+
+.icon-btn{
+  width:34px; height:34px; border-radius:var(--radius-sm);
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--surface-hover); border:1px solid var(--border);
+  color:var(--text-dim); cursor:pointer;
+}
+.icon-btn:hover{ color:var(--text); }
+.icon-btn .ic{ width:17px; height:17px; }
+
+hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:16px 0; }
+/* ===================================================================
+   صفحه اتصال
+   =================================================================== */
+.connect-card{ width:100%; max-width:460px; }
+.connect-logo{
+  display:flex; align-items:center; gap:10px; justify-content:center;
+  margin-bottom:22px;
+}
+.connect-logo .brand-mark{ width:40px; height:40px; border-radius:12px; font-size:17px; }
+.connect-logo-text{ text-align:right; }
+.connect-logo-text b{ font-size:16px; display:block; }
+.connect-logo-text span{ font-size:11px; color:var(--text-faint); }
+
+.connect-title{ text-align:center; font-size:19px; margin-bottom:6px; }
+.connect-desc{ text-align:center; font-size:13px; color:var(--text-dim); margin-bottom:24px; line-height:1.9; }
+
+.guide-toggle{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:13px 14px; background:var(--bg-soft); border:1px solid var(--border-soft);
+  border-radius:var(--radius-sm); cursor:pointer; font-size:12.5px; font-weight:600;
+  color:var(--text-dim); margin-bottom:14px;
+}
+.guide-steps{
+  list-style:none; margin:0 0 16px; padding:0;
+  display:flex; flex-direction:column; gap:10px;
+}
+.guide-steps li{
+  display:flex; gap:10px; font-size:12.5px; color:var(--text-dim); line-height:1.9;
+}
+.guide-num{
+  flex:none; width:20px; height:20px; border-radius:50%;
+  background:var(--accent-soft); color:var(--accent); font-size:10.5px; font-weight:700;
+  display:flex; align-items:center; justify-content:center; margin-top:1px;
+}
+
+.notice-box{
+  display:flex; gap:10px; padding:12px 13px;
+  background:var(--amber-soft); border:1px solid #e7a33e30;
+  border-radius:var(--radius-sm); margin-bottom:18px;
+}
+.notice-box .ic{ width:16px; height:16px; color:var(--amber); flex:none; margin-top:1px; }
+.notice-box p{ font-size:12px; color:var(--text-dim); line-height:1.9; }
+.notice-box ul{ margin:6px 0 0; padding-inline-start:18px; font-size:12px; color:var(--text-dim); line-height:2; }
+
+.connect-status{
+  display:flex; align-items:center; gap:10px;
+  padding:12px 13px; border-radius:var(--radius-sm);
+  font-size:12.5px; margin-top:14px;
+}
+.connect-status.loading{ background:var(--blue-soft); color:var(--blue); }
+.connect-status.success{ background:var(--green-soft); color:var(--green); }
+.connect-status.error{ background:var(--red-soft); color:var(--red); }
+
+.connect-foot{
+  text-align:center; margin-top:18px; font-size:11.5px; color:var(--text-faint);
+}
+.connect-foot a{ color:var(--accent); font-weight:600; }
+
+/* ===================================================================
+   داشبورد
+   =================================================================== */
+.kpi-grid{
+  display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin-bottom:16px;
+}
+.kpi-card{ padding:16px 18px; }
+.kpi-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+.kpi-ic{
+  width:34px; height:34px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  background:var(--accent-soft); color:var(--accent);
+}
+.kpi-ic.blue{ background:var(--blue-soft); color:var(--blue); }
+.kpi-ic.green{ background:var(--green-soft); color:var(--green); }
+.kpi-ic.amber{ background:var(--amber-soft); color:var(--amber); }
+.kpi-label{ font-size:12px; color:var(--text-faint); margin-bottom:6px; }
+.kpi-value{ font-size:21px; font-weight:700; }
+.kpi-change{ font-size:11.5px; margin-top:6px; display:flex; align-items:center; gap:4px; }
+
+.dash-grid{ display:grid; grid-template-columns:2fr 1fr; gap:14px; align-items:start; }
+
+.chart-head{ display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; margin-bottom:6px; }
+.chart-value{ font-size:24px; font-weight:700; }
+.chart-value-sub{ font-size:12.5px; margin-top:3px; }
+.chart-canvas-wrap{ height:260px; margin-top:14px; position:relative; }
+.range-tabs{ display:flex; gap:4px; }
+
+.mini-list{ display:flex; flex-direction:column; }
+.mini-row{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:11px 0; border-top:1px solid var(--border-soft);
+}
+.mini-row:first-child{ border-top:none; padding-top:2px; }
+.mini-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+.mini-name{ font-size:13px; font-weight:600; }
+.mini-sym{ font-size:11px; color:var(--text-faint); }
+.mini-right{ text-align:left; }
+.mini-price{ font-size:13px; font-weight:600; }
+
+/* ===================================================================
+   بازار
+   =================================================================== */
+.market-toolbar{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px;
+}
+.sparkline{ width:84px; height:30px; }
+
+/* ===================================================================
+   صفحه ارز
+   =================================================================== */
+.coin-head{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+.coin-id{ display:flex; align-items:center; gap:12px; }
+.coin-ic-lg{
+  width:44px; height:44px; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:700; color:#061513;
+  background:linear-gradient(135deg, var(--accent), var(--blue));
+}
+.coin-price-row{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+.coin-price{ font-size:28px; font-weight:700; }
+.coin-stats-row{ display:flex; gap:22px; flex-wrap:wrap; margin-top:14px; }
+.coin-stat .lbl{ font-size:11px; color:var(--text-faint); margin-bottom:4px; }
+.coin-stat .val{ font-size:13.5px; font-weight:600; }
+
+.coin-grid{ display:grid; grid-template-columns:2fr 1fr; gap:14px; align-items:start; }
+.coin-chart-controls{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+
+/* ===================================================================
+   کیف پول
+   =================================================================== */
+.wallet-summary{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:16px; }
+.wallet-head-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+
+/* ===================================================================
+   پروفایل
+   =================================================================== */
+.profile-head{ display:flex; align-items:center; gap:16px; margin-bottom:22px; flex-wrap:wrap; }
+.avatar{
+  width:58px; height:58px; border-radius:50%;
+  background:linear-gradient(135deg, var(--accent), var(--blue));
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px; font-weight:700; color:#061513; flex:none;
+}
+.info-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding:12px 2px; border-top:1px solid var(--border-soft); }
+.info-row:first-child{ border-top:none; }
+.info-row .k{ font-size:12.5px; color:var(--text-faint); }
+.info-row .v{ font-size:13px; font-weight:600; }
+
+.profile-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start; }
+
+/* ===================================================================
+   واکنش‌گرایی صفحات
+   =================================================================== */
+@media (max-width:1020px){
+  .kpi-grid{ grid-template-columns:repeat(2,1fr); }
+  .dash-grid{ grid-template-columns:1fr; }
+  .coin-grid{ grid-template-columns:1fr; }
+  .profile-grid{ grid-template-columns:1fr; }
+  .wallet-summary{ grid-template-columns:repeat(3,1fr); }
+}
+@media (max-width:620px){
+  .kpi-grid{ grid-template-columns:1fr 1fr; gap:10px; }
+  .wallet-summary{ grid-template-columns:1fr; }
+  .coin-price{ font-size:23px; }
+  .chart-value{ font-size:20px; }
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="connect-shell">
+    <div class="state-box">
+      <div class="spin" style="width:24px;height:24px;border-width:2.5px;color:var(--accent);"></div>
+      <div class="title" style="margin-top:6px;">در حال بارگذاری برنامه…</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+// ===================================================================
+// توابع کمکی عمومی: قالب‌بندی عدد، تاریخ، ابزارهای DOM
+// ===================================================================
+
+const Utils = (() => {
+
+  function formatNumber(value, { decimals = 2, compact = false } = {}){
+    if(value === null || value === undefined || Number.isNaN(value)) return "—";
+    const num = Number(value);
+    if(compact){
+      const abs = Math.abs(num);
+      if(abs >= 1e9) return (num/1e9).toLocaleString("en-US",{maximumFractionDigits:2}) + " میلیارد";
+      if(abs >= 1e6) return (num/1e6).toLocaleString("en-US",{maximumFractionDigits:2}) + " میلیون";
+      if(abs >= 1e3) return (num/1e3).toLocaleString("en-US",{maximumFractionDigits:1}) + " هزار";
+    }
+    return num.toLocaleString(numberLocale(), { maximumFractionDigits: decimals, minimumFractionDigits: 0 });
+  }
+
+  // نرخ تبدیل آزمایشی تومان به تتر — بر اساس آخرین قیمت USDT/IRT در داده بازار
+  function usdtRate(){
+    const usdt = (typeof MockData !== "undefined") ? MockData.coins.find(c => c.id === "usdt") : null;
+    return (usdt && usdt.price) ? usdt.price : 60000;
+  }
+
+  function numberLocale(){
+    const fmt = (typeof State !== "undefined") ? State.get().settings.numberFormat : "latin";
+    return fmt === "fa" ? "fa-IR" : "en-US";
+  }
+
+  function formatPrice(value, currency = "تومان"){
+    if(value === null || value === undefined || Number.isNaN(value)) return "—";
+    let num = Number(value);
+    let unitLabel = currency;
+
+    const priceUnit = (typeof State !== "undefined") ? State.get().settings.priceUnit : "irt";
+    if(priceUnit === "usdt"){
+      num = num / usdtRate();
+      if(currency === "تومان") unitLabel = "تتر";
+    }
+
+    let decimals = 2;
+    if(priceUnit === "usdt"){
+      decimals = num >= 1 ? 2 : 4;
+    }else{
+      if(num >= 1000) decimals = 0;
+      else if(num < 1) decimals = 4;
+    }
+    const formatted = num.toLocaleString(numberLocale(), { maximumFractionDigits: decimals });
+    return unitLabel ? `${formatted} ${unitLabel}` : formatted;
+  }
+
+  function formatPercent(value){
+    if(value === null || value === undefined || Number.isNaN(value)) return "—";
+    const num = Number(value);
+    const sign = num > 0 ? "+" : "";
+    return `${sign}${num.toFixed(2)}٪`;
+  }
+
+  function formatDateTime(isoString){
+    if(!isoString) return "—";
+    const d = new Date(isoString);
+    if(Number.isNaN(d.getTime())) return "—";
+    const fmt = new Intl.DateTimeFormat("fa-IR", {
+      year:"numeric", month:"2-digit", day:"2-digit",
+      hour:"2-digit", minute:"2-digit"
+    });
+    return fmt.format(d);
+  }
+
+  function formatDate(isoString){
+    if(!isoString) return "—";
+    const d = new Date(isoString);
+    if(Number.isNaN(d.getTime())) return "—";
+    return new Intl.DateTimeFormat("fa-IR", { year:"numeric", month:"2-digit", day:"2-digit" }).format(d);
+  }
+
+  function timeAgo(isoString){
+    if(!isoString) return "—";
+    const d = new Date(isoString);
+    const diffSec = Math.floor((Date.now() - d.getTime())/1000);
+    if(diffSec < 10) return "همین الان";
+    if(diffSec < 60) return `${diffSec} ثانیه پیش`;
+    const diffMin = Math.floor(diffSec/60);
+    if(diffMin < 60) return `${diffMin} دقیقه پیش`;
+    const diffHr = Math.floor(diffMin/60);
+    if(diffHr < 24) return `${diffHr} ساعت پیش`;
+    const diffDay = Math.floor(diffHr/24);
+    return `${diffDay} روز پیش`;
+  }
+
+  function el(tag, attrs = {}, children = []){
+    const node = document.createElement(tag);
+    for(const [k,v] of Object.entries(attrs)){
+      if(k === "class") node.className = v;
+      else if(k === "html") node.innerHTML = v;
+      else if(k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2).toLowerCase(), v);
+      else if(v !== false && v !== null && v !== undefined) node.setAttribute(k, v);
+    }
+    (Array.isArray(children) ? children : [children]).forEach(c => {
+      if(c === null || c === undefined || c === false) return;
+      node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+    });
+    return node;
+  }
+
+  function debounce(fn, wait = 250){
+    let t;
+    return (...args) => {
+      clearTimeout(t);
+      t = setTimeout(() => fn(...args), wait);
+    };
+  }
+
+  function initials(name){
+    if(!name) return "—";
+    return name.trim().slice(0,2);
+  }
+
+  function maskSecret(value, visibleStart = 4, visibleEnd = 4){
+    if(!value) return "";
+    if(value.length <= visibleStart + visibleEnd) return "•".repeat(value.length);
+    return value.slice(0, visibleStart) + "•".repeat(Math.max(6, value.length - visibleStart - visibleEnd)) + value.slice(-visibleEnd);
+  }
+
+  function maskPhone(phone){
+    if(!phone) return "—";
+    const digits = phone.replace(/\D/g, "");
+    if(digits.length < 6) return phone;
+    return digits.slice(0,4) + "***" + digits.slice(-3);
+  }
+
+  return { formatNumber, formatPrice, formatPercent, formatDateTime, formatDate, timeAgo, el, debounce, initials, maskSecret, maskPhone };
+})();
+// ===================================================================
+// مجموعه آیکون‌های خطی ساده (SVG) — سبک یکپارچه برای کل برنامه
+// ===================================================================
+
+const Icons = {
+  dashboard: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>`,
+  market: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 17l5-5 4 4 8-9" stroke-linecap="round" stroke-linejoin="round"/><path d="M15 7h5v5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  wallet: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/><circle cx="16.5" cy="14" r="1"/></svg>`,
+  history: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 1 0 3-6.7" stroke-linecap="round"/><path d="M3 4v5h5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 7v5l3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  profile: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20c1.5-4 5-5.5 7.5-5.5s6 1.5 7.5 5.5" stroke-linecap="round"/></svg>`,
+  settings: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.97 7.97 0 0 0 0-3l1.8-1.4-2-3.4-2.1.6a8 8 0 0 0-2.6-1.5L14 2h-4l-.5 2.2a8 8 0 0 0-2.6 1.5l-2.1-.6-2 3.4L4.6 10a8 8 0 0 0 0 3l-1.8 1.5 2 3.4 2.1-.6c.8.7 1.6 1.2 2.6 1.5L10 22h4l.5-2.2a8 8 0 0 0 2.6-1.5l2.1.6 2-3.4-1.8-1.5z" stroke-linejoin="round"/></svg>`,
+  logo: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 14l4-5 3.5 3L18 6" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 6h4v4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  eye: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.8-7 10-7 10 7 10 7-3.8 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`,
+  eyeOff: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 3l18 18" stroke-linecap="round"/><path d="M10.6 5.2A10.9 10.9 0 0 1 12 5c6.2 0 10 7 10 7a15.6 15.6 0 0 1-4 4.6M6.3 6.3C3.6 8.1 2 12 2 12s3.8 7 10 7c1.4 0 2.6-.3 3.7-.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>`,
+  copy: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>`,
+  check: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  alert: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 9v4" stroke-linecap="round"/><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><circle cx="12" cy="16.3" r="0.9" fill="currentColor" stroke="none"/></svg>`,
+  info: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5" stroke-linecap="round"/><circle cx="12" cy="8" r="0.9" fill="currentColor" stroke="none"/></svg>`,
+  refresh: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 0 1 15.3-6.4L21 8" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3v5h-5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12a9 9 0 0 1-15.3 6.4L3 16" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 21v-5h5" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  search: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3" stroke-linecap="round"/></svg>`,
+  chevronDown: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  chevronLeft: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  externalLink: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 4h6v6" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 4L10 14" stroke-linecap="round"/><path d="M19 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  link: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 15L15 9" stroke-linecap="round"/><path d="M10.5 6.5l1-1a4 4 0 0 1 5.7 5.7l-1.4 1.4" stroke-linecap="round"/><path d="M13.5 17.5l-1 1a4 4 0 0 1-5.7-5.7l1.4-1.4" stroke-linecap="round"/></svg>`,
+  unlink: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18.4 5.6a4 4 0 0 1 0 5.7L17 12.7" stroke-linecap="round"/><path d="M5.6 18.4a4 4 0 0 1 0-5.7L7 11.3" stroke-linecap="round"/><path d="M3 3l18 18" stroke-linecap="round"/></svg>`,
+  shield: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l7 3v5c0 5-3.4 8.4-7 10-3.6-1.6-7-5-7-10V6z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  trash: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16" stroke-linecap="round"/><path d="M9 7V4h6v3" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  menu: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18M3 12h18M3 18h18" stroke-linecap="round"/></svg>`,
+  close: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 6l12 12M18 6L6 18" stroke-linecap="round"/></svg>`,
+  sun: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8L6 18M18 6l1.8-1.8" stroke-linecap="round"/></svg>`,
+  moon: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z" stroke-linejoin="round"/></svg>`,
+  trendUp: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  trendDown: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7l6 6 4-4 8 9" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  empty: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M3 11h18" stroke-linecap="round"/><path d="M8 4h8l2 3H6z" stroke-linejoin="round"/></svg>`,
+  plug: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 3v5M15 3v5" stroke-linecap="round"/><path d="M6 8h12v3a6 6 0 0 1-12 0z" stroke-linejoin="round"/><path d="M12 17v4" stroke-linecap="round"/></svg>`,
+  zap: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h6l-1 8 9-12h-6z" stroke-linejoin="round" stroke-linecap="round"/></svg>`,
+  bell: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 10a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" stroke-linecap="round"/></svg>`,
+  logout: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 17l5-5-5-5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12H9" stroke-linecap="round"/></svg>`,
+  clock: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+};
+
+function ic(name, extraClass = ""){
+  const svg = Icons[name] || "";
+  return extraClass ? svg.replace('class="ic"', `class="ic ${extraClass}"`) : svg;
+}
+// ===================================================================
+// مدیریت وضعیت کلی برنامه
+// -------------------------------------------------------------------
+// فقط تنظیمات غیرحساس (تم، واحد قیمت، بازه به‌روزرسانی و ...) در
+// localStorage ذخیره می‌شوند. وضعیت اتصال و هر داده مرتبط با حساب
+// صرافی فقط در حافظه (در طول یک نشست مرورگر) نگه‌داری می‌شود و با
+// رفرش صفحه از بین می‌رود — دقیقاً همان رفتاری که از یک معماری امن
+// مبتنی بر نشست سمت سرور انتظار می‌رود.
+// ===================================================================
+
+const STORAGE_KEY = "nx_dashboard_settings_v1";
+
+const State = (() => {
+  const listeners = new Set();
+
+  function loadSettings(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(!raw) return defaultSettings();
+      return { ...defaultSettings(), ...JSON.parse(raw) };
+    }catch(e){
+      return defaultSettings();
+    }
+  }
+
+  function defaultSettings(){
+    return {
+      theme: "dark",
+      priceUnit: "irt",        // irt | usdt
+      numberFormat: "latin",   // latin | fa
+      refreshInterval: 60,     // ثانیه
+      notifyPriceAlerts: true,
+      notifyConnection: true,
+      language: "fa",
+    };
+  }
+
+  function persistSettings(){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(store.settings)); }catch(e){ /* ignore */ }
+  }
+
+  const store = {
+    route: { name:"connect", params:{} },
+    connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null },
+    settings: loadSettings(),
+    sidebarOpen: false,
+  };
+
+  function get(){ return store; }
+
+  function set(patch){
+    for(const [k,v] of Object.entries(patch)){
+      if(typeof v === "object" && v !== null && !Array.isArray(v) && typeof store[k] === "object"){
+        store[k] = { ...store[k], ...v };
+      }else{
+        store[k] = v;
+      }
+    }
+    if("settings" in patch) persistSettings();
+    emit();
+  }
+
+  function subscribe(fn){
+    listeners.add(fn);
+    return () => listeners.delete(fn);
+  }
+
+  function emit(){
+    listeners.forEach(fn => fn(store));
+  }
+
+  return { get, set, subscribe };
+})();
+// ===================================================================
+// داده‌های آزمایشی (MOCK)
+// -------------------------------------------------------------------
+// هر مقدار در این فایل کاملاً ساختگی است و صرفاً برای نمایش ساختار
+// رابط کاربری در زمانی است که اتصال واقعی به API برقرار نیست یا
+// هنوز داده واقعی برنگردانده.
+// تمام رکوردهای این فایل دارای فیلد isMock: true هستند تا در هیچ
+// جای برنامه به اشتباه به‌عنوان داده واقعی حساب نمایش داده نشوند.
+// وقتی لایه اتصال واقعی (js/api.js) به بک‌اند متصل شود، این فایل
+// باید به‌طور کامل کنار گذاشته شود.
+// ===================================================================
+
+const MockData = {
+
+  coins: [
+    { id:"btc",   name:"بیت‌کوین",  symbol:"BTC/USDT", price:3812450000, change24h:2.41,  high24h:3865000000, low24h:3701000000, volume24h:48200000000000, isMock:true },
+    { id:"eth",   name:"اتریوم",    symbol:"ETH/USDT", price:148250000,  change24h:-1.12, high24h:151800000,  low24h:146900000,  volume24h:21400000000000, isMock:true },
+    { id:"usdt",  name:"تتر",       symbol:"USDT/IRT", price:60850,      change24h:0.08,  high24h:60980,      low24h:60700,      volume24h:98100000000000, isMock:true },
+    { id:"bnb",   name:"بایننس کوین", symbol:"BNB/USDT", price:38420000, change24h:3.87,  high24h:39100000,   low24h:36950000,   volume24h:6400000000000,  isMock:true },
+    { id:"sol",   name:"سولانا",    symbol:"SOL/USDT", price:9840000,    change24h:-3.24, high24h:10250000,   low24h:9710000,    volume24h:8900000000000,  isMock:true },
+    { id:"xrp",   name:"ریپل",      symbol:"XRP/USDT", price:34250,      change24h:1.05,  high24h:35100,      low24h:33700,      volume24h:4200000000000,  isMock:true },
+    { id:"doge",  name:"دوج‌کوین",  symbol:"DOGE/USDT", price:9120,      change24h:5.62,  high24h:9480,       low24h:8640,       volume24h:3100000000000,  isMock:true },
+    { id:"ada",   name:"کاردانو",   symbol:"ADA/USDT", price:21800,      change24h:-0.64, high24h:22400,      low24h:21350,      volume24h:1800000000000,  isMock:true },
+    { id:"trx",   name:"ترون",      symbol:"TRX/USDT", price:8650,       change24h:0.92,  high24h:8790,       low24h:8540,       volume24h:1200000000000,  isMock:true },
+    { id:"ton",   name:"تون‌کوین",  symbol:"TON/USDT", price:264000,     change24h:-2.05, high24h:272500,     low24h:259800,     volume24h:2600000000000,  isMock:true },
+  ],
+
+  // دنباله قیمت N روزه برای هر ارز (برای رسم نمودار صفحه اختصاصی)
+  coinHistory(coinId, days = 30){
+    const base = (this.coins.find(c => c.id === coinId) || {}).price || 1000;
+    const points = [];
+    let v = base * 0.9;
+    const now = Date.now();
+    for(let i = days; i >= 0; i--){
+      v = v * (1 + (Math.sin(i/3.1) * 0.015) + (Math.random() - 0.5) * 0.02);
+      points.push({
+        t: new Date(now - i * 86400000).toISOString(),
+        v: Math.round(v)
+      });
+    }
+    return points;
+  },
+
+  history30d(coinId){ return this.coinHistory(coinId, 30); },
+
+  // سری زمانی ارزش کل پرتفو (برای نمودار داشبورد)
+  portfolioHistory(range = "7d"){
+    const days = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 }[range] || 7;
+    const stepsPerDay = range === "24h" ? 8 : 1;
+    const points = [];
+    let v = 410000000;
+    const now = Date.now();
+    const totalSteps = days * stepsPerDay;
+    for(let i = totalSteps; i >= 0; i--){
+      v = v * (1 + (Math.random() - 0.48) * 0.018);
+      points.push({
+        t: new Date(now - i * (86400000 / stepsPerDay)).toISOString(),
+        v: Math.round(v)
+      });
+    }
+    return points;
+  },
+
+  walletAssets: [
+    { coinId:"btc",  name:"بیت‌کوین", symbol:"BTC", total:0.0842, available:0.0842, locked:0,       change24h:2.41,  isMock:true },
+    { coinId:"eth",  name:"اتریوم",   symbol:"ETH", total:1.245,  available:0.945,  locked:0.3,     change24h:-1.12, isMock:true },
+    { coinId:"usdt", name:"تتر",      symbol:"USDT", total:412.5, available:412.5,  locked:0,       change24h:0.08,  isMock:true },
+    { coinId:"sol",  name:"سولانا",   symbol:"SOL", total:18.4,   available:18.4,   locked:0,       change24h:-3.24, isMock:true },
+    { coinId:"doge", name:"دوج‌کوین", symbol:"DOGE", total:5400,  available:5400,   locked:0,       change24h:5.62,  isMock:true },
+  ],
+
+  transactions: [
+    { id:"TXN-9F21A", date:"2026-10-08T14:22:00", type:"خرید",   coin:"BTC",  amount:0.012,  status:"موفق",   desc:"خرید از بازار BTC/USDT", isMock:true },
+    { id:"TXN-9E10C", date:"2026-10-07T09:05:00", type:"فروش",   coin:"ETH",  amount:0.3,    status:"موفق",   desc:"فروش از بازار ETH/USDT", isMock:true },
+    { id:"TXN-9D8B2", date:"2026-10-05T19:40:00", type:"واریز",  coin:"USDT", amount:200,    status:"موفق",   desc:"واریز از کیف‌پول خارجی", isMock:true },
+    { id:"TXN-9C331", date:"2026-10-03T11:15:00", type:"خرید",   coin:"SOL",  amount:4.2,    status:"در انتظار", desc:"سفارش محدود SOL/USDT", isMock:true },
+    { id:"TXN-9B220", date:"2026-09-29T17:50:00", type:"برداشت", coin:"DOGE", amount:1200,   status:"ناموفق", desc:"خطا در تایید شبکه", isMock:true },
+  ],
+
+  profile: {
+    username: "کاربر نمونه",
+    accountId: "NX-2284910",
+    phoneMasked: "0912***45",
+    connectedAt: "2026-09-18T10:30:00",
+    exchangeName: "نوبیتکس",
+  },
+
+  openOrdersCount: 2,
+};
+// ===================================================================
+// لایه اتصال به داده (Api)
+// -------------------------------------------------------------------
+// این فایل جای‌گزین لایه فنی واقعی اتصال به نوبیتکس است که طبق
+// طراحی پروژه، جداگانه و در سمت سرور (مثلاً یک Cloudflare Worker)
+// پیاده‌سازی می‌شود:
+//
+//   مرورگر کاربر → Worker (امضای درخواست با API Secret) → نوبیتکس
+//
+// نکات امنیتی که این فایل رعایت می‌کند و باید در پیاده‌سازی واقعی هم
+// رعایت شوند:
+//   • کلید/سیکرت API هرگز در localStorage یا کد سمت کلاینت ذخیره
+//     نمی‌شود؛ فقط برای یک درخواست اتصال اولیه به سرور ارسال و سپس
+//     از حافظه کلاینت پاک می‌شود.
+//   • پس از اتصال موفق، فقط یک «نشانه جلسه» (session token) بدون
+//     اطلاعات حساس در حافظه (نه storage) نگه‌داری می‌شود.
+//   • تمام متدهای زیر async هستند و دقیقاً همان قراردادی را دارند
+//     که نسخه واقعی (فراخوانی Worker) باید داشته باشد؛ برای اتصال
+//     نسخه واقعی فقط کافیست بدنه هر متد با fetch به Worker واقعی
+//     جایگزین شود و امضای تابع حفظ بماند.
+//
+// در این نسخه (چون بک‌اند واقعی در دسترس نیست) همه متدها با تاخیر
+// شبیه‌سازی‌شده از MockData پاسخ می‌دهند و خروجی isMock:true دارد.
+// ===================================================================
+
+const Api = (() => {
+
+  const LATENCY = 550;
+  let sessionToken = null; // فقط در حافظه؛ هرگز در storage ذخیره نمی‌شود
+
+  function delay(ms = LATENCY){
+    return new Promise(res => setTimeout(res, ms));
+  }
+
+  function isValidKeyFormat(key){
+    // بررسی ظاهری ساده؛ اعتبارسنجی واقعی کلید همیشه سمت سرور انجام می‌شود
+    return typeof key === "string" && key.trim().length >= 20;
+  }
+
+  async function connect(apiKey){
+    if(!isValidKeyFormat(apiKey)){
+      const err = new Error("فرمت کلید API نامعتبر است.");
+      err.code = "INVALID_FORMAT";
+      throw err;
+    }
+    await delay(1100);
+
+    // --- در نسخه واقعی: ---
+    // const res = await fetch(`${WORKER_URL}/connect`, {
+    //   method: "POST",
+    //   body: JSON.stringify({ apiKey }),
+    // });
+    // کلید apiKey پس از این فراخوانی از حافظه کلاینت حذف می‌شود.
+
+    sessionToken = "sess_" + Math.random().toString(36).slice(2);
+    State.set({
+      connection: {
+        status: "connected",
+        exchangeName: "نوبیتکس",
+        connectedAt: new Date().toISOString(),
+        lastChecked: new Date().toISOString(),
+      }
+    });
+    return { ok:true, sessionToken };
+  }
+
+  async function disconnect(){
+    await delay(300);
+    sessionToken = null;
+    State.set({ connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null } });
+    return { ok:true };
+  }
+
+  async function checkConnection(){
+    await delay(500);
+    const conn = State.get().connection;
+    if(conn.status !== "connected") return conn;
+    const updated = { ...conn, lastChecked: new Date().toISOString() };
+    State.set({ connection: updated });
+    return updated;
+  }
+
+  async function getMarketList(){
+    await delay();
+    return { data: MockData.coins, isMock:true, fetchedAt:new Date().toISOString() };
+  }
+
+  async function getCoin(coinId){
+    await delay();
+    const coin = MockData.coins.find(c => c.id === coinId) || null;
+    return { data: coin, isMock:true, fetchedAt:new Date().toISOString() };
+  }
+
+  async function getCoinHistory(coinId, range = "30d"){
+    await delay(650);
+    const days = { "7d":7, "30d":30, "90d":90 }[range] || 30;
+    return { data: MockData.coinHistory(coinId, days), range, isMock:true, fetchedAt:new Date().toISOString() };
+  }
+
+  async function getPortfolioSummary(){
+    await delay();
+    const assets = MockData.walletAssets;
+    const totalValueIrt = 412850000; // ساختگی — فقط برای نمایش ساختار
+    return {
+      data:{
+        totalValueIrt,
+        availableValueIrt: Math.round(totalValueIrt * 0.82),
+        assetCount: assets.length,
+        openOrders: MockData.openOrdersCount,
+        change24hPercent: 1.86,
+      },
+      isMock:true,
+      fetchedAt:new Date().toISOString()
+    };
+  }
+
+  async function getPortfolioHistory(range = "7d"){
+    await delay(650);
+    return { data: MockData.portfolioHistory(range), range, isMock:true, fetchedAt:new Date().toISOString() };
+  }
+
+  async function getWalletAssets(){
+    await delay();
+    return { data: MockData.walletAssets, isMock:true, fetchedAt:new Date().toISOString() };
+  }
+
+  async function getTransactions(filters = {}){
+    await delay();
+    let rows = [...MockData.transactions];
+    if(filters.type && filters.type !== "all") rows = rows.filter(r => r.type === filters.type);
+    if(filters.coin && filters.coin !== "all") rows = rows.filter(r => r.coin === filters.coin);
+    if(filters.status && filters.status !== "all") rows = rows.filter(r => r.status === filters.status);
+    return { data: rows, isMock:true, fetchedAt:new Date().toISOString() };
+  }
+
+  async function getProfile(){
+    await delay();
+    return { data: MockData.profile, isMock:true, fetchedAt:new Date().toISOString() };
+  }
+
+  return {
+    connect, disconnect, checkConnection,
+    getMarketList, getCoin, getCoinHistory,
+    getPortfolioSummary, getPortfolioHistory,
+    getWalletAssets, getTransactions, getProfile,
+  };
+})();
+// ===================================================================
+// اعلان‌های کوتاه (Toast)
+// ===================================================================
+
+const Toast = (() => {
+  let host = null;
+
+  function ensureHost(){
+    if(host) return host;
+    host = Utils.el("div", { class:"toast-host" });
+    document.body.appendChild(host);
+    return host;
+  }
+
+  const ICONS = { success:"check", error:"alert", info:"info" };
+
+  function show(type, title, desc = "", timeout = 4200){
+    ensureHost();
+    const node = Utils.el("div", { class:`toast ${type}` }, [
+      Utils.el("div", { html: ic(ICONS[type] || "info") }),
+      Utils.el("div", {}, [
+        Utils.el("div", { style:"font-weight:700;margin-bottom:2px;" }, title),
+        desc ? Utils.el("div", { class:"text-faint" }, desc) : null,
+      ])
+    ]);
+    host.appendChild(node);
+    setTimeout(() => {
+      node.style.transition = "opacity .2s ease, transform .2s ease";
+      node.style.opacity = "0";
+      node.style.transform = "translateY(6px)";
+      setTimeout(() => node.remove(), 200);
+    }, timeout);
+  }
+
+  return {
+    success:(t,d) => show("success", t, d),
+    error:(t,d) => show("error", t, d),
+    info:(t,d) => show("info", t, d),
+  };
+})();
+// ===================================================================
+// کمک‌تابع‌های رسم نمودار (بر پایه Chart.js)
+// ===================================================================
+
+const Charts = (() => {
+  const instances = new Map();
+
+  function cssVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function destroy(key){
+    if(instances.has(key)){
+      instances.get(key).destroy();
+      instances.delete(key);
+    }
+  }
+
+  function lineChart(key, canvas, points, { color, currency = "تومان", fill = true } = {}){
+    destroy(key);
+    if(!canvas || typeof Chart === "undefined") return null;
+    const accent = color || cssVar("--accent") || "#17c3b2";
+    const grid = cssVar("--border-soft") || "#1b2436";
+    const textFaint = cssVar("--text-faint") || "#5c6680";
+
+    const ctx = canvas.getContext("2d");
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.clientHeight || 220);
+    gradient.addColorStop(0, accent + "33");
+    gradient.addColorStop(1, accent + "00");
+
+    const chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: points.map(p => p.t),
+        datasets: [{
+          data: points.map(p => p.v),
+          borderColor: accent,
+          backgroundColor: fill ? gradient : "transparent",
+          borderWidth: 2,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          pointHoverBackgroundColor: accent,
+          pointHoverBorderColor: "#fff",
+          tension: 0.35,
+          fill,
+        }]
+      },
+      options: {
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{ mode:"index", intersect:false },
+        plugins:{
+          legend:{ display:false },
+          tooltip:{
+            rtl:true,
+            backgroundColor: cssVar("--surface") || "#121a2b",
+            borderColor: grid,
+            borderWidth:1,
+            titleColor: textFaint,
+            bodyColor: "#e9eef6",
+            titleFont:{ family:"Vazirmatn", size:11 },
+            bodyFont:{ family:"Vazirmatn", size:12, weight:"700" },
+            padding:10,
+            displayColors:false,
+            callbacks:{
+              title:(items) => Utils.formatDateTime(items[0].label),
+              label:(item) => Utils.formatPrice(item.raw, currency),
+            }
+          }
+        },
+        scales:{
+          x:{ display:false },
+          y:{ display:false }
+        },
+        elements:{ line:{ capBezierPoints:true } }
+      }
+    });
+    instances.set(key, chart);
+    return chart;
+  }
+
+  function sparkline(canvas, points, positive = true){
+    if(!canvas || typeof Chart === "undefined") return null;
+    const key = "spark_" + (canvas.dataset.key || Math.random());
+    destroy(key);
+    const color = positive ? (cssVar("--green") || "#2ecc82") : (cssVar("--red") || "#f0555f");
+    const chart = new Chart(canvas.getContext("2d"), {
+      type:"line",
+      data:{
+        labels:points.map((_,i) => i),
+        datasets:[{ data:points.map(p => p.v), borderColor:color, borderWidth:1.6, pointRadius:0, tension:0.4 }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{enabled:false} },
+        scales:{ x:{display:false}, y:{display:false} },
+        elements:{ line:{ borderJoinStyle:"round" } }
+      }
+    });
+    instances.set(key, chart);
+    return chart;
+  }
+
+  return { lineChart, sparkline, destroy };
+})();
+// ===================================================================
+// کامپوننت‌های قابل استفاده مجدد (کارت، جدول، وضعیت خالی/خطا و ...)
+// ===================================================================
+
+const UI = (() => {
+
+  function skeleton(w = "100%", h = "16px", extra = ""){
+    return Utils.el("div", { class:"skel", style:`width:${w};height:${h};${extra}` });
+  }
+
+  function skeletonCard(){
+    return Utils.el("div", { class:"card card-pad" }, [
+      skeleton("40%", "11px", "margin-bottom:10px;"),
+      skeleton("60%", "22px"),
+    ]);
+  }
+
+  function stateBox({ icon = "info", title, desc, actionLabel, onAction }){
+    const box = Utils.el("div", { class:"state-box" }, [
+      Utils.el("div", { html: ic(icon) }),
+      Utils.el("div", { class:"title" }, title),
+      desc ? Utils.el("div", { class:"desc" }, desc) : null,
+    ]);
+    if(actionLabel && onAction){
+      const btn = Utils.el("button", { class:"btn btn-ghost btn-sm", style:"margin-top:8px;", onClick:onAction }, actionLabel);
+      box.appendChild(btn);
+    }
+    return box;
+  }
+
+  function empty(title, desc, action){
+    return stateBox({ icon:"empty", title, desc, ...(action || {}) });
+  }
+
+  function errorState(title, desc, onRetry){
+    return stateBox({ icon:"alert", title: title || "خطا در دریافت اطلاعات", desc: desc || "اتصال برقرار نشد یا پاسخی دریافت نشد.", actionLabel: onRetry ? "تلاش مجدد" : null, onAction:onRetry });
+  }
+
+  function loading(title = "در حال دریافت اطلاعات…"){
+    return Utils.el("div", { class:"state-box" }, [
+      Utils.el("div", { class:"spin", style:"width:22px;height:22px;border-width:2.5px;color:var(--accent);" }),
+      Utils.el("div", { class:"title", style:"margin-top:4px;" }, title),
+    ]);
+  }
+
+  function mockFlag(){
+    return Utils.el("span", { class:"mock-flag" }, [ic("info"), "داده آزمایشی"]);
+  }
+
+  function changeBadge(value){
+    if(value === null || value === undefined) return Utils.el("span", { class:"badge badge-gray" }, "—");
+    const positive = value >= 0;
+    return Utils.el("span", { class:`badge ${positive ? "badge-green" : "badge-red"}` }, [
+      Utils.el("span", { html: ic(positive ? "trendUp" : "trendDown") }),
+      Utils.formatPercent(value),
+    ]);
+  }
+
+  function coinAvatar(symbol, size = 28){
+    const letters = (symbol || "?").replace(/[^A-Za-z]/g,"").slice(0,3) || "?";
+    return Utils.el("div", { class:"coin-ic", style:`width:${size}px;height:${size}px;font-size:${Math.round(size*0.36)}px;` }, letters);
+  }
+
+  function statusBadge(status){
+    const map = {
+      "موفق": "badge-green", "در انتظار": "badge-amber", "ناموفق": "badge-red",
+      "connected": "badge-green", "disconnected": "badge-gray", "checking": "badge-blue",
+    };
+    const labelMap = { connected:"متصل", disconnected:"قطع شده", checking:"در حال بررسی" };
+    return Utils.el("span", { class:`badge ${map[status] || "badge-gray"}` }, [
+      Utils.el("span", { class:"badge-dot" }),
+      labelMap[status] || status,
+    ]);
+  }
+
+  return { skeleton, skeletonCard, stateBox, empty, errorState, loading, mockFlag, changeBadge, coinAvatar, statusBadge };
+})();
+// ===================================================================
+// مسیریاب ساده مبتنی بر Hash
+// ===================================================================
+
+const Router = (() => {
+  const routes = [
+    { pattern: /^connect$/,        name:"connect",  page:() => PageConnect },
+    { pattern: /^dashboard$/,      name:"dashboard",page:() => PageDashboard },
+    { pattern: /^market$/,         name:"market",   page:() => PageMarket },
+    { pattern: /^coin\/([\w-]+)$/, name:"coin",     page:() => PageCoin },
+    { pattern: /^wallet$/,         name:"wallet",   page:() => PageWallet },
+    { pattern: /^history$/,        name:"history",  page:() => PageHistory },
+    { pattern: /^profile$/,        name:"profile",  page:() => PageProfile },
+    { pattern: /^settings$/,       name:"settings", page:() => PageSettings },
+  ];
+
+  function current(){
+    const hash = (location.hash || "#connect").replace(/^#\/?/, "");
+    for(const r of routes){
+      const m = hash.match(r.pattern);
+      if(m) return { name:r.name, page:r.page(), params:{ id: m[1] } };
+    }
+    return { name:"dashboard", page:PageDashboard, params:{} };
+  }
+
+  function go(path){
+    location.hash = "#/" + path.replace(/^#\/?/, "");
+  }
+
+  function start(onChange){
+    window.addEventListener("hashchange", () => onChange(current()));
+    onChange(current());
+  }
+
+  return { go, current, start };
+})();
+// ===================================================================
+// صفحه اتصال حساب نوبیتکس
+// ===================================================================
+
+// مراحل راهنما از اینجا قابل ویرایش هستند — در صورت تغییر فرایند
+// رسمی نوبیتکس، فقط کافیست متن همین آرایه به‌روز شود.
+const CONNECT_GUIDE_STEPS = [
+  "وارد وب‌سایت رسمی نوبیتکس به نشانی nobitex.ir شوید و وارد حساب کاربری خود شوید.",
+  "از بخش تنظیمات حساب، مسیر «کلیدهای API» را باز کنید.",
+  "یک کلید جدید بسازید و فقط دسترسی‌های «خواندن اطلاعات» و «معامله» را فعال کنید.",
+  "در صورت امکان، دسترسی «برداشت» را غیرفعال نگه دارید.",
+  "کلید ساخته‌شده را کپی کرده و در فیلد زیر وارد کنید.",
+];
+
+const NOBITEX_API_GUIDE_URL = "https://apidocs.nobitex.ir/api-key-guide";
+
+const PageConnect = {
+  mount(container){
+    let guideOpen = false;
+    let showKey = false;
+    let status = "idle"; // idle | loading | success | error
+    let errorMsg = "";
+
+    container.innerHTML = "";
+    container.className = "connect-shell";
+
+    const card = Utils.el("div", { class:"card card-pad connect-card" });
+    container.appendChild(card);
+
+    function renderGuide(){
+      return Utils.el("div", {}, [
+        Utils.el("div", {
+          class:"guide-toggle",
+          onClick: () => { guideOpen = !guideOpen; paint(); }
+        }, [
+          Utils.el("span", {}, "راهنمای دریافت کلید API"),
+          Utils.el("span", { html: ic(guideOpen ? "chevronDown" : "chevronLeft") }),
+        ]),
+        guideOpen ? Utils.el("ol", { class:"guide-steps", style:"list-style:none;" },
+          CONNECT_GUIDE_STEPS.map((s,i) => Utils.el("li", {}, [
+            Utils.el("span", { class:"guide-num" }, String(i+1)),
+            Utils.el("span", {}, s),
+          ]))
+        ) : null,
+      ]);
+    }
+
+    function renderNotice(){
+      return Utils.el("div", { class:"notice-box" }, [
+        Utils.el("div", { html: ic("shield") }),
+        Utils.el("div", {}, [
+          Utils.el("p", {}, "نکات مهم امنیتی پیش از اتصال:"),
+          Utils.el("ul", {}, [
+            Utils.el("li", {}, "کلید API را فقط از وب‌سایت رسمی نوبیتکس دریافت کنید."),
+            Utils.el("li", {}, "سطح دسترسی کلید را متناسب با نیاز برنامه انتخاب کنید."),
+            Utils.el("li", {}, "در صورت امکان، دسترسی برداشت وجه را غیرفعال بگذارید."),
+            Utils.el("li", {}, "کلید API یک اطلاعات حساس است و نباید در اختیار دیگران قرار گیرد."),
+          ]),
+        ]),
+      ]);
+    }
+
+    function renderStatus(){
+      if(status === "loading"){
+        return Utils.el("div", { class:"connect-status loading" }, [
+          Utils.el("span", { class:"spin", style:"width:14px;height:14px;border-width:2px;" }),
+          "در حال برقراری اتصال با نوبیتکس…",
+        ]);
+      }
+      if(status === "success"){
+        return Utils.el("div", { class:"connect-status success" }, [
+          Utils.el("span", { html: ic("check") }),
+          "اتصال با موفقیت برقرار شد. در حال انتقال به داشبورد…",
+        ]);
+      }
+      if(status === "error"){
+        return Utils.el("div", { class:"connect-status error" }, [
+          Utils.el("span", { html: ic("alert") }),
+          errorMsg || "اتصال برقرار نشد. لطفاً دوباره تلاش کنید.",
+        ]);
+      }
+      return null;
+    }
+
+    async function handleConnect(){
+      const input = card.querySelector("#apiKeyInput");
+      const value = input.value.trim();
+
+      if(value.length < 20){
+        status = "error";
+        errorMsg = "کلید وارد شده معتبر به نظر نمی‌رسد. کلید API معمولاً طولانی‌تر است.";
+        paint();
+        return;
+      }
+
+      status = "loading";
+      errorMsg = "";
+      paint();
+
+      try{
+        await Api.connect(value);
+        // کلید فقط برای همین فراخوانی استفاده شد و اینجا از حافظه پاک می‌شود
+        input.value = "";
+        status = "success";
+        paint();
+        Toast.success("اتصال برقرار شد", "حساب نوبیتکس شما با موفقیت متصل شد.");
+        setTimeout(() => Router.go("dashboard"), 700);
+      }catch(e){
+        status = "error";
+        errorMsg = e && e.message ? e.message : "خطایی در اتصال رخ داد.";
+        paint();
+      }
+    }
+
+    function paint(){
+      card.innerHTML = "";
+      card.appendChild(Utils.el("div", { class:"connect-logo" }, [
+        Utils.el("div", { class:"brand-mark", html: ic("logo") }),
+        Utils.el("div", { class:"connect-logo-text" }, [
+          Utils.el("b", {}, "صرافی من"),
+          Utils.el("span", {}, "داشبورد شخصی مدیریت دارایی"),
+        ]),
+      ]));
+      card.appendChild(Utils.el("h1", { class:"connect-title" }, "اتصال حساب نوبیتکس"));
+      card.appendChild(Utils.el("p", { class:"connect-desc" },
+        "با وارد کردن کلید API حساب نوبیتکس خود، می‌توانید دارایی‌ها، قیمت‌ها و تاریخچه تراکنش‌های خود را در این داشبورد مشاهده کنید. این برنامه هرگز امکان برداشت وجه ندارد."
+      ));
+
+      card.appendChild(renderGuide());
+      card.appendChild(renderNotice());
+
+      const field = Utils.el("div", { class:"field" }, [
+        Utils.el("label", { for:"apiKeyInput" }, "کلید API نوبیتکس"),
+        Utils.el("div", { class:"input-wrap api-field" }, [
+          Utils.el("input", {
+            id:"apiKeyInput", class:"input", type: showKey ? "text" : "password",
+            placeholder:"کلید API خود را اینجا وارد کنید", autocomplete:"off", spellcheck:"false",
+          }),
+          Utils.el("div", { class:"input-actions" }, [
+            Utils.el("button", {
+              class:"input-icon-btn", type:"button", title: showKey ? "مخفی کردن" : "نمایش",
+              html: ic(showKey ? "eyeOff" : "eye"),
+              onClick: () => { showKey = !showKey; const inp = card.querySelector("#apiKeyInput"); const val = inp.value; paint(); const ni = card.querySelector("#apiKeyInput"); ni.value = val; ni.focus(); },
+            }),
+          ]),
+        ]),
+        Utils.el("span", { class:"field-hint" }, "این مقدار هرگز در مرورگر ذخیره نمی‌شود و فقط برای برقراری اتصال اولیه استفاده می‌شود."),
+      ]);
+      card.appendChild(field);
+
+      const btn = Utils.el("button", {
+        class:"btn btn-primary btn-block", style:"margin-top:16px;height:44px;",
+        disabled: status === "loading" ? "true" : false,
+        onClick: handleConnect,
+      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال اتصال…"] : "اتصال به نوبیتکس");
+      card.appendChild(btn);
+
+      const st = renderStatus();
+      if(st) card.appendChild(st);
+
+      card.appendChild(Utils.el("div", { class:"connect-foot" }, [
+        "برای اطلاعات بیشتر، ",
+        Utils.el("a", { href: NOBITEX_API_GUIDE_URL, target:"_blank", rel:"noopener" }, "راهنمای رسمی نوبیتکس"),
+        " را مطالعه کنید.",
+      ]));
+    }
+
+    paint();
+  }
+};
+// ===================================================================
+// صفحه داشبورد
+// ===================================================================
+
+const PageDashboard = {
+  async mount(container){
+    container.innerHTML = "";
+    const head = Utils.el("div", { class:"page-head" }, [
+      Utils.el("div", {}, [
+        Utils.el("h1", {}, "داشبورد"),
+        Utils.el("div", { class:"sub" }, "نمای کلی دارایی‌ها و بازار"),
+      ]),
+    ]);
+    container.appendChild(head);
+
+    const kpiGrid = Utils.el("div", { class:"kpi-grid" });
+    const dashGrid = Utils.el("div", { class:"dash-grid" });
+    const chartCard = Utils.el("div", { class:"card card-pad" });
+    const sideCard = Utils.el("div", { class:"card card-pad" });
+    dashGrid.append(chartCard, sideCard);
+    container.append(kpiGrid, dashGrid);
+
+    const marketCard = Utils.el("div", { class:"card card-pad", style:"margin-top:14px;" });
+    container.appendChild(marketCard);
+
+    // --- اسکلت بارگذاری اولیه ---
+    for(let i=0;i<4;i++) kpiGrid.appendChild(UI.skeletonCard());
+    chartCard.appendChild(UI.loading("در حال بارگذاری نمودار دارایی…"));
+    sideCard.appendChild(UI.loading("در حال دریافت بازار…"));
+    marketCard.appendChild(UI.loading());
+
+    let range = "7d";
+
+    try{
+      const [summaryRes, historyRes, marketRes] = await Promise.all([
+        Api.getPortfolioSummary(),
+        Api.getPortfolioHistory(range),
+        Api.getMarketList(),
+      ]);
+
+      renderKpis(summaryRes);
+      renderChart(historyRes, summaryRes);
+      renderSideMarket(marketRes);
+      renderMarketTable(marketRes);
+
+      State.set({ connection: { lastChecked: new Date().toISOString() } });
+    }catch(e){
+      kpiGrid.innerHTML = "";
+      chartCard.innerHTML = "";
+      marketCard.innerHTML = "";
+      chartCard.appendChild(UI.errorState("دریافت اطلاعات داشبورد ناموفق بود", "اتصال به سرور برقرار نشد.", () => PageDashboard.mount(container)));
+    }
+
+    function renderKpis(summaryRes){
+      kpiGrid.innerHTML = "";
+      const s = summaryRes.data;
+      const items = [
+        { label:"ارزش کل دارایی‌ها", value:Utils.formatPrice(s.totalValueIrt), ic:"wallet", change:s.change24hPercent, color:"" },
+        { label:"موجودی قابل‌استفاده", value:Utils.formatPrice(s.availableValueIrt), ic:"zap", color:"blue" },
+        { label:"تعداد دارایی‌ها", value:Utils.formatNumber(s.assetCount), ic:"market", color:"green" },
+        { label:"سفارش‌های باز", value:Utils.formatNumber(s.openOrders), ic:"history", color:"amber" },
+      ];
+      items.forEach(it => {
+        const card = Utils.el("div", { class:"card kpi-card" }, [
+          Utils.el("div", { class:"kpi-top" }, [
+            Utils.el("div", { class:`kpi-ic ${it.color}`, html: ic(it.ic) }),
+            summaryRes.isMock ? UI.mockFlag() : null,
+          ]),
+          Utils.el("div", { class:"kpi-label" }, it.label),
+          Utils.el("div", { class:"kpi-value num" }, it.value),
+          it.change !== undefined ? Utils.el("div", { class:`kpi-change ${it.change >= 0 ? "up":"down"}` }, [
+            Utils.el("span", { html: ic(it.change >= 0 ? "trendUp" : "trendDown") }),
+            Utils.formatPercent(it.change) + " (۲۴ ساعت)",
+          ]) : null,
+        ]);
+        kpiGrid.appendChild(card);
+      });
+    }
+
+    function renderChart(historyRes, summaryRes){
+      chartCard.innerHTML = "";
+      const points = historyRes.data;
+      if(!points || points.length < 2){
+        chartCard.appendChild(UI.empty("داده تاریخی کافی نیست", "برای نمایش نمودار، داده بیشتری لازم است."));
+        return;
+      }
+      const last = points[points.length-1].v;
+      const first = points[0].v;
+      const pct = ((last - first) / first) * 100;
+
+      chartCard.appendChild(Utils.el("div", { class:"chart-head" }, [
+        Utils.el("div", {}, [
+          Utils.el("div", { class:"card-title" }, [
+            "ارزش کل پرتفو ",
+            historyRes.isMock ? UI.mockFlag() : null,
+          ]),
+          Utils.el("div", { class:"chart-value num" }, Utils.formatPrice(last)),
+          Utils.el("div", { class:`chart-value-sub ${pct>=0?"up":"down"}` }, `${Utils.formatPercent(pct)} در این بازه`),
+        ]),
+        Utils.el("div", { class:"range-tabs" }, ["24h","7d","30d","90d"].map(r =>
+          Utils.el("button", {
+            class:`chip ${r===range?"active":""}`,
+            onClick: async () => {
+              range = r;
+              chartCard.querySelectorAll(".range-tabs .chip").forEach(c=>c.classList.remove("active"));
+              const hRes = await Api.getPortfolioHistory(range);
+              renderChart(hRes, summaryRes);
+            }
+          }, r)
+        )),
+      ]));
+
+      const wrap = Utils.el("div", { class:"chart-canvas-wrap" }, [ Utils.el("canvas", { id:"portfolioChart" }) ]);
+      chartCard.appendChild(wrap);
+      requestAnimationFrame(() => {
+        Charts.lineChart("portfolioChart", document.getElementById("portfolioChart"), points, { currency:"تومان" });
+      });
+    }
+
+    function renderSideMarket(marketRes){
+      sideCard.innerHTML = "";
+      sideCard.appendChild(Utils.el("div", { class:"card-head" }, [
+        Utils.el("div", { class:"card-title" }, "رصد سریع بازار"),
+      ]));
+      const top = [...marketRes.data].sort((a,b) => Math.abs(b.change24h) - Math.abs(a.change24h)).slice(0,6);
+      if(top.length === 0){
+        sideCard.appendChild(UI.empty("بازاری یافت نشد", ""));
+        return;
+      }
+      const list = Utils.el("div", { class:"mini-list" });
+      top.forEach(c => {
+        const row = Utils.el("div", { class:"mini-row", onClick: () => Router.go(`coin/${c.id}`) }, [
+          Utils.el("div", { class:"mini-left" }, [
+            UI.coinAvatar(c.symbol, 30),
+            Utils.el("div", {}, [
+              Utils.el("div", { class:"mini-name" }, c.name),
+              Utils.el("div", { class:"mini-sym num" }, c.symbol),
+            ]),
+          ]),
+          Utils.el("div", { class:"mini-right" }, [
+            Utils.el("div", { class:"mini-price num" }, Utils.formatPrice(c.price, "")),
+            UI.changeBadge(c.change24h),
+          ]),
+        ]);
+        row.style.cursor = "pointer";
+        list.appendChild(row);
+      });
+      sideCard.appendChild(list);
+    }
+
+    function renderMarketTable(marketRes){
+      marketCard.innerHTML = "";
+      marketCard.appendChild(Utils.el("div", { class:"card-head" }, [
+        Utils.el("div", { class:"card-title" }, [
+          "ارزهای منتخب ",
+          marketRes.isMock ? UI.mockFlag() : null,
+        ]),
+        Utils.el("button", { class:"btn btn-outline btn-sm", onClick: () => Router.go("market") }, "مشاهده همه بازار"),
+      ]));
+
+      if(!marketRes.data || marketRes.data.length === 0){
+        marketCard.appendChild(UI.empty("ارزی برای نمایش یافت نشد", ""));
+        return;
+      }
+
+      const wrap = Utils.el("div", { class:"table-wrap" });
+      const table = Utils.el("table", { class:"tbl" }, [
+        Utils.el("thead", {}, Utils.el("tr", {}, [
+          Utils.el("th", {}, "نام ارز"), Utils.el("th", {}, "نماد"),
+          Utils.el("th", {}, "آخرین قیمت"), Utils.el("th", {}, "تغییر ۲۴ساعته"),
+          Utils.el("th", {}, "حجم معاملات"), Utils.el("th", {}, ""),
+        ])),
+      ]);
+      const tbody = Utils.el("tbody");
+      marketRes.data.slice(0,6).forEach(c => {
+        const tr = Utils.el("tr", { onClick: () => Router.go(`coin/${c.id}`) }, [
+          Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(c.symbol), Utils.el("span", {}, c.name)])),
+          Utils.el("td", { class:"num text-dim" }, c.symbol),
+          Utils.el("td", { class:"num" }, Utils.formatPrice(c.price, "")),
+          Utils.el("td", {}, UI.changeBadge(c.change24h)),
+          Utils.el("td", { class:"num text-dim" }, Utils.formatNumber(c.volume24h, { compact:true })),
+          Utils.el("td", {}, Utils.el("button", { class:"btn btn-ghost btn-sm" }, "جزئیات")),
+        ]);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      marketCard.appendChild(wrap);
+    }
+  }
+};
+// ===================================================================
+// صفحه بازار ارزهای دیجیتال
+// ===================================================================
+
+const PageMarket = {
+  async mount(container){
+    container.innerHTML = "";
+    let allCoins = [];
+    let query = "";
+    let marketFilter = "all";
+    let sortKey = "volume24h";
+    let sortDir = "desc";
+    let pageSize = 6;
+    let visibleCount = pageSize;
+    let loadError = false;
+
+    container.appendChild(Utils.el("div", { class:"page-head" }, [
+      Utils.el("div", {}, [
+        Utils.el("h1", {}, "بازار ارزهای دیجیتال"),
+        Utils.el("div", { class:"sub" }, "قیمت لحظه‌ای ارزهای پشتیبانی‌شده توسط نوبیتکس"),
+      ]),
+      Utils.el("button", { class:"btn btn-ghost btn-sm", id:"mkRefresh", html:"" }, [Utils.el("span",{html:ic("refresh")}), " به‌روزرسانی"]),
+    ]));
+
+    const toolbar = Utils.el("div", { class:"market-toolbar" });
+    container.appendChild(toolbar);
+
+    const card = Utils.el("div", { class:"card card-pad" });
+    container.appendChild(card);
+    card.appendChild(UI.loading("در حال بارگذاری بازار…"));
+
+    container.querySelector("#mkRefresh").addEventListener("click", load);
+
+    function buildToolbar(){
+      toolbar.innerHTML = "";
+      toolbar.appendChild(Utils.el("div", { class:"search-wrap" }, [
+        Utils.el("span", { html: ic("search") }),
+        Utils.el("input", {
+          class:"input", placeholder:"جست‌وجوی نام یا نماد ارز…",
+          value:query,
+          onInput: Utils.debounce((e) => { query = e.target.value; visibleCount = pageSize; renderTable(); }, 200),
+        }),
+      ]));
+      toolbar.appendChild(Utils.el("div", { style:"display:flex;gap:6px;flex-wrap:wrap;" }, [
+        chip("all","همه بازارها"), chip("IRT","بازار تومانی"), chip("USDT","بازار تتری"),
+      ]));
+    }
+
+    function chip(val, label){
+      return Utils.el("button", {
+        class:`chip ${marketFilter===val?"active":""}`,
+        onClick: () => { marketFilter = val; visibleCount = pageSize; buildToolbar(); renderTable(); }
+      }, label);
+    }
+
+    async function load(){
+      card.innerHTML = "";
+      card.appendChild(UI.loading("در حال بارگذاری بازار…"));
+      try{
+        const res = await Api.getMarketList();
+        allCoins = res.data.map(c => ({ ...c, _spark: MockData.history30d(c.id).slice(-14) }));
+        loadError = false;
+        buildToolbar();
+        renderTable(res.isMock);
+      }catch(e){
+        loadError = true;
+        card.innerHTML = "";
+        card.appendChild(UI.errorState("دریافت بازار ناموفق بود", "", load));
+      }
+    }
+
+    function applyFilters(){
+      let rows = allCoins.filter(c => {
+        if(marketFilter !== "all" && !c.symbol.includes(marketFilter)) return false;
+        if(query && !(c.name.includes(query) || c.symbol.toLowerCase().includes(query.toLowerCase()))) return false;
+        return true;
+      });
+      rows.sort((a,b) => {
+        const d = sortDir === "asc" ? 1 : -1;
+        return (a[sortKey] - b[sortKey]) * d;
+      });
+      return rows;
+    }
+
+    function setSort(key){
+      if(sortKey === key) sortDir = sortDir === "asc" ? "desc" : "asc";
+      else { sortKey = key; sortDir = "desc"; }
+      renderTable();
+    }
+
+    function renderTable(isMock){
+      card.innerHTML = "";
+      const rows = applyFilters();
+
+      card.appendChild(Utils.el("div", { class:"card-head" }, [
+        Utils.el("div", { class:"card-title" }, [
+          `${rows.length} ارز `,
+          isMock ? UI.mockFlag() : null,
+        ]),
+      ]));
+
+      if(rows.length === 0){
+        card.appendChild(UI.empty("نتیجه‌ای یافت نشد", "عبارت جست‌وجو یا فیلتر انتخاب‌شده را تغییر دهید."));
+        return;
+      }
+
+      const th = (label, key) => Utils.el("th", {
+        class: key ? "sortable" : "",
+        onClick: key ? () => setSort(key) : null,
+      }, [label, key && sortKey===key ? Utils.el("span", { html: ic(sortDir==="asc"?"chevronDown":"chevronDown") }) : ""]);
+
+      const wrap = Utils.el("div", { class:"table-wrap" });
+      const table = Utils.el("table", { class:"tbl" }, [
+        Utils.el("thead", {}, Utils.el("tr", {}, [
+          th("نام ارز"), th("نماد"),
+          th("قیمت فعلی","price"), th("تغییر ۲۴ساعته","change24h"),
+          th("بالاترین ۲۴ساعته"), th("پایین‌ترین ۲۴ساعته"),
+          th("حجم معاملات","volume24h"), th("روند"), th(""),
+        ])),
+      ]);
+      const tbody = Utils.el("tbody");
+      rows.slice(0, visibleCount).forEach(c => {
+        const tr = Utils.el("tr", { onClick: () => Router.go(`coin/${c.id}`) }, [
+          Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(c.symbol), Utils.el("span", {}, c.name)])),
+          Utils.el("td", { class:"num text-dim" }, c.symbol),
+          Utils.el("td", { class:"num" }, Utils.formatPrice(c.price, "")),
+          Utils.el("td", {}, UI.changeBadge(c.change24h)),
+          Utils.el("td", { class:"num text-dim" }, Utils.formatPrice(c.high24h, "")),
+          Utils.el("td", { class:"num text-dim" }, Utils.formatPrice(c.low24h, "")),
+          Utils.el("td", { class:"num text-dim" }, Utils.formatNumber(c.volume24h, { compact:true })),
+          Utils.el("td", {}, Utils.el("canvas", { class:"sparkline", "data-key":c.id })),
+          Utils.el("td", {}, Utils.el("button", { class:"btn btn-ghost btn-sm" }, "جزئیات")),
+        ]);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      card.appendChild(wrap);
+
+      if(visibleCount < rows.length){
+        card.appendChild(Utils.el("div", { style:"text-align:center;margin-top:14px;" },
+          Utils.el("button", { class:"btn btn-outline btn-sm", onClick: () => { visibleCount += pageSize; renderTable(); } }, "نمایش موارد بیشتر")
+        ));
+      }
+
+      requestAnimationFrame(() => {
+        rows.slice(0, visibleCount).forEach(c => {
+          const canvas = wrap.querySelector(`canvas[data-key="${c.id}"]`);
+          if(canvas) Charts.sparkline(canvas, c._spark, c.change24h >= 0);
+        });
+      });
+    }
+
+    load();
+  }
+};
+// ===================================================================
+// صفحه اختصاصی هر ارز
+// ===================================================================
+
+const PageCoin = {
+  async mount(container, params){
+    const coinId = params.id;
+    container.innerHTML = "";
+    container.appendChild(Utils.el("button", {
+      class:"btn btn-ghost btn-sm", style:"margin-bottom:14px;",
+      onClick: () => Router.go("market"),
+    }, [Utils.el("span", { html: ic("chevronLeft") }), " بازگشت به بازار"]));
+
+    const headCard = Utils.el("div", { class:"card card-pad" });
+    const grid = Utils.el("div", { class:"coin-grid", style:"margin-top:14px;" });
+    const chartCard = Utils.el("div", { class:"card card-pad" });
+    const sideCol = Utils.el("div", { style:"display:flex;flex-direction:column;gap:14px;" });
+    grid.append(chartCard, sideCol);
+    container.append(headCard, grid);
+
+    headCard.appendChild(UI.loading("در حال بارگذاری اطلاعات ارز…"));
+
+    let range = "30d";
+
+    try{
+      const [coinRes, histRes, walletRes] = await Promise.all([
+        Api.getCoin(coinId),
+        Api.getCoinHistory(coinId, range),
+        Api.getWalletAssets(),
+      ]);
+
+      if(!coinRes.data){
+        headCard.innerHTML = "";
+        headCard.appendChild(UI.empty("ارز یافت نشد", "این نماد در فهرست ارزهای پشتیبانی‌شده وجود ندارد."));
+        return;
+      }
+
+      renderHead(coinRes.data, coinRes.isMock);
+      renderChart(histRes, coinRes.data);
+      renderSide(coinRes.data, walletRes);
+
+    }catch(e){
+      headCard.innerHTML = "";
+      headCard.appendChild(UI.errorState("دریافت اطلاعات ارز ناموفق بود", "", () => PageCoin.mount(container, params)));
+    }
+
+    function renderHead(coin, isMock){
+      headCard.innerHTML = "";
+      headCard.appendChild(Utils.el("div", { class:"coin-head" }, [
+        Utils.el("div", { class:"coin-id" }, [
+          Utils.el("div", { class:"coin-ic-lg" }, coin.symbol.replace(/[^A-Za-z]/g,"").slice(0,3)),
+          Utils.el("div", {}, [
+            Utils.el("div", { style:"display:flex;align-items:center;gap:8px;" }, [
+              Utils.el("h2", { style:"font-size:17px;" }, coin.name),
+              isMock ? UI.mockFlag() : null,
+            ]),
+            Utils.el("div", { class:"text-faint num", style:"font-size:12.5px;margin-top:3px;" }, coin.symbol),
+          ]),
+        ]),
+        Utils.el("div", { style:"text-align:left;" }, [
+          Utils.el("div", { class:"coin-price-row" }, [
+            Utils.el("div", { class:"coin-price num" }, Utils.formatPrice(coin.price, "")),
+            UI.changeBadge(coin.change24h),
+          ]),
+          Utils.el("div", { class:"text-faint", style:"font-size:11.5px;margin-top:4px;" },
+            `آخرین به‌روزرسانی: ${Utils.timeAgo(new Date().toISOString())}`),
+        ]),
+      ]));
+      headCard.appendChild(Utils.el("div", { class:"coin-stats-row" }, [
+        stat("بالاترین ۲۴ساعته", Utils.formatPrice(coin.high24h, "")),
+        stat("پایین‌ترین ۲۴ساعته", Utils.formatPrice(coin.low24h, "")),
+        stat("حجم معاملات ۲۴ساعته", Utils.formatNumber(coin.volume24h, { compact:true })),
+      ]));
+    }
+
+    function stat(label, value){
+      return Utils.el("div", { class:"coin-stat" }, [
+        Utils.el("div", { class:"lbl" }, label),
+        Utils.el("div", { class:"val num" }, value),
+      ]);
+    }
+
+    function renderChart(histRes, coin){
+      chartCard.innerHTML = "";
+      const points = histRes.data;
+
+      chartCard.appendChild(Utils.el("div", { class:"coin-chart-controls" }, [
+        Utils.el("div", { class:"card-title" }, [
+          `نمودار قیمت `,
+          histRes.isMock ? UI.mockFlag() : null,
+        ]),
+        Utils.el("div", { class:"range-tabs" }, ["7d","30d","90d"].map(r =>
+          Utils.el("button", {
+            class:`chip ${r===range?"active":""}`,
+            onClick: async () => {
+              range = r;
+              const hRes = await Api.getCoinHistory(coinId, range);
+              renderChart(hRes, coin);
+            }
+          }, r === "7d" ? "۷ روز" : r === "30d" ? "۳۰ روز" : "۹۰ روز")
+        )),
+      ]));
+
+      if(!points || points.length < 2){
+        chartCard.appendChild(UI.empty("داده تاریخی کافی در دسترس نیست", "اطلاعات این بازه هنوز از صرافی دریافت نشده است."));
+        return;
+      }
+
+      const first = points[0].v, last = points[points.length-1].v;
+      const pct = ((last-first)/first)*100;
+      chartCard.appendChild(Utils.el("div", { style:"margin:6px 0 2px;" }, [
+        Utils.el("span", { class:`num ${pct>=0?"up":"down"}`, style:"font-size:13px;font-weight:700;" }, Utils.formatPercent(pct)),
+        Utils.el("span", { class:"text-faint", style:"font-size:12px;" }, ` در بازه انتخاب‌شده`),
+      ]));
+
+      const wrap = Utils.el("div", { class:"chart-canvas-wrap" }, [ Utils.el("canvas", { id:"coinChart" }) ]);
+      chartCard.appendChild(wrap);
+      requestAnimationFrame(() => {
+        Charts.lineChart("coinChart", document.getElementById("coinChart"), points, { color: pct>=0 ? null : getComputedStyle(document.documentElement).getPropertyValue("--red"), currency:"" });
+      });
+    }
+
+    function renderSide(coin, walletRes){
+      sideCol.innerHTML = "";
+
+      const holding = (walletRes.data || []).find(a => a.coinId === coin.id);
+      const holdCard = Utils.el("div", { class:"card card-pad" }, [
+        Utils.el("div", { class:"card-title" }, "موجودی شما از این ارز"),
+      ]);
+      if(holding){
+        holdCard.appendChild(Utils.el("div", { style:"margin-top:10px;" }, [
+          Utils.el("div", { class:"num", style:"font-size:19px;font-weight:700;" }, `${Utils.formatNumber(holding.total,{decimals:6})} ${holding.symbol}`),
+          Utils.el("div", { class:"text-faint", style:"font-size:12px;margin-top:4px;" }, `≈ ${Utils.formatPrice(holding.total * coin.price, "")}`),
+          walletRes.isMock ? Utils.el("div", { style:"margin-top:10px;" }, UI.mockFlag()) : null,
+        ]));
+      }else{
+        holdCard.appendChild(UI.empty("موجودی از این ارز ندارید", ""));
+      }
+      sideCol.appendChild(holdCard);
+
+      const ordersCard = Utils.el("div", { class:"card card-pad" }, [
+        Utils.el("div", { class:"card-title" }, "سفارش‌های باز مرتبط"),
+        UI.empty("سفارش فعالی برای این ارز نیست", "سفارش‌های باز در این نسخه فقط برای کل حساب نمایش داده می‌شوند."),
+      ]);
+      sideCol.appendChild(ordersCard);
+    }
+  }
+};
+// ===================================================================
+// صفحه کیف پول
+// ===================================================================
+
+const NOBITEX_OFFICIAL_URL = "https://nobitex.ir";
+
+const PageWallet = {
+  async mount(container){
+    container.innerHTML = "";
+    let hideValues = false;
+    let query = "";
+    let assets = [];
+    let coinMap = {};
+
+    container.appendChild(Utils.el("div", { class:"page-head" }, [
+      Utils.el("div", {}, [
+        Utils.el("h1", {}, "کیف پول"),
+        Utils.el("div", { class:"sub" }, "مشاهده موجودی دارایی‌ها — بدون امکان واریز یا برداشت از داخل برنامه"),
+      ]),
+      Utils.el("button", { class:"btn btn-primary btn-sm", onClick: openChargeModal }, "شارژ حساب"),
+    ]));
+
+    const summary = Utils.el("div", { class:"wallet-summary" });
+    const card = Utils.el("div", { class:"card card-pad" });
+    container.append(summary, card);
+
+    for(let i=0;i<3;i++) summary.appendChild(UI.skeletonCard());
+    card.appendChild(UI.loading("در حال دریافت دارایی‌ها…"));
+
+    try{
+      const [walletRes, marketRes] = await Promise.all([ Api.getWalletAssets(), Api.getMarketList() ]);
+      assets = walletRes.data;
+      coinMap = Object.fromEntries(marketRes.data.map(c => [c.id, c]));
+      renderSummary(walletRes.isMock);
+      renderTable(walletRes.isMock);
+    }catch(e){
+      summary.innerHTML = "";
+      card.innerHTML = "";
+      card.appendChild(UI.errorState("دریافت دارایی‌ها ناموفق بود", "", () => PageWallet.mount(container)));
+    }
+
+    function valueOf(a){
+      const price = (coinMap[a.coinId] || {}).price || 0;
+      return a.total * price;
+    }
+
+    function renderSummary(isMock){
+      summary.innerHTML = "";
+      const totalValue = assets.reduce((s,a) => s + valueOf(a), 0);
+      const availValue = assets.reduce((s,a) => s + (a.available * ((coinMap[a.coinId]||{}).price || 0)), 0);
+      const lockedValue = assets.reduce((s,a) => s + (a.locked * ((coinMap[a.coinId]||{}).price || 0)), 0);
+
+      const items = [
+        { label:"ارزش کل دارایی‌ها", value:totalValue, ic:"wallet" },
+        { label:"موجودی قابل‌استفاده", value:availValue, ic:"zap", color:"blue" },
+        { label:"موجودی درگیر سفارش", value:lockedValue, ic:"clock", color:"amber" },
+      ];
+      items.forEach(it => {
+        summary.appendChild(Utils.el("div", { class:"card kpi-card" }, [
+          Utils.el("div", { class:"kpi-top" }, [
+            Utils.el("div", { class:`kpi-ic ${it.color||""}`, html: ic(it.ic) }),
+            isMock ? UI.mockFlag() : null,
+          ]),
+          Utils.el("div", { class:"kpi-label" }, it.label),
+          Utils.el("div", { class:"kpi-value num" }, hideValues ? "••••••" : Utils.formatPrice(it.value, "")),
+        ]));
+      });
+    }
+
+    function renderTable(isMock){
+      card.innerHTML = "";
+      card.appendChild(Utils.el("div", { class:"card-head", style:"flex-wrap:wrap;gap:10px;" }, [
+        Utils.el("div", { class:"search-wrap" }, [
+          Utils.el("span", { html: ic("search") }),
+          Utils.el("input", {
+            class:"input", placeholder:"جست‌وجوی دارایی…", value:query,
+            onInput: Utils.debounce((e) => { query = e.target.value; renderTable(isMock); }, 200),
+          }),
+        ]),
+        Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: () => { hideValues = !hideValues; renderSummary(isMock); renderTable(isMock); } },
+          [Utils.el("span", { html: ic(hideValues ? "eyeOff" : "eye") }), hideValues ? " نمایش مقادیر" : " پنهان‌کردن مقادیر"]),
+      ]));
+
+      const rows = assets.filter(a => !query || a.name.includes(query) || a.symbol.toLowerCase().includes(query.toLowerCase()));
+
+      if(assets.length === 0){
+        card.appendChild(UI.empty("دارایی‌ای در حساب شما یافت نشد", "پس از واریز، دارایی‌های شما اینجا نمایش داده می‌شود."));
+        return;
+      }
+      if(rows.length === 0){
+        card.appendChild(UI.empty("نتیجه‌ای یافت نشد", "نام یا نماد دیگری را جست‌وجو کنید."));
+        return;
+      }
+
+      const wrap = Utils.el("div", { class:"table-wrap" });
+      const table = Utils.el("table", { class:"tbl" }, [
+        Utils.el("thead", {}, Utils.el("tr", {}, [
+          Utils.el("th", {}, "نام ارز"), Utils.el("th", {}, "موجودی کل"),
+          Utils.el("th", {}, "قابل‌استفاده"), Utils.el("th", {}, "قفل‌شده"),
+          Utils.el("th", {}, "قیمت واحد"), Utils.el("th", {}, "ارزش تقریبی"), Utils.el("th", {}, "تغییر ۲۴ساعته"),
+        ])),
+      ]);
+      const tbody = Utils.el("tbody");
+      rows.forEach(a => {
+        const price = (coinMap[a.coinId]||{}).price || 0;
+        const value = a.total * price;
+        tbody.appendChild(Utils.el("tr", { onClick: () => Router.go(`coin/${a.coinId}`) }, [
+          Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(a.symbol), Utils.el("span", {}, a.name)])),
+          Utils.el("td", { class:"num" }, hideValues ? "••••" : Utils.formatNumber(a.total,{decimals:6})),
+          Utils.el("td", { class:"num text-dim" }, hideValues ? "••••" : Utils.formatNumber(a.available,{decimals:6})),
+          Utils.el("td", { class:"num text-dim" }, hideValues ? "••••" : Utils.formatNumber(a.locked,{decimals:6})),
+          Utils.el("td", { class:"num text-dim" }, hideValues ? "••••" : Utils.formatPrice(price, "")),
+          Utils.el("td", { class:"num" }, hideValues ? "••••" : Utils.formatPrice(value, "")),
+          Utils.el("td", {}, UI.changeBadge(a.change24h)),
+        ]));
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      card.appendChild(wrap);
+      if(isMock) card.appendChild(Utils.el("div", { style:"margin-top:12px;" }, UI.mockFlag()));
+    }
+
+    function openChargeModal(){
+      const backdrop = Utils.el("div", { class:"modal-backdrop", onClick:(e) => { if(e.target===backdrop) backdrop.remove(); } });
+      backdrop.appendChild(Utils.el("div", { class:"modal" }, [
+        Utils.el("h3", {}, "انتقال به وب‌سایت نوبیتکس"),
+        Utils.el("p", {}, "برای شارژ حساب، به وب‌سایت رسمی نوبیتکس هدایت می‌شوید. این برنامه هیچ اطلاعات بانکی یا پرداختی را دریافت نمی‌کند."),
+        Utils.el("div", { class:"modal-actions" }, [
+          Utils.el("button", { class:"btn btn-outline", onClick: () => backdrop.remove() }, "انصراف"),
+          Utils.el("button", { class:"btn btn-primary", onClick: () => {
+            window.open(NOBITEX_OFFICIAL_URL, "_blank", "noopener");
+            backdrop.remove();
+          }}, [Utils.el("span",{html:ic("externalLink")}), " رفتن به نوبیتکس"]),
+        ]),
+      ]));
+      document.body.appendChild(backdrop);
+    }
+  }
+};
+// ===================================================================
+// صفحه تاریخچه تراکنش‌ها
+// ===================================================================
+
+const PageHistory = {
+  async mount(container){
+    container.innerHTML = "";
+    let filters = { type:"all", coin:"all", status:"all" };
+    let rows = [];
+
+    container.appendChild(Utils.el("div", { class:"page-head" }, [
+      Utils.el("div", {}, [
+        Utils.el("h1", {}, "تاریخچه تراکنش‌ها"),
+        Utils.el("div", { class:"sub" }, "فهرست تراکنش‌های دریافت‌شده از حساب نوبیتکس"),
+      ]),
+    ]));
+
+    const toolbar = Utils.el("div", { class:"market-toolbar" });
+    const card = Utils.el("div", { class:"card card-pad" });
+    container.append(toolbar, card);
+    card.appendChild(UI.loading("در حال دریافت تراکنش‌ها…"));
+
+    async function load(){
+      card.innerHTML = "";
+      card.appendChild(UI.loading("در حال دریافت تراکنش‌ها…"));
+      try{
+        const res = await Api.getTransactions(filters);
+        rows = res.data;
+        buildToolbar();
+        renderTable(res.isMock);
+      }catch(e){
+        card.innerHTML = "";
+        card.appendChild(UI.errorState("دریافت تاریخچه ناموفق بود", "", load));
+      }
+    }
+
+    function buildToolbar(){
+      toolbar.innerHTML = "";
+      const typeSel = Utils.el("select", { class:"select", onChange:(e) => { filters.type = e.target.value; load(); } },
+        ["all","خرید","فروش","واریز","برداشت"].map(v => Utils.el("option", { value:v, selected: filters.type===v }, v === "all" ? "همه انواع" : v)));
+      const statusSel = Utils.el("select", { class:"select", onChange:(e) => { filters.status = e.target.value; load(); } },
+        ["all","موفق","در انتظار","ناموفق"].map(v => Utils.el("option", { value:v, selected: filters.status===v }, v === "all" ? "همه وضعیت‌ها" : v)));
+      const coinSel = Utils.el("select", { class:"select", onChange:(e) => { filters.coin = e.target.value; load(); } },
+        ["all","BTC","ETH","USDT","SOL","DOGE"].map(v => Utils.el("option", { value:v, selected: filters.coin===v }, v === "all" ? "همه ارزها" : v)));
+      toolbar.append(typeSel, coinSel, statusSel);
+    }
+
+    function renderTable(isMock){
+      card.innerHTML = "";
+      card.appendChild(Utils.el("div", { class:"card-head" }, [
+        Utils.el("div", { class:"card-title" }, [`${rows.length} تراکنش `, isMock ? UI.mockFlag() : null]),
+      ]));
+
+      if(rows.length === 0){
+        card.appendChild(UI.empty("تراکنشی یافت نشد", "با فیلترهای انتخاب‌شده تراکنشی ثبت نشده است."));
+        return;
+      }
+
+      const wrap = Utils.el("div", { class:"table-wrap" });
+      const table = Utils.el("table", { class:"tbl" }, [
+        Utils.el("thead", {}, Utils.el("tr", {}, [
+          Utils.el("th", {}, "تاریخ و ساعت"), Utils.el("th", {}, "نوع"),
+          Utils.el("th", {}, "ارز"), Utils.el("th", {}, "مقدار"),
+          Utils.el("th", {}, "وضعیت"), Utils.el("th", {}, "شناسه"), Utils.el("th", {}, "توضیحات"),
+        ])),
+      ]);
+      const tbody = Utils.el("tbody");
+      rows.forEach(t => {
+        tbody.appendChild(Utils.el("tr", {}, [
+          Utils.el("td", { class:"num text-dim" }, Utils.formatDateTime(t.date)),
+          Utils.el("td", {}, t.type),
+          Utils.el("td", { class:"num" }, t.coin),
+          Utils.el("td", { class:"num" }, Utils.formatNumber(t.amount, { decimals:6 })),
+          Utils.el("td", {}, UI.statusBadge(t.status)),
+          Utils.el("td", { class:"num text-faint" }, t.id),
+          Utils.el("td", { class:"text-dim" }, t.desc),
+        ]));
+      });
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      card.appendChild(wrap);
+    }
+
+    load();
+  }
+};
+// ===================================================================
+// صفحه پروفایل
+// ===================================================================
+
+const PageProfile = {
+  async mount(container){
+    container.innerHTML = "";
+    container.appendChild(Utils.el("div", { class:"page-head" }, [
+      Utils.el("div", {}, [
+        Utils.el("h1", {}, "پروفایل"),
+        Utils.el("div", { class:"sub" }, "اطلاعات حساب و وضعیت اتصال صرافی"),
+      ]),
+    ]));
+
+    const grid = Utils.el("div", { class:"profile-grid" });
+    container.appendChild(grid);
+
+    const infoCard = Utils.el("div", { class:"card card-pad" });
+    const rightCol = Utils.el("div", { style:"display:flex;flex-direction:column;gap:14px;" });
+    grid.append(infoCard, rightCol);
+    infoCard.appendChild(UI.loading("در حال دریافت اطلاعات حساب…"));
+
+    try{
+      const profRes = await Api.getProfile();
+      renderInfo(profRes.data, profRes.isMock);
+      renderExchange();
+      renderSecurity();
+    }catch(e){
+      infoCard.innerHTML = "";
+      infoCard.appendChild(UI.errorState("دریافت اطلاعات پروفایل ناموفق بود", "", () => PageProfile.mount(container)));
+    }
+
+    function renderInfo(profile, isMock){
+      infoCard.innerHTML = "";
+      infoCard.appendChild(Utils.el("div", { class:"profile-head" }, [
+        Utils.el("div", { class:"avatar" }, Utils.initials(profile.username)),
+        Utils.el("div", {}, [
+          Utils.el("div", { style:"font-size:16px;font-weight:700;" }, profile.username),
+          Utils.el("div", { class:"text-faint num", style:"font-size:12px;margin-top:3px;" }, profile.accountId),
+        ]),
+        isMock ? UI.mockFlag() : null,
+      ]));
+      infoCard.appendChild(Utils.el("div", {}, [
+        row("شناسه حساب", profile.accountId),
+        row("شماره تلفن", Utils.maskPhone(profile.phoneMasked)),
+        row("وضعیت اتصال", null, UI.statusBadge(State.get().connection.status)),
+        row("تاریخ اتصال حساب", Utils.formatDate(profile.connectedAt)),
+      ]));
+    }
+
+    function row(k, v, node){
+      return Utils.el("div", { class:"info-row" }, [
+        Utils.el("span", { class:"k" }, k),
+        node || Utils.el("span", { class:"v num" }, v),
+      ]);
+    }
+
+    function renderExchange(){
+      const conn = State.get().connection;
+      const card = Utils.el("div", { class:"card card-pad" }, [
+        Utils.el("div", { class:"card-title" }, "اطلاعات صرافی"),
+      ]);
+      card.appendChild(Utils.el("div", { style:"margin-top:10px;" }, [
+        row2("صرافی متصل", conn.exchangeName || "نوبیتکس"),
+        row2("وضعیت اتصال", null, UI.statusBadge(conn.status)),
+        row2("آخرین بررسی اتصال", Utils.timeAgo(conn.lastChecked)),
+      ]));
+      const actions = Utils.el("div", { style:"display:flex;gap:8px;margin-top:14px;" }, [
+        Utils.el("button", { class:"btn btn-outline btn-sm", onClick: async (e) => {
+          e.target.disabled = true;
+          await Api.checkConnection();
+          Toast.info("بررسی شد", "وضعیت اتصال به‌روزرسانی شد.");
+          renderExchange();
+        }}, [Utils.el("span",{html:ic("refresh")}), " بررسی مجدد اتصال"]),
+        Utils.el("button", { class:"btn btn-danger-ghost btn-sm", onClick: confirmDisconnect }, [Utils.el("span",{html:ic("unlink")}), " قطع اتصال"]),
+      ]);
+      card.appendChild(actions);
+
+      const old = rightCol.querySelector("[data-card='exchange']");
+      card.dataset.card = "exchange";
+      if(old) rightCol.replaceChild(card, old); else rightCol.appendChild(card);
+
+      function row2(k,v,node){
+        return Utils.el("div", { class:"info-row" }, [
+          Utils.el("span", { class:"k" }, k),
+          node || Utils.el("span", { class:"v" }, v),
+        ]);
+      }
+    }
+
+    function renderSecurity(){
+      const card = Utils.el("div", { class:"card card-pad", "data-card":"security" }, [
+        Utils.el("div", { class:"card-title" }, "امنیت اتصال"),
+        Utils.el("div", { class:"notice-box", style:"margin-top:12px;" }, [
+          Utils.el("div", { html: ic("shield") }),
+          Utils.el("p", {}, "کلید API شما رمزنگاری‌شده و فقط در سرور نگه‌داری می‌شود. این برنامه هرگز کلید کامل، رمز عبور یا کد یک‌بارمصرف شما را نمایش نمی‌دهد."),
+        ]),
+        Utils.el("button", { class:"btn btn-danger-ghost btn-sm btn-block", style:"margin-top:4px;", onClick: confirmDisconnect },
+          [Utils.el("span",{html:ic("trash")}), " حذف اتصال ذخیره‌شده"]),
+      ]);
+      rightCol.appendChild(card);
+    }
+
+    function confirmDisconnect(){
+      const backdrop = Utils.el("div", { class:"modal-backdrop", onClick:(e) => { if(e.target===backdrop) backdrop.remove(); } });
+      backdrop.appendChild(Utils.el("div", { class:"modal" }, [
+        Utils.el("h3", {}, "قطع اتصال حساب نوبیتکس؟"),
+        Utils.el("p", {}, "پس از قطع اتصال، برای مشاهده دوباره اطلاعات باید کلید API را مجدداً وارد کنید."),
+        Utils.el("div", { class:"modal-actions" }, [
+          Utils.el("button", { class:"btn btn-outline", onClick: () => backdrop.remove() }, "انصراف"),
+          Utils.el("button", { class:"btn btn-danger-ghost", onClick: async () => {
+            await Api.disconnect();
+            backdrop.remove();
+            Toast.info("اتصال قطع شد", "حساب نوبیتکس شما از برنامه جدا شد.");
+            Router.go("connect");
+          }}, "قطع اتصال"),
+        ]),
+      ]));
+      document.body.appendChild(backdrop);
+    }
+  }
+};
+// ===================================================================
+// صفحه تنظیمات
+// ===================================================================
+
+const APP_VERSION = "۱.۰.۰ (نسخه اول)";
+
+const PageSettings = {
+  mount(container){
+    container.innerHTML = "";
+    container.appendChild(Utils.el("div", { class:"page-head" }, [
+      Utils.el("div", {}, [
+        Utils.el("h1", {}, "تنظیمات"),
+        Utils.el("div", { class:"sub" }, "شخصی‌سازی نمایش و رفتار برنامه"),
+      ]),
+    ]));
+
+    const s = State.get().settings;
+    const card = Utils.el("div", { class:"card card-pad" });
+    container.appendChild(card);
+
+    function update(patch){
+      State.set({ settings: patch });
+      ThemeManager.apply();
+      paint();
+    }
+
+    function paint(){
+      const cur = State.get().settings;
+      card.innerHTML = "";
+
+      card.appendChild(settingRow("تم رابط کاربری", "روشن یا تیره", themeToggle(cur)));
+      card.appendChild(settingRow("واحد نمایش قیمت", "تومان یا تتر", select(["irt","usdt"], cur.priceUnit, {irt:"تومان", usdt:"تتر"}, v => update({priceUnit:v}))));
+      card.appendChild(settingRow("نحوه نمایش اعداد", "ارقام لاتین یا فارسی", select(["latin","fa"], cur.numberFormat, {latin:"لاتین (1234)", fa:"فارسی (۱۲۳۴)"}, v => update({numberFormat:v}))));
+      card.appendChild(settingRow("بازه به‌روزرسانی خودکار", "فاصله زمانی دریافت اطلاعات جدید", select([30,60,120,300], cur.refreshInterval, {30:"۳۰ ثانیه",60:"۱ دقیقه",120:"۲ دقیقه",300:"۵ دقیقه"}, v => update({refreshInterval:Number(v)})) ));
+      card.appendChild(settingRow("اعلان تغییرات قیمت", "دریافت اعلان برای نوسانات مهم بازار", switchEl(cur.notifyPriceAlerts, v => update({notifyPriceAlerts:v}))));
+      card.appendChild(settingRow("اعلان وضعیت اتصال", "اطلاع از قطع یا برقراری اتصال صرافی", switchEl(cur.notifyConnection, v => update({notifyConnection:v}))));
+      card.appendChild(settingRow("زبان برنامه", "در نسخه اول فقط فارسی پشتیبانی می‌شود", Utils.el("span", { class:"badge badge-gray" }, "فارسی")));
+      card.appendChild(settingRow("نسخه برنامه", "", Utils.el("span", { class:"text-dim num" }, APP_VERSION)));
+
+      card.appendChild(Utils.el("div", { style:"margin-top:18px;" }, [
+        Utils.el("button", { class:"btn btn-danger-ghost btn-block", onClick: logout },
+          [Utils.el("span", { html: ic("logout") }), " خروج از حساب"]),
+      ]));
+    }
+
+    function settingRow(label, desc, control){
+      return Utils.el("div", { class:"set-row" }, [
+        Utils.el("div", {}, [
+          Utils.el("div", { class:"label" }, label),
+          desc ? Utils.el("div", { class:"desc" }, desc) : null,
+        ]),
+        control,
+      ]);
+    }
+
+    function select(values, current, labels, onChange){
+      return Utils.el("select", { class:"select", onChange:(e) => onChange(e.target.value) },
+        values.map(v => Utils.el("option", { value:v, selected: String(v)===String(current) }, labels[v])));
+    }
+
+    function switchEl(checked, onChange){
+      return Utils.el("label", { class:"switch" }, [
+        Utils.el("input", { type:"checkbox", checked: checked ? "checked" : false, onChange:(e) => onChange(e.target.checked) }),
+        Utils.el("span", { class:"track" }, Utils.el("span", { class:"thumb" })),
+      ]);
+    }
+
+    function themeToggle(cur){
+      return Utils.el("div", { class:"tabs" }, [
+        Utils.el("button", { class:`tab-btn ${cur.theme==="dark"?"active":""}`, onClick: () => update({theme:"dark"}), html: ic("moon") + " تیره" }),
+        Utils.el("button", { class:`tab-btn ${cur.theme==="light"?"active":""}`, onClick: () => update({theme:"light"}), html: ic("sun") + " روشن" }),
+      ]);
+    }
+
+    async function logout(){
+      await Api.disconnect();
+      Toast.info("خارج شدید", "برای ورود دوباره، کلید API را وارد کنید.");
+      Router.go("connect");
+    }
+
+    paint();
+  }
+};
+
+const ThemeManager = {
+  apply(){
+    const theme = State.get().settings.theme;
+    document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
+  }
+};
+// ===================================================================
+// راه‌اندازی برنامه: اسکلت، سایدبار، نوار بالا، مسیریابی
+// ===================================================================
+
+const NAV_ITEMS = [
+  { key:"dashboard", label:"داشبورد",            icon:"dashboard" },
+  { key:"market",    label:"بازار ارزها",         icon:"market" },
+  { key:"wallet",    label:"کیف پول",             icon:"wallet" },
+  { key:"history",   label:"تاریخچه تراکنش‌ها",   icon:"history" },
+  { key:"profile",   label:"پروفایل",             icon:"profile" },
+  { key:"settings",  label:"تنظیمات",             icon:"settings" },
+];
+
+const PAGE_TITLES = {
+  dashboard:"داشبورد", market:"بازار ارزهای دیجیتال", coin:"جزئیات ارز",
+  wallet:"کیف پول", history:"تاریخچه تراکنش‌ها", profile:"پروفایل", settings:"تنظیمات",
+};
+
+const App = (() => {
+  const root = document.getElementById("app");
+  let refreshTimer = null;
+
+  function buildShell(){
+    root.innerHTML = "";
+
+    const scrim = Utils.el("div", { class:"sidebar-scrim", onClick: closeSidebar });
+    const sidebar = Utils.el("aside", { class:"sidebar" });
+    sidebar.appendChild(Utils.el("div", { class:"brand" }, [
+      Utils.el("div", { class:"brand-mark", html: ic("logo") }),
+      Utils.el("div", {}, [
+        Utils.el("div", { class:"brand-name" }, "صرافی من"),
+        Utils.el("div", { class:"brand-sub" }, "داشبورد شخصی ارز دیجیتال"),
+      ]),
+    ]));
+
+    const navGroup = Utils.el("div", { class:"nav-group" });
+    NAV_ITEMS.forEach(item => {
+      navGroup.appendChild(Utils.el("div", {
+        class:"nav-item", "data-key":item.key,
+        html: ic(item.icon) + `<span>${item.label}</span>`,
+        onClick: () => { Router.go(item.key); closeSidebar(); },
+      }));
+    });
+    sidebar.appendChild(navGroup);
+
+    sidebar.appendChild(Utils.el("div", { class:"sidebar-foot" }, [
+      Utils.el("div", { class:"nav-item", html: ic("unlink") + `<span>قطع اتصال و خروج</span>`, onClick: handleLogout }),
+    ]));
+
+    const main = Utils.el("main", { class:"main" });
+    const topbar = Utils.el("header", { class:"topbar" }, [
+      Utils.el("div", { class:"topbar-left" }, [
+        Utils.el("button", { class:"menu-btn", html: ic("menu"), onClick: openSidebar }),
+        Utils.el("div", { class:"topbar-title", id:"pageTitle" }, "داشبورد"),
+      ]),
+      Utils.el("div", { class:"topbar-right" }, [
+        Utils.el("span", { id:"connBadge" }),
+        Utils.el("span", { class:"text-faint", id:"lastUpdate", style:"font-size:11.5px;white-space:nowrap;" }),
+        Utils.el("button", { class:"icon-btn", title:"به‌روزرسانی اطلاعات", html: ic("refresh"), onClick: refreshCurrentPage, id:"refreshBtn" }),
+        Utils.el("button", { class:"icon-btn", title:"پروفایل", html: ic("profile"), onClick: () => Router.go("profile") }),
+      ]),
+    ]);
+
+    const content = Utils.el("div", { class:"content", id:"pageContent" });
+    main.append(topbar, content);
+
+    const bottomNav = Utils.el("nav", { class:"bottom-nav" });
+    ["dashboard","market","wallet","history","profile"].forEach(key => {
+      const item = NAV_ITEMS.find(n => n.key === key);
+      bottomNav.appendChild(Utils.el("div", {
+        class:"bn-item", "data-key":key,
+        html: ic(item.icon) + `<span>${item.label.replace("تاریخچه تراکنش‌ها","تاریخچه")}</span>`,
+        onClick: () => Router.go(key),
+      }));
+    });
+
+    const shell = Utils.el("div", { class:"shell" }, [main, sidebar]);
+    root.append(shell, scrim, bottomNav);
+
+    updateConnBadge();
+  }
+
+  function openSidebar(){ document.querySelector(".sidebar").classList.add("open"); document.querySelector(".sidebar-scrim").classList.add("open"); }
+  function closeSidebar(){ document.querySelector(".sidebar")?.classList.remove("open"); document.querySelector(".sidebar-scrim")?.classList.remove("open"); }
+
+  function updateConnBadge(){
+    const badge = document.getElementById("connBadge");
+    const lastUpdate = document.getElementById("lastUpdate");
+    if(!badge) return;
+    badge.innerHTML = "";
+    badge.appendChild(UI.statusBadge(State.get().connection.status));
+    if(lastUpdate){
+      lastUpdate.textContent = State.get().connection.lastChecked
+        ? `به‌روزرسانی ${Utils.timeAgo(State.get().connection.lastChecked)}`
+        : "";
+    }
+  }
+
+  function setActiveNav(name){
+    document.querySelectorAll(".nav-item[data-key]").forEach(n => n.classList.toggle("active", n.dataset.key === name));
+    document.querySelectorAll(".bn-item[data-key]").forEach(n => n.classList.toggle("active", n.dataset.key === name));
+    const title = document.getElementById("pageTitle");
+    if(title) title.textContent = PAGE_TITLES[name] || "";
+  }
+
+  let currentRoute = null;
+
+  async function refreshCurrentPage(){
+    const btn = document.getElementById("refreshBtn");
+    if(btn) btn.classList.add("spin");
+    await Api.checkConnection();
+    updateConnBadge();
+    if(currentRoute) await currentRoute.page.mount(document.getElementById("pageContent"), currentRoute.params);
+    if(btn) btn.classList.remove("spin");
+    Toast.success("به‌روزرسانی شد", "اطلاعات صفحه به‌روزرسانی شد.");
+  }
+
+  async function handleLogout(){
+    await Api.disconnect();
+    closeSidebar();
+    Router.go("connect");
+  }
+
+  function startAutoRefresh(){
+    if(refreshTimer) clearInterval(refreshTimer);
+    const sec = State.get().settings.refreshInterval || 60;
+    refreshTimer = setInterval(async () => {
+      if(State.get().connection.status !== "connected") return;
+      await Api.checkConnection();
+      updateConnBadge();
+    }, sec * 1000);
+  }
+
+  function onRouteChange(route){
+    const connected = State.get().connection.status === "connected";
+
+    if(route.name === "connect" || !connected){
+      if(refreshTimer) clearInterval(refreshTimer);
+      root.innerHTML = "";
+      PageConnect.mount(root);
+      return;
+    }
+
+    if(!root.querySelector(".shell")) buildShell();
+    currentRoute = route;
+    setActiveNav(route.name);
+    updateConnBadge();
+    const content = document.getElementById("pageContent");
+    route.page.mount(content, route.params);
+  }
+
+  function init(){
+    ThemeManager.apply();
+    Router.start(onRouteChange);
+    startAutoRefresh();
+    State.subscribe((s) => {
+      updateConnBadge();
+    });
+  }
+
+  return { init };
+})();
+
+document.addEventListener("DOMContentLoaded", App.init);
+</script>
+</body>
+</html>

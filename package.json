@@ -1,0 +1,16 @@
+{
+  "name": "nobitex-dashboard",
+  "version": "1.0.0",
+  "description": "داشبورد شخصی مدیریت و تحلیل ارزهای دیجیتال — رابط کاربری فرانت‌اند",
+  "scripts": {
+    "cap:add-android": "cap add android",
+    "cap:sync": "cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/core": "^6.1.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2"
+  }
+}
