@@ -942,6 +942,7 @@ hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:18px 0; }
   </div>
 </div>
 
+<script>window.__API_BASE__ = ""; /* آدرس Worker؛ خالی = همان دامنه */</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script>
 // ===================================================================
@@ -962,11 +963,10 @@ const Utils = (() => {
     return num.toLocaleString(numberLocale(), { maximumFractionDigits: decimals, minimumFractionDigits: 0 });
   }
 
-  // نرخ تبدیل آزمایشی تومان به تتر — بر اساس آخرین قیمت USDT/IRT در داده بازار
-  function usdtRate(){
-    const usdt = (typeof MockData !== "undefined") ? MockData.coins.find(c => c.id === "usdt") : null;
-    return (usdt && usdt.price) ? usdt.price : 60000;
-  }
+  // نرخ تتر (تومان) از آخرین پاسخ واقعی بازار؛ اگر موجود نباشد null و قیمت تتری نمایش داده نمی‌شود
+  let _usdtRate = null;
+  function setUsdtRate(v){ _usdtRate = (Number(v) > 0) ? Number(v) : null; }
+  function usdtRate(){ return _usdtRate; }
 
   function numberLocale(){
     const fmt = (typeof State !== "undefined") ? State.get().settings.numberFormat : "latin";
@@ -980,6 +980,7 @@ const Utils = (() => {
 
     const priceUnit = (typeof State !== "undefined") ? State.get().settings.priceUnit : "irt";
     if(priceUnit === "usdt"){
+      if(!usdtRate()) return "—";
       num = num / usdtRate();
       if(currency === "تومان") unitLabel = "تتر";
     }
@@ -1075,7 +1076,7 @@ const Utils = (() => {
     return digits.slice(0,4) + "***" + digits.slice(-3);
   }
 
-  return { formatNumber, formatPrice, formatPercent, formatDateTime, formatDate, timeAgo, el, debounce, initials, maskSecret, maskPhone };
+  return { setUsdtRate, formatNumber, formatPrice, formatPercent, formatDateTime, formatDate, timeAgo, el, debounce, initials, maskSecret, maskPhone };
 })();
 // ===================================================================
 // مجموعه آیکون‌های خطی ساده (SVG) — سبک یکپارچه برای کل برنامه
@@ -1197,240 +1198,103 @@ const State = (() => {
   return { get, set, subscribe };
 })();
 // ===================================================================
-// داده‌های آزمایشی (MOCK)
-// -------------------------------------------------------------------
-// هر مقدار در این فایل کاملاً ساختگی است و صرفاً برای نمایش ساختار
-// رابط کاربری در زمانی است که اتصال واقعی به API برقرار نیست یا
-// هنوز داده واقعی برنگردانده.
-// تمام رکوردهای این فایل دارای فیلد isMock: true هستند تا در هیچ
-// جای برنامه به اشتباه به‌عنوان داده واقعی حساب نمایش داده نشوند.
-// وقتی لایه اتصال واقعی (js/api.js) به بک‌اند متصل شود، این فایل
-// باید به‌طور کامل کنار گذاشته شود.
+// لایه اتصال به سرور (Cloudflare Worker) — بدون هیچ داده آزمایشی
 // ===================================================================
-
-const MockData = {
-
-  coins: [
-    { id:"btc",   name:"بیت‌کوین",  symbol:"BTC/USDT", price:3812450000, change24h:2.41,  high24h:3865000000, low24h:3701000000, volume24h:48200000000000, isMock:true },
-    { id:"eth",   name:"اتریوم",    symbol:"ETH/USDT", price:148250000,  change24h:-1.12, high24h:151800000,  low24h:146900000,  volume24h:21400000000000, isMock:true },
-    { id:"usdt",  name:"تتر",       symbol:"USDT/IRT", price:60850,      change24h:0.08,  high24h:60980,      low24h:60700,      volume24h:98100000000000, isMock:true },
-    { id:"bnb",   name:"بایننس کوین", symbol:"BNB/USDT", price:38420000, change24h:3.87,  high24h:39100000,   low24h:36950000,   volume24h:6400000000000,  isMock:true },
-    { id:"sol",   name:"سولانا",    symbol:"SOL/USDT", price:9840000,    change24h:-3.24, high24h:10250000,   low24h:9710000,    volume24h:8900000000000,  isMock:true },
-    { id:"xrp",   name:"ریپل",      symbol:"XRP/USDT", price:34250,      change24h:1.05,  high24h:35100,      low24h:33700,      volume24h:4200000000000,  isMock:true },
-    { id:"doge",  name:"دوج‌کوین",  symbol:"DOGE/USDT", price:9120,      change24h:5.62,  high24h:9480,       low24h:8640,       volume24h:3100000000000,  isMock:true },
-    { id:"ada",   name:"کاردانو",   symbol:"ADA/USDT", price:21800,      change24h:-0.64, high24h:22400,      low24h:21350,      volume24h:1800000000000,  isMock:true },
-    { id:"trx",   name:"ترون",      symbol:"TRX/USDT", price:8650,       change24h:0.92,  high24h:8790,       low24h:8540,       volume24h:1200000000000,  isMock:true },
-    { id:"ton",   name:"تون‌کوین",  symbol:"TON/USDT", price:264000,     change24h:-2.05, high24h:272500,     low24h:259800,     volume24h:2600000000000,  isMock:true },
-  ],
-
-  // دنباله قیمت N روزه برای هر ارز (برای رسم نمودار صفحه اختصاصی)
-  coinHistory(coinId, days = 30){
-    const base = (this.coins.find(c => c.id === coinId) || {}).price || 1000;
-    const points = [];
-    let v = base * 0.9;
-    const now = Date.now();
-    for(let i = days; i >= 0; i--){
-      v = v * (1 + (Math.sin(i/3.1) * 0.015) + (Math.random() - 0.5) * 0.02);
-      points.push({
-        t: new Date(now - i * 86400000).toISOString(),
-        v: Math.round(v)
-      });
-    }
-    return points;
-  },
-
-  history30d(coinId){ return this.coinHistory(coinId, 30); },
-
-  // سری زمانی ارزش کل پرتفو (برای نمودار داشبورد)
-  portfolioHistory(range = "7d"){
-    const days = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 }[range] || 7;
-    const stepsPerDay = range === "24h" ? 8 : 1;
-    const points = [];
-    let v = 410000000;
-    const now = Date.now();
-    const totalSteps = days * stepsPerDay;
-    for(let i = totalSteps; i >= 0; i--){
-      v = v * (1 + (Math.random() - 0.48) * 0.018);
-      points.push({
-        t: new Date(now - i * (86400000 / stepsPerDay)).toISOString(),
-        v: Math.round(v)
-      });
-    }
-    return points;
-  },
-
-  walletAssets: [
-    { coinId:"btc",  name:"بیت‌کوین", symbol:"BTC", total:0.0842, available:0.0842, locked:0,       change24h:2.41,  isMock:true },
-    { coinId:"eth",  name:"اتریوم",   symbol:"ETH", total:1.245,  available:0.945,  locked:0.3,     change24h:-1.12, isMock:true },
-    { coinId:"usdt", name:"تتر",      symbol:"USDT", total:412.5, available:412.5,  locked:0,       change24h:0.08,  isMock:true },
-    { coinId:"sol",  name:"سولانا",   symbol:"SOL", total:18.4,   available:18.4,   locked:0,       change24h:-3.24, isMock:true },
-    { coinId:"doge", name:"دوج‌کوین", symbol:"DOGE", total:5400,  available:5400,   locked:0,       change24h:5.62,  isMock:true },
-  ],
-
-  transactions: [
-    { id:"TXN-9F21A", date:"2026-10-08T14:22:00", type:"خرید",   coin:"BTC",  amount:0.012,  status:"موفق",   desc:"خرید از بازار BTC/USDT", isMock:true },
-    { id:"TXN-9E10C", date:"2026-10-07T09:05:00", type:"فروش",   coin:"ETH",  amount:0.3,    status:"موفق",   desc:"فروش از بازار ETH/USDT", isMock:true },
-    { id:"TXN-9D8B2", date:"2026-10-05T19:40:00", type:"واریز",  coin:"USDT", amount:200,    status:"موفق",   desc:"واریز از کیف‌پول خارجی", isMock:true },
-    { id:"TXN-9C331", date:"2026-10-03T11:15:00", type:"خرید",   coin:"SOL",  amount:4.2,    status:"در انتظار", desc:"سفارش محدود SOL/USDT", isMock:true },
-    { id:"TXN-9B220", date:"2026-09-29T17:50:00", type:"برداشت", coin:"DOGE", amount:1200,   status:"ناموفق", desc:"خطا در تایید شبکه", isMock:true },
-  ],
-
-  profile: {
-    username: "کاربر نمونه",
-    accountId: "NX-2284910",
-    phoneMasked: "0912***45",
-    connectedAt: "2026-09-18T10:30:00",
-    exchangeName: "نوبیتکس",
-  },
-
-  openOrdersCount: 2,
-};
-// ===================================================================
-// لایه اتصال به داده (Api)
-// -------------------------------------------------------------------
-// این فایل جای‌گزین لایه فنی واقعی اتصال به نوبیتکس است که طبق
-// طراحی پروژه، جداگانه و در سمت سرور (مثلاً یک Cloudflare Worker)
-// پیاده‌سازی می‌شود:
-//
-//   مرورگر کاربر → Worker (امضای درخواست با API Secret) → نوبیتکس
-//
-// نکات امنیتی که این فایل رعایت می‌کند و باید در پیاده‌سازی واقعی هم
-// رعایت شوند:
-//   • کلید/سیکرت API هرگز در localStorage یا کد سمت کلاینت ذخیره
-//     نمی‌شود؛ فقط برای یک درخواست اتصال اولیه به سرور ارسال و سپس
-//     از حافظه کلاینت پاک می‌شود.
-//   • پس از اتصال موفق، فقط یک «نشانه جلسه» (session token) بدون
-//     اطلاعات حساس در حافظه (نه storage) نگه‌داری می‌شود.
-//   • تمام متدهای زیر async هستند و دقیقاً همان قراردادی را دارند
-//     که نسخه واقعی (فراخوانی Worker) باید داشته باشد؛ برای اتصال
-//     نسخه واقعی فقط کافیست بدنه هر متد با fetch به Worker واقعی
-//     جایگزین شود و امضای تابع حفظ بماند.
-//
-// در این نسخه (چون بک‌اند واقعی در دسترس نیست) همه متدها با تاخیر
-// شبیه‌سازی‌شده از MockData پاسخ می‌دهند و خروجی isMock:true دارد.
-// ===================================================================
+// آدرس Worker از config.js می‌آید (خالی = همین دامنه). هیچ کلید نوبیتکسی در مرورگر وجود ندارد.
+const API_BASE = String(window.__API_BASE__ || "").replace(/\/$/, "");
 
 const Api = (() => {
-
-  const LATENCY = 550;
   let sessionToken = null; // فقط در حافظه؛ هرگز در storage ذخیره نمی‌شود
 
-  function delay(ms = LATENCY){
-    return new Promise(res => setTimeout(res, ms));
-  }
-
-  function isValidKeyFormat(key){
-    // بررسی ظاهری ساده؛ اعتبارسنجی واقعی کلید همیشه سمت سرور انجام می‌شود
-    return typeof key === "string" && key.trim().length >= 20;
-  }
-
-  async function connect(apiKey){
-    if(!isValidKeyFormat(apiKey)){
-      const err = new Error("فرمت کلید API نامعتبر است.");
-      err.code = "INVALID_FORMAT";
+  async function request(path, { method = "GET", body, auth = true } = {}){
+    const headers = { Accept: "application/json" };
+    if(body !== undefined) headers["Content-Type"] = "application/json";
+    if(auth && sessionToken) headers.Authorization = "Bearer " + sessionToken;
+    let res;
+    try{
+      res = await fetch(API_BASE + path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+    }catch(e){
+      const err = new Error("اتصال به سرور برقرار نشد. اینترنت یا آدرس Worker را بررسی کنید.");
+      err.code = "NETWORK"; throw err;
+    }
+    let json = null;
+    try{ json = await res.json(); }catch(e){ /* غیر JSON */ }
+    if(!res.ok || !json || json.ok !== true){
+      const e = (json && json.error) || {};
+      const err = new Error(e.message || `خطای سرور (HTTP ${res.status})`);
+      err.code = e.code || ("HTTP_" + res.status); err.status = res.status; err.detail = e;
+      if(res.status === 401 && err.code === "SESSION_INVALID"){
+        sessionToken = null;
+        State.set({ connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null } });
+        window.dispatchEvent(new Event("hashchange")); // مسیریاب را به صفحه ورود برمی‌گرداند
+      }
       throw err;
     }
-    await delay(1100);
+    return json;
+  }
+  const wrap = (json) => ({ data: json.data, meta: json.meta || null, fetchedAt: json.fetchedAt, isMock: false });
+  const get = async (path) => wrap(await request(path));
 
-    // --- در نسخه واقعی: ---
-    // const res = await fetch(`${WORKER_URL}/connect`, {
-    //   method: "POST",
-    //   body: JSON.stringify({ apiKey }),
-    // });
-    // کلید apiKey پس از این فراخوانی از حافظه کلاینت حذف می‌شود.
-
-    sessionToken = "sess_" + Math.random().toString(36).slice(2);
-    State.set({
-      connection: {
-        status: "connected",
-        exchangeName: "نوبیتکس",
-        connectedAt: new Date().toISOString(),
-        lastChecked: new Date().toISOString(),
-      }
-    });
-    return { ok:true, sessionToken };
+  async function connect(passcode){
+    const json = await request("/api/session", { method:"POST", body:{ passcode }, auth:false });
+    sessionToken = json.data.token;
+    State.set({ connection: { status:"connected", exchangeName:"نوبیتکس", connectedAt:new Date().toISOString(), lastChecked:new Date().toISOString() } });
+    return { ok:true };
   }
 
   async function disconnect(){
-    await delay(300);
     sessionToken = null;
     State.set({ connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null } });
     return { ok:true };
   }
 
   async function checkConnection(){
-    await delay(500);
-    const conn = State.get().connection;
-    if(conn.status !== "connected") return conn;
-    const updated = { ...conn, lastChecked: new Date().toISOString() };
-    State.set({ connection: updated });
-    return updated;
+    if(!sessionToken) return State.get().connection;
+    try{
+      await request("/api/session/check");
+      State.set({ connection: { status:"connected", lastChecked:new Date().toISOString() } });
+    }catch(e){ /* در قطعی شبکه، زمان آخرین بررسی موفق تغییر نمی‌کند */ }
+    return State.get().connection;
   }
 
   async function getMarketList(){
-    await delay();
-    return { data: MockData.coins, isMock:true, fetchedAt:new Date().toISOString() };
+    const res = await get("/api/market");
+    const usdt = res.data.find(c => c.id === "usdt");
+    Utils.setUsdtRate(usdt ? usdt.price : null);
+    return res;
   }
-
-  async function getCoin(coinId){
-    await delay();
-    const coin = MockData.coins.find(c => c.id === coinId) || null;
-    return { data: coin, isMock:true, fetchedAt:new Date().toISOString() };
+  async function getCoin(id){
+    const res = await getMarketList();
+    return { ...res, data: res.data.find(c => c.id === id) || null };
   }
-
-  async function getCoinHistory(coinId, range = "30d"){
-    await delay(650);
-    const days = { "7d":7, "30d":30, "90d":90 }[range] || 30;
-    return { data: MockData.coinHistory(coinId, days), range, isMock:true, fetchedAt:new Date().toISOString() };
-  }
-
-  async function getPortfolioSummary(){
-    await delay();
-    const assets = MockData.walletAssets;
-    const totalValueIrt = 412850000; // ساختگی — فقط برای نمایش ساختار
-    return {
-      data:{
-        totalValueIrt,
-        availableValueIrt: Math.round(totalValueIrt * 0.82),
-        assetCount: assets.length,
-        openOrders: MockData.openOrdersCount,
-        change24hPercent: 1.86,
-      },
-      isMock:true,
-      fetchedAt:new Date().toISOString()
-    };
-  }
-
-  async function getPortfolioHistory(range = "7d"){
-    await delay(650);
-    return { data: MockData.portfolioHistory(range), range, isMock:true, fetchedAt:new Date().toISOString() };
-  }
-
-  async function getWalletAssets(){
-    await delay();
-    return { data: MockData.walletAssets, isMock:true, fetchedAt:new Date().toISOString() };
-  }
+  const getCoinHistory   = (id, range) => get(`/api/history/${encodeURIComponent(id)}?range=${range}`);
+  const getSparklines    = (ids) => get(`/api/sparklines?ids=${ids.join(",")}`);
+  const getOrderbook     = (id) => get(`/api/orderbook/${encodeURIComponent(id)}`);
+  const getPortfolioSummary = () => get("/api/portfolio");
+  const getPortfolioHistory = (range) => get(`/api/portfolio/history?range=${range}`);
+  const getWalletAssets  = () => get("/api/wallets");
+  const getOpenOrders    = () => get("/api/orders/open");
+  const getProfile       = () => get("/api/profile");
 
   async function getTransactions(filters = {}){
-    await delay();
-    let rows = [...MockData.transactions];
-    if(filters.type && filters.type !== "all") rows = rows.filter(r => r.type === filters.type);
-    if(filters.coin && filters.coin !== "all") rows = rows.filter(r => r.coin === filters.coin);
-    if(filters.status && filters.status !== "all") rows = rows.filter(r => r.status === filters.status);
-    return { data: rows, isMock:true, fetchedAt:new Date().toISOString() };
+    const res = await get("/api/orders/history");
+    const rows = res.data.filter(t =>
+      (!filters.type   || filters.type   === "all" || t.type   === filters.type) &&
+      (!filters.coin   || filters.coin   === "all" || t.coin   === filters.coin) &&
+      (!filters.status || filters.status === "all" || t.status === filters.status));
+    return { ...res, data: rows };
   }
 
-  async function getProfile(){
-    await delay();
-    return { data: MockData.profile, isMock:true, fetchedAt:new Date().toISOString() };
-  }
+  // --- سفارش‌گذاری (همه‌ی اعتبارسنجی و تصمیم‌ها سمت سرور است) ---
+  const getTradeConfig = () => get("/api/trade/config");
+  const previewOrder   = (order) => request("/api/trade/preview", { method:"POST", body:{ order } }).then(j => j.data);
+  const submitOrder    = (order, clientOrderId, confirmToken) =>
+    request("/api/trade/submit", { method:"POST", body:{ order, clientOrderId, confirmToken } }).then(j => j.data);
+  const getOrderStatus = (id) => request("/api/trade/status", { method:"POST", body:{ id } }).then(j => j.data);
 
-  return {
-    connect, disconnect, checkConnection,
-    getMarketList, getCoin, getCoinHistory,
-    getPortfolioSummary, getPortfolioHistory,
-    getWalletAssets, getTransactions, getProfile,
-  };
+  return { connect, disconnect, checkConnection, getMarketList, getCoin, getCoinHistory, getSparklines, getOrderbook,
+    getPortfolioSummary, getPortfolioHistory, getWalletAssets, getOpenOrders, getProfile, getTransactions,
+    getTradeConfig, previewOrder, submitOrder, getOrderStatus };
 })();
 // ===================================================================
 // لایه حساب کاربری برنامه (جدا از اتصال صرافی)
@@ -1855,6 +1719,7 @@ const Router = (() => {
     { pattern: /^dashboard$/,      name:"dashboard",page:() => PageDashboard },
     { pattern: /^market$/,         name:"market",   page:() => PageMarket },
     { pattern: /^coin\/([\w-]+)$/, name:"coin",     page:() => PageCoin },
+    { pattern: /^trade(?:\/([\w-]+))?$/, name:"trade", page:() => PageTrade },
     { pattern: /^wallet$/,         name:"wallet",   page:() => PageWallet },
     { pattern: /^history$/,        name:"history",  page:() => PageHistory },
     { pattern: /^profile$/,        name:"profile",  page:() => PageProfile },
@@ -2122,11 +1987,10 @@ const PageAuthPassword = {
 // مراحل راهنما از اینجا قابل ویرایش هستند — در صورت تغییر فرایند
 // رسمی نوبیتکس، فقط کافیست متن همین آرایه به‌روز شود.
 const CONNECT_GUIDE_STEPS = [
-  "وارد وب‌سایت رسمی نوبیتکس به نشانی nobitex.ir شوید و وارد حساب کاربری خود شوید.",
-  "از بخش تنظیمات حساب، مسیر «کلیدهای API» را باز کنید.",
-  "یک کلید جدید بسازید و فقط دسترسی‌های «خواندن اطلاعات» و «معامله» را فعال کنید.",
-  "در صورت امکان، دسترسی «برداشت» را غیرفعال نگه دارید.",
-  "کلید ساخته‌شده را کپی کرده و در فیلد زیر وارد کنید.",
+  "در پنل رسمی نوبیتکس (nobitex.ir) یک کلید API بسازید؛ فقط دسترسی «خواندن» و (در صورت نیاز به سفارش‌گذاری) «معامله» را فعال کنید و دسترسی «برداشت» را فعال نکنید.",
+  "کلید را هرگز در این برنامه یا چت وارد نکنید؛ آن را فقط با دستور «wrangler secret put NOBITEX_TOKEN» در Cloudflare ذخیره کنید.",
+  "رمز دسترسی داشبورد (DASHBOARD_PASSCODE) و SESSION_SECRET را هم به همین روش به‌صورت Secret تنظیم کنید.",
+  "رمز دسترسی همان رمزی است که در فیلد زیر وارد می‌کنید؛ کلید نوبیتکس هیچ‌وقت به مرورگر نمی‌رسد.",
 ];
 
 const NOBITEX_API_GUIDE_URL = "https://apidocs.nobitex.ir/api-key-guide";
@@ -2150,7 +2014,7 @@ const PageConnect = {
           class:"guide-toggle",
           onClick: () => { guideOpen = !guideOpen; paint(); }
         }, [
-          Utils.el("span", {}, "راهنمای دریافت کلید API"),
+          Utils.el("span", {}, "راهنمای راه‌اندازی کلید و رمزها"),
           Utils.el("span", { html: ic(guideOpen ? "chevronDown" : "chevronLeft") }),
         ]),
         guideOpen ? Utils.el("ol", { class:"guide-steps", style:"list-style:none;" },
@@ -2168,10 +2032,10 @@ const PageConnect = {
         Utils.el("div", {}, [
           Utils.el("p", {}, "نکات مهم امنیتی پیش از اتصال:"),
           Utils.el("ul", {}, [
-            Utils.el("li", {}, "کلید API را فقط از وب‌سایت رسمی نوبیتکس دریافت کنید."),
+            Utils.el("li", {}, "کلید API را فقط از وب‌سایت رسمی نوبیتکس دریافت کنید و فقط در Secrets سرور نگه دارید."),
             Utils.el("li", {}, "سطح دسترسی کلید را متناسب با نیاز برنامه انتخاب کنید."),
             Utils.el("li", {}, "در صورت امکان، دسترسی برداشت وجه را غیرفعال بگذارید."),
-            Utils.el("li", {}, "کلید API یک اطلاعات حساس است و نباید در اختیار دیگران قرار گیرد."),
+            Utils.el("li", {}, "رمز دسترسی و کلید API اطلاعات حساس‌اند و نباید در اختیار دیگران قرار گیرند."),
           ]),
         ]),
       ]);
@@ -2181,13 +2045,13 @@ const PageConnect = {
       if(status === "loading"){
         return Utils.el("div", { class:"connect-status loading" }, [
           Utils.el("span", { class:"spin", style:"width:14px;height:14px;border-width:2px;" }),
-          "در حال برقراری اتصال با نوبیتکس…",
+          "در حال برقراری اتصال با سرور داشبورد…",
         ]);
       }
       if(status === "success"){
         return Utils.el("div", { class:"connect-status success" }, [
           Utils.el("span", { html: ic("check") }),
-          "اتصال با موفقیت برقرار شد. در حال انتقال به داشبورد…",
+          "ورود انجام شد. در حال انتقال به داشبورد…",
         ]);
       }
       if(status === "error"){
@@ -2203,9 +2067,9 @@ const PageConnect = {
       const input = card.querySelector("#apiKeyInput");
       const value = input.value.trim();
 
-      if(value.length < 20){
+      if(value.length < 1){
         status = "error";
-        errorMsg = "کلید وارد شده معتبر به نظر نمی‌رسد. کلید API معمولاً طولانی‌تر است.";
+        errorMsg = "رمز دسترسی را وارد کنید.";
         paint();
         return;
       }
@@ -2220,7 +2084,7 @@ const PageConnect = {
         input.value = "";
         status = "success";
         paint();
-        Toast.success("اتصال برقرار شد", "حساب نوبیتکس شما با موفقیت متصل شد.");
+        Toast.success("ورود انجام شد", "اتصال به سرور داشبورد برقرار است.");
         setTimeout(() => Router.go("dashboard"), 700);
       }catch(e){
         status = "error";
@@ -2238,20 +2102,20 @@ const PageConnect = {
           Utils.el("span", {}, "داشبورد شخصی مدیریت دارایی"),
         ]),
       ]));
-      card.appendChild(Utils.el("h1", { class:"connect-title" }, "اتصال حساب نوبیتکس"));
+      card.appendChild(Utils.el("h1", { class:"connect-title" }, "ورود به سرور داشبورد"));
       card.appendChild(Utils.el("p", { class:"connect-desc" },
-        "با وارد کردن کلید API حساب نوبیتکس خود، می‌توانید دارایی‌ها، قیمت‌ها و تاریخچه تراکنش‌های خود را در این داشبورد مشاهده کنید. این برنامه هرگز امکان برداشت وجه ندارد."
+        "با رمز دسترسی داشبورد وارد شوید تا داده‌های واقعی نوبیتکس از طریق سرور امن نمایش داده شود. این برنامه امکان برداشت وجه ندارد."
       ));
 
       card.appendChild(renderGuide());
       card.appendChild(renderNotice());
 
       const field = Utils.el("div", { class:"field" }, [
-        Utils.el("label", { for:"apiKeyInput" }, "کلید API نوبیتکس"),
+        Utils.el("label", { for:"apiKeyInput" }, "رمز دسترسی داشبورد"),
         Utils.el("div", { class:"input-wrap api-field" }, [
           Utils.el("input", {
             id:"apiKeyInput", class:"input", type: showKey ? "text" : "password",
-            placeholder:"کلید API خود را اینجا وارد کنید", autocomplete:"off", spellcheck:"false",
+            placeholder:"رمز دسترسی را وارد کنید", autocomplete:"off", spellcheck:"false",
           }),
           Utils.el("div", { class:"input-actions" }, [
             Utils.el("button", {
@@ -2261,7 +2125,7 @@ const PageConnect = {
             }),
           ]),
         ]),
-        Utils.el("span", { class:"field-hint" }, "این مقدار هرگز در مرورگر ذخیره نمی‌شود و فقط برای برقراری اتصال اولیه استفاده می‌شود."),
+        Utils.el("span", { class:"field-hint" }, "این مقدار در مرورگر ذخیره نمی‌شود؛ پس از ورود فقط یک توکن نشست کوتاه‌مدت در حافظه می‌ماند."),
       ]);
       card.appendChild(field);
 
@@ -2269,14 +2133,14 @@ const PageConnect = {
         class:"btn btn-primary btn-block", style:"margin-top:16px;height:44px;",
         disabled: status === "loading" ? "true" : false,
         onClick: handleConnect,
-      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال اتصال…"] : "اتصال به نوبیتکس");
+      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال ورود…"] : "ورود");
       card.appendChild(btn);
 
       const st = renderStatus();
       if(st) card.appendChild(st);
 
       card.appendChild(Utils.el("div", { class:"connect-foot" }, [
-        "برای اطلاعات بیشتر، ",
+        "برای ساخت کلید API، ",
         Utils.el("a", { href: NOBITEX_API_GUIDE_URL, target:"_blank", rel:"noopener" }, "راهنمای رسمی نوبیتکس"),
         " را مطالعه کنید.",
       ]));
@@ -2318,25 +2182,32 @@ const PageDashboard = {
 
     let range = "7d";
 
-    try{
-      const [summaryRes, historyRes, marketRes] = await Promise.all([
-        Api.getPortfolioSummary(),
-        Api.getPortfolioHistory(range),
-        Api.getMarketList(),
-      ]);
+    const [summaryS, historyS, marketS] = await Promise.allSettled([
+      Api.getPortfolioSummary(),
+      Api.getPortfolioHistory(range),
+      Api.getMarketList(),
+    ]);
 
-      renderKpis(summaryRes);
-      renderChart(historyRes, summaryRes);
-      renderSideMarket(marketRes);
-      renderMarketTable(marketRes);
-
-      State.set({ connection: { lastChecked: new Date().toISOString() } });
-    }catch(e){
-      kpiGrid.innerHTML = "";
-      chartCard.innerHTML = "";
-      marketCard.innerHTML = "";
-      chartCard.appendChild(UI.errorState("دریافت اطلاعات داشبورد ناموفق بود", "اتصال به سرور برقرار نشد.", () => PageDashboard.mount(container)));
+    if(marketS.status === "fulfilled"){
+      renderSideMarket(marketS.value);
+      renderMarketTable(marketS.value);
+    }else{
+      sideCard.innerHTML = ""; marketCard.innerHTML = "";
+      marketCard.appendChild(UI.errorState("دریافت اطلاعات بازار ناموفق بود", marketS.reason && marketS.reason.message, () => PageDashboard.mount(container)));
     }
+    if(summaryS.status === "fulfilled"){
+      renderKpis(summaryS.value);
+    }else{
+      kpiGrid.innerHTML = "";
+      kpiGrid.appendChild(UI.errorState("دریافت اطلاعات حساب ناموفق بود", summaryS.reason && summaryS.reason.message, () => PageDashboard.mount(container)));
+    }
+    if(historyS.status === "fulfilled"){
+      renderChart(historyS.value, summaryS.value);
+    }else{
+      chartCard.innerHTML = "";
+      chartCard.appendChild(UI.empty("تاریخچه پرتفو در دسترس نیست", historyS.reason && historyS.reason.message));
+    }
+    if(marketS.status === "fulfilled") State.set({ connection: { lastChecked: new Date().toISOString() } });
 
     function renderKpis(summaryRes){
       kpiGrid.innerHTML = "";
@@ -2355,9 +2226,9 @@ const PageDashboard = {
           ]),
           Utils.el("div", { class:"kpi-label" }, it.label),
           Utils.el("div", { class:"kpi-value num" }, it.value),
-          it.change !== undefined ? Utils.el("div", { class:`kpi-change ${it.change >= 0 ? "up":"down"}` }, [
+          (it.change !== undefined && it.change !== null) ? Utils.el("div", { class:`kpi-change ${it.change >= 0 ? "up":"down"}` }, [
             Utils.el("span", { html: ic(it.change >= 0 ? "trendUp" : "trendDown") }),
-            Utils.formatPercent(it.change) + " (۲۴ ساعت)",
+            Utils.formatPercent(it.change) + " (۲۴ ساعت، بر اساس موجودی فعلی)",
           ]) : null,
         ]);
         kpiGrid.appendChild(card);
@@ -2368,7 +2239,7 @@ const PageDashboard = {
       chartCard.innerHTML = "";
       const points = historyRes.data;
       if(!points || points.length < 2){
-        chartCard.appendChild(UI.empty("داده تاریخی کافی نیست", "برای نمایش نمودار، داده بیشتری لازم است."));
+        chartCard.appendChild(UI.empty("داده تاریخی کافی نیست", "نوبیتکس تاریخچه ارزش پرتفو ارائه نمی‌دهد؛ این نمودار از نمونه‌هایی ساخته می‌شود که سرور از زمان فعال‌سازی ذخیره کرده است."));
         return;
       }
       const last = points[points.length-1].v;
@@ -2393,7 +2264,7 @@ const PageDashboard = {
               if(wrap) wrap.innerHTML = "";
               if(wrap) wrap.appendChild(UI.skeleton("100%","100%","border-radius:14px;"));
               chartCard.querySelectorAll(".range-tabs .chip").forEach(c=>c.classList.remove("active"));
-              const hRes = await Api.getPortfolioHistory(range);
+              let hRes; try{ hRes = await Api.getPortfolioHistory(range); }catch(e){ hRes = { data:[] }; }
               renderChart(hRes, summaryRes);
             }
           }, r)
@@ -2498,7 +2369,7 @@ const PageMarket = {
     container.appendChild(Utils.el("div", { class:"page-head" }, [
       Utils.el("div", {}, [
         Utils.el("h1", {}, "بازار ارزهای دیجیتال"),
-        Utils.el("div", { class:"sub" }, "قیمت لحظه‌ای ارزهای پشتیبانی‌شده در حساب متصل‌شده"),
+        Utils.el("div", { class:"sub" }, "قیمت‌های لحظه‌ای بازار تومانی نوبیتکس"),
       ]),
       Utils.el("button", { class:"btn btn-ghost btn-sm", id:"mkRefresh", html:"" }, [Utils.el("span",{html:ic("refresh")}), " به‌روزرسانی"]),
     ]));
@@ -2523,7 +2394,7 @@ const PageMarket = {
         }),
       ]));
       toolbar.appendChild(Utils.el("div", { style:"display:flex;gap:6px;flex-wrap:wrap;" }, [
-        chip("all","همه بازارها"), chip("IRT","بازار تومانی"), chip("USDT","بازار تتری"),
+        chip("all","همه بازارها"), chip("IRT","بازار تومانی"),
       ]));
     }
 
@@ -2539,14 +2410,18 @@ const PageMarket = {
       card.appendChild(UI.skeletonRows(7));
       try{
         const res = await Api.getMarketList();
-        allCoins = res.data.map(c => ({ ...c, _spark: MockData.history30d(c.id).slice(-14) }));
+        allCoins = res.data.map(c => ({ ...c, _spark: null }));
         loadError = false;
         buildToolbar();
-        renderTable(res.isMock);
+        renderTable(false);
+        Api.getSparklines(allCoins.map(c => c.id)).then(sp => {
+          allCoins.forEach(c => { c._spark = (sp.data && sp.data[c.id]) || null; });
+          renderTable(false);
+        }).catch(() => {});
       }catch(e){
         loadError = true;
         card.innerHTML = "";
-        card.appendChild(UI.errorState("دریافت بازار ناموفق بود", "", load));
+        card.appendChild(UI.errorState("دریافت بازار ناموفق بود", e.message, load));
       }
     }
 
@@ -2627,7 +2502,7 @@ const PageMarket = {
       requestAnimationFrame(() => {
         rows.slice(0, visibleCount).forEach(c => {
           const canvas = wrap.querySelector(`canvas[data-key="${c.id}"]`);
-          if(canvas) Charts.sparkline(canvas, c._spark, c.change24h >= 0);
+          if(canvas && c._spark) Charts.sparkline(canvas, c._spark, (c.change24h ?? 0) >= 0);
         });
       });
     }
@@ -2663,12 +2538,14 @@ const PageCoin = {
     );
 
     let range = "30d";
+    let coinFetchedAt = null;
 
     try{
-      const [coinRes, histRes, walletRes] = await Promise.all([
+      const [coinRes, histRes, walletRes, ordersRes] = await Promise.all([
         Api.getCoin(coinId),
-        Api.getCoinHistory(coinId, range),
-        Api.getWalletAssets(),
+        Api.getCoinHistory(coinId, range).catch(() => ({ data:[] })),
+        Api.getWalletAssets().catch(() => null),
+        Api.getOpenOrders().catch(() => null),
       ]);
 
       if(!coinRes.data){
@@ -2677,13 +2554,14 @@ const PageCoin = {
         return;
       }
 
+      coinFetchedAt = coinRes.fetchedAt;
       renderHead(coinRes.data, coinRes.isMock);
       renderChart(histRes, coinRes.data);
-      renderSide(coinRes.data, walletRes);
+      renderSide(coinRes.data, walletRes, ordersRes);
 
     }catch(e){
       headCard.innerHTML = "";
-      headCard.appendChild(UI.errorState("دریافت اطلاعات ارز ناموفق بود", "", () => PageCoin.mount(container, params)));
+      headCard.appendChild(UI.errorState("دریافت اطلاعات ارز ناموفق بود", e.message, () => PageCoin.mount(container, params)));
     }
 
     function renderHead(coin, isMock){
@@ -2705,7 +2583,7 @@ const PageCoin = {
             UI.changeBadge(coin.change24h),
           ]),
           Utils.el("div", { class:"text-faint", style:"font-size:11.5px;margin-top:4px;" },
-            `آخرین به‌روزرسانی: ${Utils.timeAgo(new Date().toISOString())}`),
+            `آخرین به‌روزرسانی: ${Utils.timeAgo(coinFetchedAt)}`),
         ]),
       ]));
       headCard.appendChild(Utils.el("div", { class:"coin-stats-row" }, [
@@ -2739,7 +2617,7 @@ const PageCoin = {
               const wrap = chartCard.querySelector(".chart-canvas-wrap");
               if(wrap) wrap.innerHTML = "";
               if(wrap) wrap.appendChild(UI.skeleton("100%","100%","border-radius:14px;"));
-              const hRes = await Api.getCoinHistory(coinId, range);
+              let hRes; try{ hRes = await Api.getCoinHistory(coinId, range); }catch(e){ hRes = { data:[] }; }
               renderChart(hRes, coin);
             }
           }, r === "7d" ? "۷ روز" : r === "30d" ? "۳۰ روز" : "۹۰ روز")
@@ -2765,30 +2643,265 @@ const PageCoin = {
       });
     }
 
-    function renderSide(coin, walletRes){
+    function renderSide(coin, walletRes, ordersRes){
       sideCol.innerHTML = "";
 
-      const holding = (walletRes.data || []).find(a => a.coinId === coin.id);
+      const holding = walletRes ? (walletRes.data || []).find(a => a.coinId === coin.id) : null;
       const holdCard = Utils.el("div", { class:"card card-pad" }, [
         Utils.el("div", { class:"card-title" }, "موجودی شما از این ارز"),
       ]);
       if(holding){
         holdCard.appendChild(Utils.el("div", { style:"margin-top:10px;" }, [
           Utils.el("div", { class:"num", style:"font-size:19px;font-weight:700;" }, `${Utils.formatNumber(holding.total,{decimals:6})} ${holding.symbol}`),
-          Utils.el("div", { class:"text-faint", style:"font-size:12px;margin-top:4px;" }, `≈ ${Utils.formatPrice(holding.total * coin.price, "")}`),
-          walletRes.isMock ? Utils.el("div", { style:"margin-top:10px;" }, UI.mockFlag()) : null,
+          Utils.el("div", { class:"text-faint", style:"font-size:12px;margin-top:4px;" }, `≈ ${Utils.formatPrice(holding.valueIrt, "")}`),
         ]));
       }else{
-        holdCard.appendChild(UI.empty("موجودی از این ارز ندارید", ""));
+        holdCard.appendChild(walletRes ? UI.empty("موجودی از این ارز ندارید", "") : UI.empty("موجودی در دسترس نیست", "دریافت اطلاعات کیف پول ممکن نشد."));
       }
       sideCol.appendChild(holdCard);
 
+      const mine = ordersRes ? (ordersRes.data || []).filter(o => o.coin === coin.id.toUpperCase()) : null;
       const ordersCard = Utils.el("div", { class:"card card-pad" }, [
         Utils.el("div", { class:"card-title" }, "سفارش‌های باز مرتبط"),
-        UI.empty("سفارش فعالی برای این ارز نیست", "سفارش‌های باز در این نسخه فقط برای کل حساب نمایش داده می‌شوند."),
+        mine === null ? UI.empty("سفارش‌ها در دسترس نیست", "دریافت سفارش‌های باز ممکن نشد.")
+          : mine.length === 0 ? UI.empty("سفارش فعالی برای این ارز نیست", "")
+          : Utils.el("div", {}, mine.map(o => Utils.el("div", { class:"info-row" }, [
+              Utils.el("span", { class:"k" }, `${o.type} ${Utils.formatNumber(o.amount, { decimals:6 })}`),
+              Utils.el("span", { class:"v num" }, o.desc),
+            ]))),
+        Utils.el("button", { class:"btn btn-outline btn-sm", style:"margin-top:12px;", onClick:() => Router.go(`trade/${coin.id}`) }, "خرید / فروش این ارز"),
       ]);
       sideCol.appendChild(ordersCard);
     }
+  }
+};
+// ===================================================================
+// صفحه خرید و فروش — ثبت سفارش واقعی فقط وقتی سرور آن را فعال کرده باشد
+// ===================================================================
+
+const PageTrade = {
+  async mount(container, params){
+    container.innerHTML = "";
+    container.appendChild(Utils.el("div", { class:"page-head" }, [
+      Utils.el("div", {}, [
+        Utils.el("h1", {}, "خرید و فروش"),
+        Utils.el("div", { class:"sub" }, "آماده‌سازی و ثبت سفارش در بازار تومانی نوبیتکس"),
+      ]),
+    ]));
+    const body = Utils.el("div");
+    container.appendChild(body);
+    body.appendChild(UI.skeletonRows(5));
+
+    let coins = [], cfg = null, assets = null, book = null;
+    const st = { coinId: (params && params.id) || "btc", side:"buy", execution:"limit", amount:"", price:"" };
+    let busy = false;
+
+    try{
+      const [mRes, cRes, wRes] = await Promise.all([
+        Api.getMarketList(),
+        Api.getTradeConfig().catch(() => null),
+        Api.getWalletAssets().catch(() => null),
+      ]);
+      coins = mRes.data; cfg = cRes && cRes.data; assets = wRes && wRes.data;
+    }catch(e){
+      body.innerHTML = "";
+      body.appendChild(UI.errorState("دریافت اطلاعات بازار ناموفق بود", e.message, () => PageTrade.mount(container, params)));
+      return;
+    }
+    if(!coins.find(c => c.id === st.coinId)) st.coinId = coins[0].id;
+    loadBook();
+
+    const coin = () => coins.find(c => c.id === st.coinId);
+    const fmtAmount = (n) => { let s = Number(n).toFixed(8); return s.includes(".") ? s.replace(/0+$/,"").replace(/\.$/,"") : s; };
+
+    async function loadBook(){
+      try{ book = (await Api.getOrderbook(st.coinId)).data; }catch(e){ book = null; }
+      paint();
+    }
+
+    function balanceInfo(){
+      if(!assets) return { text:"نامشخص (دریافت موجودی ممکن نشد)", value:null };
+      const key = st.side === "buy" ? "irt" : st.coinId;
+      const a = assets.find(x => x.coinId === key);
+      const v = a ? a.available : 0;
+      return { value:v, text: st.side === "buy" ? Utils.formatPrice(v, "تومان") : `${Utils.formatNumber(v,{decimals:8})} ${st.coinId.toUpperCase()}` };
+    }
+
+    function estimate(){
+      const amt = Number(st.amount); const c = coin();
+      if(!(amt > 0)) return null;
+      if(st.execution === "limit"){ const p = Number(st.price); return p > 0 ? amt * p : null; }
+      const unit = (st.side === "buy" ? c.bestSell : c.bestBuy) || c.price; return amt * unit;
+    }
+
+    function paint(){
+      body.innerHTML = "";
+      const c = coin();
+      const enabled = cfg && cfg.tradingEnabled;
+      body.appendChild(Utils.el("div", { class:"notice-box", style:"margin-bottom:14px;" }, [
+        Utils.el("div", { html: ic("shield") }),
+        Utils.el("p", {}, !cfg
+          ? "وضعیت سفارش‌گذاری از سرور دریافت نشد؛ ارسال سفارش در دسترس نیست."
+          : enabled
+            ? "ثبت سفارش واقعی روی سرور فعال است. هر سفارش با پول واقعی انجام می‌شود و پیش از ارسال باید صریحاً تأیید شود."
+            : "ثبت سفارش واقعی روی سرور غیرفعال است. می‌توانید سفارش را آماده و پیش‌نمایش کنید، اما ارسال نمی‌شود."),
+      ]));
+
+      const grid = Utils.el("div", { class:"coin-grid" });
+      const form = Utils.el("div", { class:"card card-pad" });
+      const side = Utils.el("div", { style:"display:flex;flex-direction:column;gap:14px;" });
+      grid.append(form, side); body.appendChild(grid);
+
+      form.appendChild(Utils.el("div", { class:"field" }, [
+        Utils.el("label", {}, "بازار"),
+        UI.dropdown({ value: st.coinId, title:"انتخاب بازار", options: coins.map(x => ({ value:x.id, label:`${x.name} (${x.symbol})` })),
+          onChange:(v) => { st.coinId = v; st.price = ""; loadBook(); } }),
+      ]));
+      form.appendChild(Utils.el("div", { class:"tabs", style:"margin-top:12px;" }, [
+        Utils.el("button", { class:`tab-btn ${st.side==="buy"?"active":""}`, onClick:() => { st.side = "buy"; paint(); } }, "خرید"),
+        Utils.el("button", { class:`tab-btn ${st.side==="sell"?"active":""}`, onClick:() => { st.side = "sell"; paint(); } }, "فروش"),
+      ]));
+      form.appendChild(Utils.el("div", { class:"tabs", style:"margin-top:8px;" }, [
+        Utils.el("button", { class:`tab-btn ${st.execution==="limit"?"active":""}`, onClick:() => { st.execution = "limit"; paint(); } }, "سفارش محدود"),
+        Utils.el("button", { class:`tab-btn ${st.execution==="market"?"active":""}`, onClick:() => { st.execution = "market"; paint(); } }, "سفارش بازار"),
+      ]));
+
+      const amountInput = Utils.el("input", { class:"input num", inputmode:"decimal", placeholder:"مثلاً 0.001", value: st.amount, autocomplete:"off",
+        onInput:(e) => { st.amount = e.target.value.trim(); updateEstimate(); } });
+      form.appendChild(Utils.el("div", { class:"field", style:"margin-top:12px;" }, [
+        Utils.el("label", {}, `مقدار (${st.coinId.toUpperCase()})`), amountInput,
+      ]));
+
+      if(st.execution === "limit"){
+        const priceInput = Utils.el("input", { class:"input num", inputmode:"decimal", placeholder:"قیمت هر واحد به تومان", value: st.price, autocomplete:"off",
+          onInput:(e) => { st.price = e.target.value.trim(); updateEstimate(); } });
+        form.appendChild(Utils.el("div", { class:"field", style:"margin-top:12px;" }, [
+          Utils.el("label", {}, "قیمت (تومان)"), priceInput,
+          Utils.el("button", { class:"btn btn-ghost btn-sm", style:"margin-top:6px;align-self:flex-start;",
+            onClick:() => { st.price = String(c.price); priceInput.value = st.price; updateEstimate(); } }, "قیمت لحظه‌ای بازار"),
+        ]));
+      }
+
+      const est = Utils.el("div", { class:"info-row", style:"margin-top:12px;" });
+      form.appendChild(est);
+      function updateEstimate(){
+        const e = estimate();
+        est.innerHTML = "";
+        est.append(Utils.el("span", { class:"k" }, st.execution === "limit" ? "مبلغ سفارش" : "مبلغ تقریبی سفارش"),
+          Utils.el("span", { class:"v num" }, e === null ? "—" : Utils.formatPrice(e, "تومان")));
+      }
+      updateEstimate();
+
+      form.appendChild(Utils.el("div", { class:"info-row" }, [
+        Utils.el("span", { class:"k" }, st.side === "buy" ? "موجودی تومانی قابل‌استفاده" : "موجودی قابل‌فروش"),
+        Utils.el("span", { class:"v num" }, balanceInfo().text),
+      ]));
+
+      const msg = Utils.el("div", { class:"connect-status error", style:"display:none;margin-top:10px;" });
+      form.appendChild(msg);
+      form.appendChild(Utils.el("button", { class:"btn btn-primary btn-block", style:"margin-top:14px;height:44px;", disabled: busy ? "true" : false,
+        onClick: async () => {
+          const o = { coinId: st.coinId, side: st.side, execution: st.execution, amount: st.amount, price: st.execution === "limit" ? st.price : null };
+          const bal = balanceInfo(); const e = estimate();
+          const fail = (t) => { msg.style.display = ""; msg.textContent = t; };
+          if(!(Number(o.amount) > 0)) return fail("مقدار را وارد کنید.");
+          if(o.execution === "limit" && !(Number(o.price) > 0)) return fail("قیمت را وارد کنید.");
+          if(bal.value !== null){
+            if(st.side === "sell" && Number(o.amount) > bal.value) return fail("مقدار از موجودی قابل‌فروش بیشتر است.");
+            if(st.side === "buy" && e !== null && e > bal.value) return fail("مبلغ سفارش از موجودی تومانی بیشتر است.");
+          }
+          msg.style.display = "none";
+          try{ openPreview(await Api.previewOrder(o)); }
+          catch(err){ fail(err.message); }
+        } }, "پیش‌نمایش سفارش"));
+
+      // ستون کناری: قیمت و دفتر سفارش‌ها
+      side.appendChild(Utils.el("div", { class:"card card-pad" }, [
+        Utils.el("div", { class:"card-title" }, `${c.name} — قیمت لحظه‌ای`),
+        Utils.el("div", { class:"coin-price num", style:"margin-top:8px;" }, Utils.formatPrice(c.price, "")),
+        Utils.el("div", { class:"text-faint", style:"font-size:12px;margin-top:4px;" },
+          `خرید ${Utils.formatPrice(c.bestSell, "")} · فروش ${Utils.formatPrice(c.bestBuy, "")}`),
+      ]));
+      const bookCard = Utils.el("div", { class:"card card-pad" }, [ Utils.el("div", { class:"card-title" }, "دفتر سفارش‌ها") ]);
+      if(!book || (!book.bids.length && !book.asks.length)){
+        bookCard.appendChild(UI.empty("دفتر سفارش در دسترس نیست", ""));
+      }else{
+        const col = (title, rows) => Utils.el("div", { style:"flex:1;min-width:0;" }, [
+          Utils.el("div", { class:"text-faint", style:"font-size:12px;margin:8px 0 4px;" }, title),
+          ...rows.slice(0,6).map(r => Utils.el("div", { class:"info-row" }, [
+            Utils.el("span", { class:"k num" }, Utils.formatPrice(r.price, "")),
+            Utils.el("span", { class:"v num text-dim" }, Utils.formatNumber(r.amount, { decimals:6 })),
+          ])),
+        ]);
+        bookCard.appendChild(Utils.el("div", { style:"display:flex;gap:14px;" }, [ col("خریداران", book.bids), col("فروشندگان", book.asks) ]));
+      }
+      side.appendChild(bookCard);
+    }
+
+    function openPreview(pv){
+      const sm = pv.summary;
+      const backdrop = Utils.el("div", { class:"modal-backdrop" });
+      const modal = Utils.el("div", { class:"modal" });
+      backdrop.appendChild(modal);
+      let confirmed = false, sending = false, done = false;
+
+      const row = (k, v) => Utils.el("div", { class:"info-row" }, [ Utils.el("span", { class:"k" }, k), Utils.el("span", { class:"v num" }, v) ]);
+
+      function render(result){
+        modal.innerHTML = "";
+        modal.appendChild(Utils.el("h3", {}, result ? "نتیجه‌ی سفارش" : "تأیید نهایی سفارش"));
+        if(result){
+          modal.appendChild(Utils.el("p", {}, result.text));
+          if(result.row){
+            modal.appendChild(row("شناسه سفارش", result.row.id));
+            modal.appendChild(row("وضعیت (از نوبیتکس)", result.row.status));
+          }
+          modal.appendChild(Utils.el("div", { class:"modal-actions" }, [
+            Utils.el("button", { class:"btn btn-outline", onClick:() => backdrop.remove() }, "بستن"),
+            result.ok ? Utils.el("button", { class:"btn btn-primary", onClick:() => { backdrop.remove(); Router.go("history"); } }, "تاریخچه سفارش‌ها") : null,
+          ]));
+          return;
+        }
+        modal.appendChild(row("بازار", sm.market));
+        modal.appendChild(row("جهت", sm.side === "buy" ? "خرید" : "فروش"));
+        modal.appendChild(row("نوع سفارش", sm.execution === "limit" ? "محدود (Limit)" : "بازار (Market)"));
+        modal.appendChild(row("مقدار", `${sm.amount} ${st.coinId.toUpperCase()}`));
+        modal.appendChild(row("قیمت", sm.price ? Utils.formatPrice(Number(sm.price), "تومان") : "بهترین قیمت بازار"));
+        modal.appendChild(row(sm.execution === "limit" ? "مبلغ سفارش" : "مبلغ تقریبی", Utils.formatPrice(sm.estimateIrt, "تومان")));
+        (pv.warnings || []).forEach(w => modal.appendChild(Utils.el("p", { class:"text-faint", style:"font-size:12px;margin-top:8px;" }, w)));
+
+        if(!pv.tradingEnabled){
+          modal.appendChild(Utils.el("div", { class:"notice-box", style:"margin-top:12px;" }, [
+            Utils.el("div", { html: ic("shield") }),
+            Utils.el("p", {}, "ثبت سفارش واقعی روی سرور غیرفعال است؛ این فقط یک پیش‌نمایش است و هیچ سفارشی ارسال نمی‌شود."),
+          ]));
+          modal.appendChild(Utils.el("div", { class:"modal-actions" }, [
+            Utils.el("button", { class:"btn btn-outline", onClick:() => backdrop.remove() }, "بستن") ]));
+          return;
+        }
+        const chk = Utils.el("input", { type:"checkbox", onChange:(e) => { confirmed = e.target.checked; send.disabled = !confirmed || sending; } });
+        modal.appendChild(Utils.el("label", { style:"display:flex;gap:8px;align-items:flex-start;margin-top:12px;font-size:13px;cursor:pointer;" }, [
+          chk, Utils.el("span", {}, "مطمئنم که این یک سفارش واقعی با پول واقعی است و جزئیات بالا را بررسی کرده‌ام."),
+        ]));
+        const send = Utils.el("button", { class:"btn btn-primary", disabled:"true", onClick: async () => {
+          if(sending || done || !confirmed) return;       // جلوگیری از کلیک تکراری
+          sending = true; send.disabled = true; send.textContent = "در حال ارسال…";
+          try{
+            const r = await Api.submitOrder(pv.order, pv.clientOrderId, pv.confirmToken);
+            done = true; render({ ok:true, text:r.message, row:r.order });
+          }catch(err){
+            done = true; // هر نتیجه‌ی غیرموفق → برای تلاش دوباره باید پیش‌نمایش جدید ساخته شود
+            render({ ok:false, text:err.message });
+          }
+        } }, "تأیید و ارسال سفارش");
+        modal.appendChild(Utils.el("div", { class:"modal-actions" }, [
+          Utils.el("button", { class:"btn btn-outline", onClick:() => backdrop.remove() }, "انصراف"), send ]));
+      }
+      render();
+      document.body.appendChild(backdrop);
+    }
+
+    paint();
   }
 };
 // ===================================================================
@@ -2829,19 +2942,17 @@ const PageWallet = {
     }catch(e){
       summary.innerHTML = "";
       card.innerHTML = "";
-      card.appendChild(UI.errorState("دریافت دارایی‌ها ناموفق بود", "", () => PageWallet.mount(container)));
+      card.appendChild(UI.errorState("دریافت دارایی‌ها ناموفق بود", e.message, () => PageWallet.mount(container)));
     }
 
-    function valueOf(a){
-      const price = (coinMap[a.coinId] || {}).price || 0;
-      return a.total * price;
-    }
+    const sumOf = (fn) => assets.reduce((s,a) => s + (a.valueIrt === null ? 0 : fn(a)), 0);
+    const unpriced = () => assets.filter(a => a.valueIrt === null).length;
 
     function renderSummary(isMock){
       summary.innerHTML = "";
-      const totalValue = assets.reduce((s,a) => s + valueOf(a), 0);
-      const availValue = assets.reduce((s,a) => s + (a.available * ((coinMap[a.coinId]||{}).price || 0)), 0);
-      const lockedValue = assets.reduce((s,a) => s + (a.locked * ((coinMap[a.coinId]||{}).price || 0)), 0);
+      const totalValue = sumOf(a => a.valueIrt);
+      const availValue = sumOf(a => a.available * a.priceIrt);
+      const lockedValue = sumOf(a => a.locked * a.priceIrt);
 
       const items = [
         { label:"ارزش کل دارایی‌ها", value:totalValue, ic:"wallet" },
@@ -2895,9 +3006,9 @@ const PageWallet = {
       ]);
       const tbody = Utils.el("tbody");
       rows.forEach(a => {
-        const price = (coinMap[a.coinId]||{}).price || 0;
-        const value = a.total * price;
-        tbody.appendChild(Utils.el("tr", { onClick: () => Router.go(`coin/${a.coinId}`) }, [
+        const price = a.priceIrt;
+        const value = a.valueIrt;
+        tbody.appendChild(Utils.el("tr", { onClick: () => { if(coinMap[a.coinId]) Router.go(`coin/${a.coinId}`); } }, [
           Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(a.symbol), Utils.el("span", {}, a.name)])),
           Utils.el("td", { class:"num" }, hideValues ? "••••" : Utils.formatNumber(a.total,{decimals:6})),
           Utils.el("td", { class:"num text-dim col-opt" }, hideValues ? "••••" : Utils.formatNumber(a.available,{decimals:6})),
@@ -2910,7 +3021,7 @@ const PageWallet = {
       table.appendChild(tbody);
       wrap.appendChild(table);
       card.appendChild(wrap);
-      if(isMock) card.appendChild(Utils.el("div", { style:"margin-top:12px;" }, UI.mockFlag()));
+      if(unpriced() > 0) card.appendChild(Utils.el("div", { class:"text-faint", style:"margin-top:12px;font-size:12px;" }, `قیمت ${unpriced()} دارایی در دسترس نیست و در مجموع ارزش‌ها لحاظ نشده است.`));
     }
 
     function openChargeModal(){
@@ -2943,7 +3054,7 @@ const PageHistory = {
     container.appendChild(Utils.el("div", { class:"page-head" }, [
       Utils.el("div", {}, [
         Utils.el("h1", {}, "تاریخچه تراکنش‌ها"),
-        Utils.el("div", { class:"sub" }, "فهرست تراکنش‌های دریافت‌شده از حساب صرافی متصل"),
+        Utils.el("div", { class:"sub" }, "سفارش‌های ثبت‌شده در حساب نوبیتکس (واریز و برداشت در این نسخه پشتیبانی نمی‌شود)"),
       ]),
     ]));
 
@@ -2962,7 +3073,7 @@ const PageHistory = {
         renderTable(res.isMock);
       }catch(e){
         card.innerHTML = "";
-        card.appendChild(UI.errorState("دریافت تاریخچه ناموفق بود", "", load));
+        card.appendChild(UI.errorState("دریافت تاریخچه ناموفق بود", e.message, load));
       }
     }
 
@@ -2970,7 +3081,7 @@ const PageHistory = {
       toolbar.innerHTML = "";
       const typeDd = UI.dropdown({
         value: filters.type, title:"نوع تراکنش",
-        options: ["all","خرید","فروش","واریز","برداشت"].map(v => ({ value:v, label: v==="all" ? "همه انواع" : v })),
+        options: ["all","خرید","فروش"].map(v => ({ value:v, label: v==="all" ? "همه انواع" : v })),
         onChange: (v) => { filters.type = v; load(); },
       });
       const coinDd = UI.dropdown({
@@ -2980,7 +3091,7 @@ const PageHistory = {
       });
       const statusDd = UI.dropdown({
         value: filters.status, title:"وضعیت",
-        options: ["all","موفق","در انتظار","ناموفق"].map(v => ({ value:v, label: v==="all" ? "همه وضعیت‌ها" : v })),
+        options: ["all","موفق","در انتظار","لغو شده"].map(v => ({ value:v, label: v==="all" ? "همه وضعیت‌ها" : v })),
         onChange: (v) => { filters.status = v; load(); },
       });
       toolbar.append(typeDd, coinDd, statusDd);
@@ -3057,24 +3168,23 @@ const PageProfile = {
       renderSecurity();
     }catch(e){
       infoCard.innerHTML = "";
-      infoCard.appendChild(UI.errorState("دریافت اطلاعات پروفایل ناموفق بود", "", () => PageProfile.mount(container)));
+      infoCard.appendChild(UI.errorState("دریافت اطلاعات پروفایل ناموفق بود", e.message, () => PageProfile.mount(container)));
     }
 
     function renderInfo(profile, isMock){
       infoCard.innerHTML = "";
       infoCard.appendChild(Utils.el("div", { class:"profile-head" }, [
-        Utils.el("div", { class:"avatar" }, Utils.initials(profile.username)),
+        Utils.el("div", { class:"avatar" }, Utils.initials(profile.username || "N")),
         Utils.el("div", {}, [
-          Utils.el("div", { style:"font-size:16px;font-weight:700;" }, profile.username),
-          Utils.el("div", { class:"text-faint num", style:"font-size:12px;margin-top:3px;" }, profile.accountId),
+          Utils.el("div", { style:"font-size:16px;font-weight:700;" }, profile.username || "حساب نوبیتکس"),
+          Utils.el("div", { class:"text-faint num", style:"font-size:12px;margin-top:3px;" }, profile.emailMasked || ""),
         ]),
         isMock ? UI.mockFlag() : null,
       ]));
       infoCard.appendChild(Utils.el("div", {}, [
-        row("شناسه حساب", profile.accountId),
-        row("شماره تلفن", Utils.maskPhone(profile.phoneMasked)),
+        row("ایمیل", profile.emailMasked || "—"),
+        row("شماره تلفن", profile.phoneMasked || "—"),
         row("وضعیت اتصال", null, UI.statusBadge(State.get().connection.status)),
-        row("تاریخ اتصال حساب", Utils.formatDate(profile.connectedAt)),
       ]));
     }
 
@@ -3122,10 +3232,10 @@ const PageProfile = {
         Utils.el("div", { class:"card-title" }, "امنیت اتصال"),
         Utils.el("div", { class:"notice-box", style:"margin-top:12px;" }, [
           Utils.el("div", { html: ic("shield") }),
-          Utils.el("p", {}, "کلید API شما رمزنگاری‌شده و فقط در سرور نگه‌داری می‌شود. این برنامه هرگز کلید کامل، رمز عبور یا کد یک‌بارمصرف شما را نمایش نمی‌دهد."),
+          Utils.el("p", {}, "کلید API نوبیتکس فقط در Secrets سرور نگه‌داری می‌شود و هرگز به مرورگر ارسال نمی‌شود."),
         ]),
         Utils.el("button", { class:"btn btn-danger-ghost btn-sm btn-block", style:"margin-top:4px;", onClick: confirmDisconnect },
-          [Utils.el("span",{html:ic("trash")}), " حذف اتصال ذخیره‌شده"]),
+          [Utils.el("span",{html:ic("trash")}), " پایان نشست"]),
       ]);
       rightCol.appendChild(card);
     }
@@ -3134,7 +3244,7 @@ const PageProfile = {
       const backdrop = Utils.el("div", { class:"modal-backdrop", onClick:(e) => { if(e.target===backdrop) backdrop.remove(); } });
       backdrop.appendChild(Utils.el("div", { class:"modal" }, [
         Utils.el("h3", {}, "قطع اتصال حساب صرافی؟"),
-        Utils.el("p", {}, "پس از قطع اتصال، برای مشاهده دوباره اطلاعات باید کلید API را مجدداً وارد کنید."),
+        Utils.el("p", {}, "پس از قطع اتصال، برای مشاهده دوباره اطلاعات باید رمز دسترسی را مجدداً وارد کنید."),
         Utils.el("div", { class:"modal-actions" }, [
           Utils.el("button", { class:"btn btn-outline", onClick: () => backdrop.remove() }, "انصراف"),
           Utils.el("button", { class:"btn btn-danger-ghost", onClick: async () => {
@@ -3249,6 +3359,7 @@ const ThemeManager = {
 // ===================================================================
 
 const NAV_ITEMS = [
+  { key:"trade",     label:"خرید و فروش",         icon:"market" },
   { key:"dashboard", label:"داشبورد",            icon:"dashboard" },
   { key:"market",    label:"بازار ارزها",         icon:"market" },
   { key:"wallet",    label:"کیف پول",             icon:"wallet" },
@@ -3258,7 +3369,7 @@ const NAV_ITEMS = [
 ];
 
 const PAGE_TITLES = {
-  dashboard:"داشبورد", market:"بازار ارزهای دیجیتال", coin:"جزئیات ارز",
+  trade:"خرید و فروش", dashboard:"داشبورد", market:"بازار ارزهای دیجیتال", coin:"جزئیات ارز",
   wallet:"کیف پول", history:"تاریخچه تراکنش‌ها", profile:"پروفایل", settings:"تنظیمات",
 };
 
