@@ -53,7 +53,7 @@
   --shadow-pop:    0 30px 80px -24px #000000e0, 0 2px 10px -2px #000000a0;
 
   --sidebar-w:     248px;
-  --topbar-h:      64px;
+  --topbar-h:      72px;
 
   --ease: cubic-bezier(.4,0,.2,1);
   --ease-pop: cubic-bezier(.2,.9,.3,1.2);
@@ -194,12 +194,16 @@ p{ margin:0; }
   min-height:100vh;
 }
 
-/* در دسکتاپ این لایه کاملاً شفاف است و سایدبار مستقیماً فرزند گرید
-   .shell رفتار می‌کند؛ فقط زیر ۸۶۰px به یک لایه فیکس تبدیل می‌شود. */
-.sidebar-layer{ display:contents; }
+/* در دسکتاپ این لایه خودش ستون دوم گرید .shell است (یک جعبه‌ی
+   معمولی)؛ سایدبار داخلش کل عرض/ارتفاع را پر می‌کند. تنها زیر ۸۶۰px
+   این لایه به یک جعبه‌ی fixed تمام‌صفحه تبدیل می‌شود تا سایدبار واقعاً
+   نسبت به صفحه‌نمایش (نه نسبت به کل سند قابل‌اسکرول) جابه‌جا شود —
+   از display:contents به‌عمد استفاده نشده چون در برخی WebViewها
+   به‌درستی پشتیبانی نمی‌شود. */
+.sidebar-layer{ grid-column:2; }
 
 .sidebar{
-  grid-column:2;
+  width:100%;
   border-inline-start:1px solid var(--border-soft);
   background:linear-gradient(180deg, var(--bg-soft), var(--bg));
   padding:20px 16px;
@@ -282,14 +286,15 @@ p{ margin:0; }
   display:flex; align-items:center; justify-content:space-between;
   gap:14px;
   padding:0 26px;
-  background:color-mix(in srgb, var(--bg) 78%, transparent);
-  backdrop-filter:blur(14px);
+  background:var(--bg-soft);
   border-bottom:1px solid var(--border-soft);
+  box-shadow:0 1px 0 0 var(--border-soft);
 }
-.topbar-left{ display:flex; align-items:center; gap:12px; min-width:0; flex:1 1 auto; overflow:hidden; }
+.topbar-left{ display:flex; align-items:center; gap:13px; min-width:0; flex:1 1 auto; overflow:hidden; }
 .topbar-title{
-  font-size:16.5px; font-weight:700; white-space:nowrap;
+  font-size:18px; font-weight:800; white-space:nowrap;
   overflow:hidden; text-overflow:ellipsis; min-width:0;
+  letter-spacing:-.01em;
 }
 .topbar-right{ display:flex; align-items:center; gap:9px; flex:none; }
 
@@ -320,12 +325,10 @@ p{ margin:0; }
 .bottom-nav{
   display:none;
   position:fixed; inset-inline:0; bottom:0; z-index:30;
-  background:color-mix(in srgb, var(--bg-soft) 85%, transparent);
-  backdrop-filter:blur(14px);
+  background:var(--bg-soft);
   border-top:1px solid var(--border-soft);
   padding:7px 4px calc(7px + env(safe-area-inset-bottom));
   justify-content:space-around;
-  box-shadow:0 -10px 30px -16px #000000a0;
 }
 .bottom-nav .bn-item{
   display:flex; flex-direction:column; align-items:center; gap:4px;
@@ -346,9 +349,11 @@ p{ margin:0; }
   .shell{ grid-template-columns:1fr; }
   /* لایه‌ی مخصوص سایدبار: خودش واقعاً نسبت به viewport فیکس و overflow:hidden
      است، تا سایدبار بسته (که با transform به بیرون می‌رود) هرگز باعث
-     اسکرول افقی کل صفحه نشود — بدون این‌که روی نوار پایین یا toastها
-     که باید دقیقاً نسبت به viewport فیکس بمانند اثر بگذارد. */
+     اسکرول افقی کل صفحه نشود و همیشه نسبت به صفحه‌نمایش (نه کل سند) ثابت
+     بماند — بدون این‌که روی نوار پایین یا toastها که باید دقیقاً نسبت
+     به viewport فیکس بمانند اثر بگذارد. */
   .sidebar-layer{
+    grid-column:auto;
     position:fixed; inset:0; z-index:50;
     overflow:hidden; pointer-events:none;
   }
@@ -600,6 +605,32 @@ table.tbl{ width:100%; border-collapse:collapse; font-size:13px; min-width:640px
 .tbl th.sortable:hover{ color:var(--text); }
 .tbl th.sortable .ic{ width:11px; height:11px; opacity:.6; vertical-align:middle; margin-inline-start:3px; }
 
+/* ستون‌های غیرضروری که در موبایل حذف می‌شوند تا اسکرول افقی تا حد
+   ممکن کم یا حذف شود؛ جدول هم به‌جای عرض ثابت، عرض واقعی کارت را پر می‌کند. */
+@media (max-width:760px){
+  .col-opt{ display:none; }
+  table.tbl{ min-width:0; width:100%; }
+  .tbl thead th{ padding:0 8px 11px; font-size:10.5px; }
+  .tbl tbody td{ padding:13px 8px; font-size:12.5px; }
+  .coin-ic{ width:25px; height:25px; font-size:9.5px; }
+
+  /* جدول تا لبه‌ی کارت باز می‌شود تا بیشترین عرض ممکن را بگیرد؛
+     ستون اول و آخر با padding جبرانی با بقیه محتوای کارت هم‌تراز می‌مانند. */
+  .card-pad .table-wrap{
+    margin-inline:-22px;
+    width:calc(100% + 44px);
+  }
+  .tbl thead th:first-child, .tbl tbody td:first-child{ padding-inline-start:22px; }
+  .tbl thead th:last-child, .tbl tbody td:last-child{ padding-inline-end:22px; }
+}
+
+@media (max-width:420px){
+  .card-pad{ padding:17px; }
+  .card-pad .table-wrap{ margin-inline:-17px; width:calc(100% + 34px); }
+  .tbl thead th:first-child, .tbl tbody td:first-child{ padding-inline-start:17px; }
+  .tbl thead th:last-child, .tbl tbody td:last-child{ padding-inline-end:17px; }
+}
+
 /* ---------- وضعیت‌های خالی / خطا / بارگذاری ---------- */
 .state-box{
   display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -789,9 +820,9 @@ hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:18px 0; }
    داشبورد
    =================================================================== */
 .kpi-grid{
-  display:grid; grid-template-columns:repeat(4, 1fr); gap:16px; margin-bottom:18px;
+  display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:16px; margin-bottom:18px;
 }
-.kpi-card{ padding:19px 20px; }
+.kpi-card{ padding:19px 20px; min-width:0; }
 .kpi-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
 .kpi-ic{
   width:38px; height:38px; border-radius:12px;
@@ -879,7 +910,7 @@ hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:18px 0; }
    واکنش‌گرایی صفحات
    =================================================================== */
 @media (max-width:1020px){
-  .kpi-grid{ grid-template-columns:repeat(2,1fr); gap:14px; }
+  .kpi-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
   .dash-grid{ grid-template-columns:1fr; }
   .coin-grid{ grid-template-columns:1fr; }
   .profile-grid{ grid-template-columns:1fr; }
@@ -890,7 +921,10 @@ hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:18px 0; }
   .wallet-summary{ gap:10px; }
 }
 @media (max-width:620px){
-  .kpi-grid{ grid-template-columns:1fr 1fr; gap:13px; }
+  .kpi-grid{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px; }
+  .kpi-card{ padding:15px 14px; }
+  .kpi-value{ font-size:19px; overflow-wrap:anywhere; }
+  .kpi-top{ gap:6px; }
   .wallet-summary{ grid-template-columns:1fr; gap:12px; }
   .coin-price{ font-size:24px; }
   .chart-value{ font-size:21px; }
@@ -2422,20 +2456,20 @@ const PageDashboard = {
       const wrap = Utils.el("div", { class:"table-wrap" });
       const table = Utils.el("table", { class:"tbl" }, [
         Utils.el("thead", {}, Utils.el("tr", {}, [
-          Utils.el("th", {}, "نام ارز"), Utils.el("th", {}, "نماد"),
+          Utils.el("th", {}, "نام ارز"), Utils.el("th", { class:"col-opt" }, "نماد"),
           Utils.el("th", {}, "آخرین قیمت"), Utils.el("th", {}, "تغییر ۲۴ساعته"),
-          Utils.el("th", {}, "حجم معاملات"), Utils.el("th", {}, ""),
+          Utils.el("th", { class:"col-opt" }, "حجم معاملات"), Utils.el("th", { class:"col-opt" }, ""),
         ])),
       ]);
       const tbody = Utils.el("tbody");
       marketRes.data.slice(0,6).forEach(c => {
         const tr = Utils.el("tr", { onClick: () => Router.go(`coin/${c.id}`) }, [
           Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(c.symbol), Utils.el("span", {}, c.name)])),
-          Utils.el("td", { class:"num text-dim" }, c.symbol),
+          Utils.el("td", { class:"num text-dim col-opt" }, c.symbol),
           Utils.el("td", { class:"num" }, Utils.formatPrice(c.price, "")),
           Utils.el("td", {}, UI.changeBadge(c.change24h)),
-          Utils.el("td", { class:"num text-dim" }, Utils.formatNumber(c.volume24h, { compact:true })),
-          Utils.el("td", {}, Utils.el("button", { class:"btn btn-ghost btn-sm" }, "جزئیات")),
+          Utils.el("td", { class:"num text-dim col-opt" }, Utils.formatNumber(c.volume24h, { compact:true })),
+          Utils.el("td", { class:"col-opt" }, Utils.el("button", { class:"btn btn-ghost btn-sm" }, "جزئیات")),
         ]);
         tbody.appendChild(tr);
       });
@@ -2551,32 +2585,32 @@ const PageMarket = {
         return;
       }
 
-      const th = (label, key) => Utils.el("th", {
-        class: key ? "sortable" : "",
+      const th = (label, key, opt) => Utils.el("th", {
+        class: `${key ? "sortable" : ""} ${opt ? "col-opt" : ""}`.trim(),
         onClick: key ? () => setSort(key) : null,
       }, [label, key && sortKey===key ? Utils.el("span", { html: ic(sortDir==="asc"?"chevronDown":"chevronDown") }) : ""]);
 
       const wrap = Utils.el("div", { class:"table-wrap" });
       const table = Utils.el("table", { class:"tbl" }, [
         Utils.el("thead", {}, Utils.el("tr", {}, [
-          th("نام ارز"), th("نماد"),
+          th("نام ارز"), th("نماد", null, true),
           th("قیمت فعلی","price"), th("تغییر ۲۴ساعته","change24h"),
-          th("بالاترین ۲۴ساعته"), th("پایین‌ترین ۲۴ساعته"),
-          th("حجم معاملات","volume24h"), th("روند"), th(""),
+          th("بالاترین ۲۴ساعته", null, true), th("پایین‌ترین ۲۴ساعته", null, true),
+          th("حجم معاملات","volume24h", true), th("روند"), th("", null, true),
         ])),
       ]);
       const tbody = Utils.el("tbody");
       rows.slice(0, visibleCount).forEach(c => {
         const tr = Utils.el("tr", { onClick: () => Router.go(`coin/${c.id}`) }, [
           Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(c.symbol), Utils.el("span", {}, c.name)])),
-          Utils.el("td", { class:"num text-dim" }, c.symbol),
+          Utils.el("td", { class:"num text-dim col-opt" }, c.symbol),
           Utils.el("td", { class:"num" }, Utils.formatPrice(c.price, "")),
           Utils.el("td", {}, UI.changeBadge(c.change24h)),
-          Utils.el("td", { class:"num text-dim" }, Utils.formatPrice(c.high24h, "")),
-          Utils.el("td", { class:"num text-dim" }, Utils.formatPrice(c.low24h, "")),
-          Utils.el("td", { class:"num text-dim" }, Utils.formatNumber(c.volume24h, { compact:true })),
+          Utils.el("td", { class:"num text-dim col-opt" }, Utils.formatPrice(c.high24h, "")),
+          Utils.el("td", { class:"num text-dim col-opt" }, Utils.formatPrice(c.low24h, "")),
+          Utils.el("td", { class:"num text-dim col-opt" }, Utils.formatNumber(c.volume24h, { compact:true })),
           Utils.el("td", {}, Utils.el("canvas", { class:"sparkline", "data-key":c.id })),
-          Utils.el("td", {}, Utils.el("button", { class:"btn btn-ghost btn-sm" }, "جزئیات")),
+          Utils.el("td", { class:"col-opt" }, Utils.el("button", { class:"btn btn-ghost btn-sm" }, "جزئیات")),
         ]);
         tbody.appendChild(tr);
       });
@@ -2855,8 +2889,8 @@ const PageWallet = {
       const table = Utils.el("table", { class:"tbl" }, [
         Utils.el("thead", {}, Utils.el("tr", {}, [
           Utils.el("th", {}, "نام ارز"), Utils.el("th", {}, "موجودی کل"),
-          Utils.el("th", {}, "قابل‌استفاده"), Utils.el("th", {}, "قفل‌شده"),
-          Utils.el("th", {}, "قیمت واحد"), Utils.el("th", {}, "ارزش تقریبی"), Utils.el("th", {}, "تغییر ۲۴ساعته"),
+          Utils.el("th", { class:"col-opt" }, "قابل‌استفاده"), Utils.el("th", { class:"col-opt" }, "قفل‌شده"),
+          Utils.el("th", { class:"col-opt" }, "قیمت واحد"), Utils.el("th", {}, "ارزش تقریبی"), Utils.el("th", {}, "تغییر ۲۴ساعته"),
         ])),
       ]);
       const tbody = Utils.el("tbody");
@@ -2866,9 +2900,9 @@ const PageWallet = {
         tbody.appendChild(Utils.el("tr", { onClick: () => Router.go(`coin/${a.coinId}`) }, [
           Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(a.symbol), Utils.el("span", {}, a.name)])),
           Utils.el("td", { class:"num" }, hideValues ? "••••" : Utils.formatNumber(a.total,{decimals:6})),
-          Utils.el("td", { class:"num text-dim" }, hideValues ? "••••" : Utils.formatNumber(a.available,{decimals:6})),
-          Utils.el("td", { class:"num text-dim" }, hideValues ? "••••" : Utils.formatNumber(a.locked,{decimals:6})),
-          Utils.el("td", { class:"num text-dim" }, hideValues ? "••••" : Utils.formatPrice(price, "")),
+          Utils.el("td", { class:"num text-dim col-opt" }, hideValues ? "••••" : Utils.formatNumber(a.available,{decimals:6})),
+          Utils.el("td", { class:"num text-dim col-opt" }, hideValues ? "••••" : Utils.formatNumber(a.locked,{decimals:6})),
+          Utils.el("td", { class:"num text-dim col-opt" }, hideValues ? "••••" : Utils.formatPrice(price, "")),
           Utils.el("td", { class:"num" }, hideValues ? "••••" : Utils.formatPrice(value, "")),
           Utils.el("td", {}, UI.changeBadge(a.change24h)),
         ]));
@@ -2968,7 +3002,7 @@ const PageHistory = {
         Utils.el("thead", {}, Utils.el("tr", {}, [
           Utils.el("th", {}, "تاریخ و ساعت"), Utils.el("th", {}, "نوع"),
           Utils.el("th", {}, "ارز"), Utils.el("th", {}, "مقدار"),
-          Utils.el("th", {}, "وضعیت"), Utils.el("th", {}, "شناسه"), Utils.el("th", {}, "توضیحات"),
+          Utils.el("th", {}, "وضعیت"), Utils.el("th", { class:"col-opt" }, "شناسه"), Utils.el("th", { class:"col-opt" }, "توضیحات"),
         ])),
       ]);
       const tbody = Utils.el("tbody");
@@ -2979,8 +3013,8 @@ const PageHistory = {
           Utils.el("td", { class:"num" }, t.coin),
           Utils.el("td", { class:"num" }, Utils.formatNumber(t.amount, { decimals:6 })),
           Utils.el("td", {}, UI.statusBadge(t.status)),
-          Utils.el("td", { class:"num text-faint" }, t.id),
-          Utils.el("td", { class:"text-dim" }, t.desc),
+          Utils.el("td", { class:"num text-faint col-opt" }, t.id),
+          Utils.el("td", { class:"text-dim col-opt" }, t.desc),
         ]));
       });
       table.appendChild(tbody);
@@ -3234,6 +3268,7 @@ const App = (() => {
 
   function buildShell(){
     root.innerHTML = "";
+    root.className = ""; // کلاس connect-shell (با padding:24px) از صفحه‌ی ورود/اتصال نباید روی داشبورد بماند
 
     const scrim = Utils.el("div", { class:"sidebar-scrim", onClick: closeSidebar });
     const sidebar = Utils.el("aside", { class:"sidebar" });
