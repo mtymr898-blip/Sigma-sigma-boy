@@ -95,6 +95,7 @@ html,body{ height:100%; max-width:100%; overflow-x:hidden; }
 body{
   margin:0;
   width:100%;
+  touch-action:pan-y;
   background:
     radial-gradient(1200px 600px at 100% -8%, #1ed4bf0d, transparent 55%),
     radial-gradient(900px 500px at -10% 15%, #5b93ff08, transparent 55%),
@@ -165,8 +166,13 @@ p{ margin:0; }
    =================================================================== */
 #app{ min-height:100%; max-width:100vw; overflow-x:hidden; }
 
-@keyframes page-enter-anim{ from{ opacity:0; transform:translateY(12px); } to{ opacity:1; transform:none; } }
-.page-enter{ animation:page-enter-anim .36s var(--ease-pop); }
+@keyframes page-enter-anim{ from{ opacity:0; transform:translateY(22px) scale(.98); } to{ opacity:1; transform:none; } }
+.page-enter > *{ animation:page-enter-anim .5s var(--ease-pop) both; }
+.page-enter > *:nth-child(1){ animation-delay:.02s; }
+.page-enter > *:nth-child(2){ animation-delay:.08s; }
+.page-enter > *:nth-child(3){ animation-delay:.14s; }
+.page-enter > *:nth-child(4){ animation-delay:.2s; }
+.page-enter > *:nth-child(n+5){ animation-delay:.25s; }
 
 /* ---------- صفحه اتصال (بدون سایدبار) ---------- */
 .connect-shell{
@@ -187,6 +193,10 @@ p{ margin:0; }
   grid-template-columns: 1fr var(--sidebar-w);
   min-height:100vh;
 }
+
+/* در دسکتاپ این لایه کاملاً شفاف است و سایدبار مستقیماً فرزند گرید
+   .shell رفتار می‌کند؛ فقط زیر ۸۶۰px به یک لایه فیکس تبدیل می‌شود. */
+.sidebar-layer{ display:contents; }
 
 .sidebar{
   grid-column:2;
@@ -334,9 +344,17 @@ p{ margin:0; }
 
 @media (max-width: 860px){
   .shell{ grid-template-columns:1fr; }
+  /* لایه‌ی مخصوص سایدبار: خودش واقعاً نسبت به viewport فیکس و overflow:hidden
+     است، تا سایدبار بسته (که با transform به بیرون می‌رود) هرگز باعث
+     اسکرول افقی کل صفحه نشود — بدون این‌که روی نوار پایین یا toastها
+     که باید دقیقاً نسبت به viewport فیکس بمانند اثر بگذارد. */
+  .sidebar-layer{
+    position:fixed; inset:0; z-index:50;
+    overflow:hidden; pointer-events:none;
+  }
   .sidebar{
-    position:fixed; inset-inline-end:0; top:0; height:100vh;
-    width:260px; z-index:50;
+    position:absolute; inset-inline-end:0; top:0; height:100%;
+    width:260px; pointer-events:auto;
     transform:translateX(104%);
     transition:transform .28s var(--ease);
     box-shadow:-20px 0 50px -20px #00000080;
@@ -469,6 +487,55 @@ p{ margin:0; }
   transition:border-color .15s var(--ease);
 }
 .select:focus{ border-color:var(--accent); }
+
+/* ---------- منوی کشویی سفارشی (جایگزین select بومی) ---------- */
+.dropdown-trigger{
+  height:40px; min-width:128px;
+  display:inline-flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:0 13px; border-radius:var(--radius-sm);
+  background:var(--bg-soft); border:1px solid var(--border);
+  color:var(--text); font-size:13px; font-weight:600; cursor:pointer;
+  transition:border-color .15s var(--ease), background .15s var(--ease);
+}
+.dropdown-trigger:hover{ border-color:var(--border-strong); background:var(--surface-hover); }
+.dropdown-trigger.open{ border-color:var(--accent); }
+.dropdown-trigger .chev{ width:14px; height:14px; color:var(--text-faint); flex:none; transition:transform .2s var(--ease); }
+.dropdown-trigger.open .chev{ transform:rotate(180deg); color:var(--accent); }
+
+.dropdown-sheet-backdrop{
+  position:fixed; inset:0; background:#050811dd; backdrop-filter:blur(4px);
+  display:flex; align-items:flex-end; justify-content:center; z-index:300;
+  animation:backdrop-in .2s var(--ease);
+}
+.dropdown-sheet{
+  width:100%; max-width:480px;
+  background:var(--surface-raised); border:1px solid var(--border); border-bottom:none;
+  border-radius:var(--radius-lg) var(--radius-lg) 0 0;
+  padding:6px 0 calc(10px + env(safe-area-inset-bottom));
+  max-height:72vh; overflow-y:auto;
+  box-shadow:var(--shadow-pop);
+  animation:sheet-in .28s var(--ease-pop);
+}
+@keyframes sheet-in{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
+.dropdown-sheet-title{ font-size:12.5px; font-weight:700; color:var(--text-faint); padding:14px 20px 8px; }
+.dropdown-option{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:15px 20px; font-size:14px; font-weight:600; color:var(--text); cursor:pointer;
+  transition:background .12s var(--ease);
+  border-top:1px solid var(--border-soft);
+}
+.dropdown-sheet-title + .dropdown-option{ border-top:none; }
+.dropdown-option:first-child{ border-top:none; }
+.dropdown-option:hover{ background:var(--surface-hover); }
+.dropdown-option.selected{ color:var(--accent); }
+.dropdown-option .radio{
+  width:20px; height:20px; border-radius:50%; border:2px solid var(--border-strong);
+  flex:none; position:relative; transition:border-color .15s var(--ease);
+}
+.dropdown-option.selected .radio{ border-color:var(--accent); }
+.dropdown-option.selected .radio::after{
+  content:""; position:absolute; inset:3px; border-radius:50%; background:var(--accent);
+}
 
 .search-wrap{ position:relative; flex:1; min-width:180px; }
 .search-wrap > span{
@@ -1577,6 +1644,45 @@ const UI = (() => {
     ]);
   }
 
+  function skeletonRow(){
+    return Utils.el("div", { style:"display:flex;align-items:center;gap:12px;padding:14px 2px;border-top:1px solid var(--border-soft);" }, [
+      skeleton("32px", "32px", "border-radius:50%;flex:none;"),
+      Utils.el("div", { style:"flex:1;display:flex;flex-direction:column;gap:7px;min-width:0;" }, [
+        skeleton("42%", "12px"),
+        skeleton("24%", "10px"),
+      ]),
+      skeleton("64px", "14px", "flex:none;"),
+    ]);
+  }
+
+  function skeletonRows(count = 5){
+    const wrap = Utils.el("div", {});
+    for(let i=0;i<count;i++) wrap.appendChild(skeletonRow());
+    if(wrap.firstChild) wrap.firstChild.style.borderTop = "none";
+    return wrap;
+  }
+
+  function skeletonChart(height = 230){
+    return Utils.el("div", { style:"margin-top:4px;" }, [
+      Utils.el("div", { style:"display:flex;justify-content:space-between;margin-bottom:16px;" }, [
+        skeleton("90px", "11px"),
+        skeleton("130px", "26px"),
+      ]),
+      skeleton("100%", `${height}px`, "border-radius:14px;"),
+    ]);
+  }
+
+  function skeletonHead(){
+    return Utils.el("div", { style:"display:flex;align-items:center;gap:14px;" }, [
+      skeleton("46px", "46px", "border-radius:50%;flex:none;"),
+      Utils.el("div", { style:"flex:1;display:flex;flex-direction:column;gap:9px;" }, [
+        skeleton("36%", "14px"),
+        skeleton("22%", "11px"),
+      ]),
+      skeleton("110px", "28px", "flex:none;"),
+    ]);
+  }
+
   function stateBox({ icon = "info", title, desc, actionLabel, onAction }){
     const box = Utils.el("div", { class:"state-box" }, [
       Utils.el("div", { html: ic(icon) }),
@@ -1652,7 +1758,55 @@ const UI = (() => {
     ]);
   }
 
-  return { skeleton, skeletonCard, stateBox, empty, errorState, loading, mockFlag, changeBadge, coinAvatar, statusBadge };
+  // منوی کشویی سفارشی — جایگزین <select> بومی که در اندروید/iOS با
+  // ظاهر سیستم‌عامل (نه تم برنامه) باز می‌شود.
+  // options: [{value, label}] | onChange(value) | title: عنوان بالای ورق کشویی
+  function dropdown({ value, options, onChange, title }){
+    let current = value;
+
+    const labelOf = (v) => {
+      const opt = options.find(o => String(o.value) === String(v));
+      return opt ? opt.label : "";
+    };
+
+    const triggerLabel = Utils.el("span", {}, labelOf(current));
+    const trigger = Utils.el("button", { type:"button", class:"dropdown-trigger" }, [
+      triggerLabel,
+      Utils.el("span", { class:"chev", html: ic("chevronDown") }),
+    ]);
+
+    function openSheet(){
+      trigger.classList.add("open");
+      const backdrop = Utils.el("div", {
+        class:"dropdown-sheet-backdrop",
+        onClick:(e) => { if(e.target === backdrop) close(); },
+      });
+      const sheet = Utils.el("div", { class:"dropdown-sheet" });
+      if(title) sheet.appendChild(Utils.el("div", { class:"dropdown-sheet-title" }, title));
+      options.forEach(opt => {
+        const isSel = String(opt.value) === String(current);
+        const row = Utils.el("div", { class:`dropdown-option ${isSel ? "selected" : ""}` }, [
+          Utils.el("span", {}, opt.label),
+          Utils.el("span", { class:"radio" }),
+        ]);
+        row.addEventListener("click", () => {
+          current = opt.value;
+          triggerLabel.textContent = opt.label;
+          close();
+          onChange(opt.value);
+        });
+        sheet.appendChild(row);
+      });
+      backdrop.appendChild(sheet);
+      document.body.appendChild(backdrop);
+      function close(){ trigger.classList.remove("open"); backdrop.remove(); }
+    }
+
+    trigger.addEventListener("click", openSheet);
+    return trigger;
+  }
+
+  return { skeleton, skeletonCard, skeletonRow, skeletonRows, skeletonChart, skeletonHead, stateBox, empty, errorState, loading, mockFlag, changeBadge, coinAvatar, statusBadge, dropdown };
 })();
 // ===================================================================
 // مسیریاب ساده مبتنی بر Hash
@@ -2124,9 +2278,9 @@ const PageDashboard = {
 
     // --- اسکلت بارگذاری اولیه ---
     for(let i=0;i<4;i++) kpiGrid.appendChild(UI.skeletonCard());
-    chartCard.appendChild(UI.loading("در حال بارگذاری نمودار دارایی…"));
-    sideCard.appendChild(UI.loading("در حال دریافت بازار…"));
-    marketCard.appendChild(UI.loading());
+    chartCard.appendChild(UI.skeletonChart());
+    sideCard.appendChild(UI.skeletonRows(6));
+    marketCard.appendChild(UI.skeletonRows(6));
 
     let range = "7d";
 
@@ -2201,6 +2355,9 @@ const PageDashboard = {
             class:`chip ${r===range?"active":""}`,
             onClick: async () => {
               range = r;
+              const wrap = chartCard.querySelector(".chart-canvas-wrap");
+              if(wrap) wrap.innerHTML = "";
+              if(wrap) wrap.appendChild(UI.skeleton("100%","100%","border-radius:14px;"));
               chartCard.querySelectorAll(".range-tabs .chip").forEach(c=>c.classList.remove("active"));
               const hRes = await Api.getPortfolioHistory(range);
               renderChart(hRes, summaryRes);
@@ -2317,7 +2474,7 @@ const PageMarket = {
 
     const card = Utils.el("div", { class:"card card-pad" });
     container.appendChild(card);
-    card.appendChild(UI.loading("در حال بارگذاری بازار…"));
+    card.appendChild(UI.skeletonRows(7));
 
     container.querySelector("#mkRefresh").addEventListener("click", load);
 
@@ -2345,7 +2502,7 @@ const PageMarket = {
 
     async function load(){
       card.innerHTML = "";
-      card.appendChild(UI.loading("در حال بارگذاری بازار…"));
+      card.appendChild(UI.skeletonRows(7));
       try{
         const res = await Api.getMarketList();
         allCoins = res.data.map(c => ({ ...c, _spark: MockData.history30d(c.id).slice(-14) }));
@@ -2464,7 +2621,12 @@ const PageCoin = {
     grid.append(chartCard, sideCol);
     container.append(headCard, grid);
 
-    headCard.appendChild(UI.loading("در حال بارگذاری اطلاعات ارز…"));
+    headCard.appendChild(UI.skeletonHead());
+    chartCard.appendChild(UI.skeletonChart());
+    sideCol.append(
+      Utils.el("div", { class:"card card-pad" }, UI.skeletonRows(2)),
+      Utils.el("div", { class:"card card-pad" }, UI.skeletonRows(2)),
+    );
 
     let range = "30d";
 
@@ -2540,6 +2702,9 @@ const PageCoin = {
             class:`chip ${r===range?"active":""}`,
             onClick: async () => {
               range = r;
+              const wrap = chartCard.querySelector(".chart-canvas-wrap");
+              if(wrap) wrap.innerHTML = "";
+              if(wrap) wrap.appendChild(UI.skeleton("100%","100%","border-radius:14px;"));
               const hRes = await Api.getCoinHistory(coinId, range);
               renderChart(hRes, coin);
             }
@@ -2619,7 +2784,7 @@ const PageWallet = {
     container.append(summary, card);
 
     for(let i=0;i<3;i++) summary.appendChild(UI.skeletonCard());
-    card.appendChild(UI.loading("در حال دریافت دارایی‌ها…"));
+    card.appendChild(UI.skeletonRows(5));
 
     try{
       const [walletRes, marketRes] = await Promise.all([ Api.getWalletAssets(), Api.getMarketList() ]);
@@ -2751,11 +2916,11 @@ const PageHistory = {
     const toolbar = Utils.el("div", { class:"market-toolbar" });
     const card = Utils.el("div", { class:"card card-pad" });
     container.append(toolbar, card);
-    card.appendChild(UI.loading("در حال دریافت تراکنش‌ها…"));
+    card.appendChild(UI.skeletonRows(5));
 
     async function load(){
       card.innerHTML = "";
-      card.appendChild(UI.loading("در حال دریافت تراکنش‌ها…"));
+      card.appendChild(UI.skeletonRows(5));
       try{
         const res = await Api.getTransactions(filters);
         rows = res.data;
@@ -2769,13 +2934,22 @@ const PageHistory = {
 
     function buildToolbar(){
       toolbar.innerHTML = "";
-      const typeSel = Utils.el("select", { class:"select", onChange:(e) => { filters.type = e.target.value; load(); } },
-        ["all","خرید","فروش","واریز","برداشت"].map(v => Utils.el("option", { value:v, selected: filters.type===v }, v === "all" ? "همه انواع" : v)));
-      const statusSel = Utils.el("select", { class:"select", onChange:(e) => { filters.status = e.target.value; load(); } },
-        ["all","موفق","در انتظار","ناموفق"].map(v => Utils.el("option", { value:v, selected: filters.status===v }, v === "all" ? "همه وضعیت‌ها" : v)));
-      const coinSel = Utils.el("select", { class:"select", onChange:(e) => { filters.coin = e.target.value; load(); } },
-        ["all","BTC","ETH","USDT","SOL","DOGE"].map(v => Utils.el("option", { value:v, selected: filters.coin===v }, v === "all" ? "همه ارزها" : v)));
-      toolbar.append(typeSel, coinSel, statusSel);
+      const typeDd = UI.dropdown({
+        value: filters.type, title:"نوع تراکنش",
+        options: ["all","خرید","فروش","واریز","برداشت"].map(v => ({ value:v, label: v==="all" ? "همه انواع" : v })),
+        onChange: (v) => { filters.type = v; load(); },
+      });
+      const coinDd = UI.dropdown({
+        value: filters.coin, title:"ارز",
+        options: ["all","BTC","ETH","USDT","SOL","DOGE"].map(v => ({ value:v, label: v==="all" ? "همه ارزها" : v })),
+        onChange: (v) => { filters.coin = v; load(); },
+      });
+      const statusDd = UI.dropdown({
+        value: filters.status, title:"وضعیت",
+        options: ["all","موفق","در انتظار","ناموفق"].map(v => ({ value:v, label: v==="all" ? "همه وضعیت‌ها" : v })),
+        onChange: (v) => { filters.status = v; load(); },
+      });
+      toolbar.append(typeDd, coinDd, statusDd);
     }
 
     function renderTable(isMock){
@@ -2837,7 +3011,10 @@ const PageProfile = {
     const infoCard = Utils.el("div", { class:"card card-pad" });
     const rightCol = Utils.el("div", { style:"display:flex;flex-direction:column;gap:14px;" });
     grid.append(infoCard, rightCol);
-    infoCard.appendChild(UI.loading("در حال دریافت اطلاعات حساب…"));
+    infoCard.appendChild(Utils.el("div", {}, [
+      UI.skeletonHead(),
+      Utils.el("div", { style:"margin-top:18px;" }, UI.skeletonRows(4)),
+    ]));
 
     try{
       const profRes = await Api.getProfile();
@@ -2969,9 +3146,9 @@ const PageSettings = {
       card.innerHTML = "";
 
       card.appendChild(settingRow("تم رابط کاربری", "روشن یا تیره", themeToggle(cur)));
-      card.appendChild(settingRow("واحد نمایش قیمت", "تومان یا تتر", select(["irt","usdt"], cur.priceUnit, {irt:"تومان", usdt:"تتر"}, v => update({priceUnit:v}))));
-      card.appendChild(settingRow("نحوه نمایش اعداد", "ارقام لاتین یا فارسی", select(["latin","fa"], cur.numberFormat, {latin:"لاتین (1234)", fa:"فارسی (۱۲۳۴)"}, v => update({numberFormat:v}))));
-      card.appendChild(settingRow("بازه به‌روزرسانی خودکار", "فاصله زمانی دریافت اطلاعات جدید", select([30,60,120,300], cur.refreshInterval, {30:"۳۰ ثانیه",60:"۱ دقیقه",120:"۲ دقیقه",300:"۵ دقیقه"}, v => update({refreshInterval:Number(v)})) ));
+      card.appendChild(settingRow("واحد نمایش قیمت", "تومان یا تتر", select(["irt","usdt"], cur.priceUnit, {irt:"تومان", usdt:"تتر"}, v => update({priceUnit:v}), "واحد نمایش قیمت")));
+      card.appendChild(settingRow("نحوه نمایش اعداد", "ارقام لاتین یا فارسی", select(["latin","fa"], cur.numberFormat, {latin:"لاتین (1234)", fa:"فارسی (۱۲۳۴)"}, v => update({numberFormat:v}), "نحوه نمایش اعداد")));
+      card.appendChild(settingRow("بازه به‌روزرسانی خودکار", "فاصله زمانی دریافت اطلاعات جدید", select([30,60,120,300], cur.refreshInterval, {30:"۳۰ ثانیه",60:"۱ دقیقه",120:"۲ دقیقه",300:"۵ دقیقه"}, v => update({refreshInterval:Number(v)}), "بازه به‌روزرسانی خودکار") ));
       card.appendChild(settingRow("اعلان تغییرات قیمت", "دریافت اعلان برای نوسانات مهم بازار", switchEl(cur.notifyPriceAlerts, v => update({notifyPriceAlerts:v}))));
       card.appendChild(settingRow("اعلان وضعیت اتصال", "اطلاع از قطع یا برقراری اتصال صرافی", switchEl(cur.notifyConnection, v => update({notifyConnection:v}))));
       card.appendChild(settingRow("زبان برنامه", "در نسخه اول فقط فارسی پشتیبانی می‌شود", Utils.el("span", { class:"badge badge-gray" }, "فارسی")));
@@ -2993,9 +3170,13 @@ const PageSettings = {
       ]);
     }
 
-    function select(values, current, labels, onChange){
-      return Utils.el("select", { class:"select", onChange:(e) => onChange(e.target.value) },
-        values.map(v => Utils.el("option", { value:v, selected: String(v)===String(current) }, labels[v])));
+    function select(values, current, labels, onChange, title){
+      return UI.dropdown({
+        value: current,
+        title: title || "",
+        options: values.map(v => ({ value:v, label: labels[v] })),
+        onChange,
+      });
     }
 
     function switchEl(checked, onChange){
@@ -3078,6 +3259,8 @@ const App = (() => {
       Utils.el("div", { class:"nav-item", html: ic("unlink") + `<span>قطع اتصال و خروج</span>`, onClick: handleLogout }),
     ]));
 
+    const sidebarLayer = Utils.el("div", { class:"sidebar-layer" }, [sidebar]);
+
     const main = Utils.el("main", { class:"main" });
     const topbar = Utils.el("header", { class:"topbar" }, [
       Utils.el("div", { class:"topbar-left" }, [
@@ -3105,7 +3288,7 @@ const App = (() => {
       }));
     });
 
-    const shell = Utils.el("div", { class:"shell" }, [main, sidebar]);
+    const shell = Utils.el("div", { class:"shell" }, [main, sidebarLayer]);
     root.append(shell, scrim, bottomNav);
 
     updateConnBadge();
