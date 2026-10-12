@@ -1,8 +1,12 @@
 {
   "name": "nobitex-dashboard",
-  "version": "1.0.0",
-  "description": "داشبورد شخصی مدیریت و تحلیل ارزهای دیجیتال — رابط کاربری فرانت‌اند",
+  "version": "1.1.0",
+  "description": "داشبورد شخصی مدیریت و تحلیل ارزهای دیجیتال — فرانت‌اند + Cloudflare Worker",
+  "private": true,
+  "type": "module",
   "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
     "cap:add-android": "cap add android",
     "cap:sync": "cap sync android"
   },
@@ -11,6 +15,7 @@
     "@capacitor/core": "^6.1.2"
   },
   "devDependencies": {
-    "@capacitor/cli": "^6.1.2"
+    "@capacitor/cli": "^6.1.2",
+    "wrangler": "^4"
   }
 }
