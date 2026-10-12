@@ -211,8 +211,9 @@ async function nobitexRaw(env, path, { method = "GET", query, body, auth = false
       const res = await fetch(url, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined, signal: ctl.signal });
       clearTimeout(timer);
       if (res.status >= 500 && i < maxAttempts) { await sleep(300); continue; }
-      let json = null; try { json = JSON.parse(await res.text()); } catch (_) { /* غیر JSON */ }
-      return { httpStatus: res.status, json, retryAfter: res.headers.get("Retry-After") };
+      const text = await res.text(); let json = null; try { json = JSON.parse(text); } catch (_) { /* غیر JSON */ }
+      const snippet = json ? "" : text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+      return { httpStatus: res.status, json, retryAfter: res.headers.get("Retry-After"), snippet };
     } catch (e) {
       clearTimeout(timer);
       lastErr = new HttpError(504, e && e.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_NETWORK", "ارتباط با نوبیتکس برقرار نشد یا زمان آن تمام شد.");
@@ -222,11 +223,11 @@ async function nobitexRaw(env, path, { method = "GET", query, body, auth = false
   throw lastErr;
 }
 async function nobitex(env, path, opts = {}) {
-  const { httpStatus, json, retryAfter } = await nobitexRaw(env, path, opts);
+  const { httpStatus, json, retryAfter, snippet } = await nobitexRaw(env, path, opts);
   if (httpStatus === 429) throw new HttpError(429, "RATE_LIMITED", "محدودیت تعداد درخواست نوبیتکس اعمال شد؛ کمی بعد دوباره تلاش کنید.", { retryAfter: Number(retryAfter) || 30 });
   if (httpStatus === 401 || httpStatus === 403) throw new HttpError(502, "UPSTREAM_AUTH", "نوبیتکس دسترسی را رد کرد: توکن نامعتبر است یا مجوز لازم را ندارد.");
   if (json && json.status === "failed") throw new HttpError(502, "UPSTREAM_FAILED", String(json.message || json.code || "درخواست توسط نوبیتکس ناموفق اعلام شد.").slice(0, 200), { public: { upstreamCode: json.code ? String(json.code).slice(0, 60) : undefined } });
-  if (httpStatus < 200 || httpStatus >= 300 || !json) throw new HttpError(502, "UPSTREAM_ERROR", `پاسخ نامعتبر از نوبیتکس (HTTP ${httpStatus}).`);
+  if (httpStatus < 200 || httpStatus >= 300 || !json) throw new HttpError(502, "UPSTREAM_ERROR", `پاسخ نامعتبر از نوبیتکس (HTTP ${httpStatus})${snippet ? " — " + snippet : ""}`);
   return json;
 }
 
