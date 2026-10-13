@@ -200,8 +200,8 @@ async function wallexRaw(env, path, { method = "GET", query, body, auth = false,
   for (const [k, v] of Object.entries(query || {})) if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
   const headers = { Accept: "application/json", "User-Agent": UA };
   if (auth) {
-    if (!env.WALLEX_API_KEY) throw new HttpError(503, "TOKEN_NOT_CONFIGURED", "کلید API والکس (WALLEX_API_KEY) در Secrets تنظیم نشده است.");
-    headers["X-API-Key"] = env.WALLEX_API_KEY;
+    if (!env.WALLEX_API_KEY || !String(env.WALLEX_API_KEY).trim()) throw new HttpError(503, "TOKEN_NOT_CONFIGURED", "کلید API والکس (WALLEX_API_KEY) در Secrets تنظیم نشده است.");
+    headers["X-API-Key"] = String(env.WALLEX_API_KEY).trim(); // فاصله/خط جدید اضافی هنگام paste رایج است
   }
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const maxAttempts = attempts || (method === "GET" ? 2 : 1); // POST/DELETE هرگز خودکار تکرار نمی‌شوند
@@ -227,7 +227,12 @@ async function wallexRaw(env, path, { method = "GET", query, body, auth = false,
 async function wallex(env, path, opts = {}) {
   const { httpStatus, json, retryAfter, snippet } = await wallexRaw(env, path, opts);
   if (httpStatus === 429) throw new HttpError(429, "RATE_LIMITED", "محدودیت تعداد درخواست والکس اعمال شد؛ کمی بعد دوباره تلاش کنید.", { retryAfter: Number(retryAfter) || 5 });
-  if (httpStatus === 401 || httpStatus === 403) throw new HttpError(502, "UPSTREAM_AUTH", "والکس دسترسی را رد کرد: کلید API نامعتبر یا منقضی است، یا مجوز لازم را ندارد، یا IP مجاز نیست.");
+  if (httpStatus === 401 || httpStatus === 403) {
+    const detail = (json && json.message ? String(json.message) : snippet || "").slice(0, 120);
+    throw new HttpError(502, opts.auth ? "UPSTREAM_AUTH" : "UPSTREAM_BLOCKED",
+      (opts.auth ? "والکس درخواست خصوصی را رد کرد" : "والکس درخواست عمومی بازار را رد کرد (بدون کلید)") + ` (HTTP ${httpStatus})` + (detail ? ` — ${detail}` : "") +
+      (opts.auth ? ". کلید نامعتبر/منقضی، مجوز ناکافی یا IP غیرمجاز ممکن است." : ". احتمالاً مسدودسازی بر اساس IP/شبکه."));
+  }
   if (json && json.success === false) throw new HttpError(502, "UPSTREAM_FAILED", String(json.message || "درخواست توسط والکس ناموفق اعلام شد.").slice(0, 200));
   if (httpStatus < 200 || httpStatus >= 300 || !json) throw new HttpError(502, "UPSTREAM_ERROR", `پاسخ نامعتبر از والکس (HTTP ${httpStatus})${snippet ? " — " + snippet : ""}`);
   if (!opts.plain && json.success !== true) throw unexpected(path);
