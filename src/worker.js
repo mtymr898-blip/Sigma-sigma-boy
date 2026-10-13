@@ -1,23 +1,24 @@
 // ===================================================================
-// Cloudflare Worker — واسط امن بین داشبورد و API نوبیتکس
+// Cloudflare Worker — واسط امن بین داشبورد و API والکس (Wallex)
 // -------------------------------------------------------------------
-// • توکن نوبیتکس (NOBITEX_TOKEN) فقط اینجا و فقط از Secrets خوانده می‌شود
+// • کلید API والکس (WALLEX_API_KEY) فقط اینجا و فقط از Secrets خوانده می‌شود
 //   و هرگز در پاسخ، لاگ یا مرورگر ظاهر نمی‌شود.
 // • مرورگر فقط با «توکن نشست» کوتاه‌مدت (امضاشده با SESSION_SECRET) کار می‌کند
 //   که پس از وارد کردن رمز دسترسی (DASHBOARD_PASSCODE) صادر می‌شود.
 // • فقط endpointهای فهرست‌شده در این فایل به نوبیتکس می‌رسند (allowlist).
 //   endpoint برداشت وجه اصلاً وجود ندارد.
 //
-// ⚠ UNVERIFIED: در محیط ساخت این پروژه به apidocs.nobitex.ir دسترسی نبود.
-//   نام endpointها از فهرست خود کاربر آمده؛ نام فیلدهای JSON و پارامترها
-//   از اطلاعات پیشین ساخته شده‌اند و باید با مستندات رسمی تطبیق داده شوند.
+// ⚠ UNVERIFIED: در محیط ساخت این پروژه به مستندات والکس دسترسی نبود. endpointها و
+//   نمونه‌های JSON از متن‌هایی است که کاربر از مستندات رسمی (api-docs.wallex.ir و
+//   developers.wallex.ir) برای من آورد. آنچه در آن متن‌ها «نامشخص» بود با برچسب UNVERIFIED
+//   مشخص شده و باید در محیط واقعی بررسی شود.
 //   همه این فرض‌ها فقط در توابع normalize*/بدنه‌ی درخواست‌ها جمع شده‌اند و
 //   اگر ساختار پاسخ با انتظار نخواند، خطای UNEXPECTED_RESPONSE برمی‌گردد
 //   (به‌جای نمایش داده‌ی غلط یا ساختگی).
 // ===================================================================
 
-const NOBITEX_BASE = "https://api.nobitex.ir";
-const UA = "nobitex-personal-dashboard/1.0";
+const WALLEX_BASE = "https://api.wallex.ir";
+const UA = "wallex-personal-dashboard/1.0";
 const SESSION_TTL_SEC = 12 * 3600;
 const CONFIRM_TTL_SEC = 120;
 
@@ -193,17 +194,17 @@ async function requireSession(request, env) {
   throw new HttpError(401, "SESSION_INVALID", "نشست معتبر نیست یا منقضی شده؛ دوباره وارد شوید.");
 }
 
-// ---------- ارتباط با نوبیتکس ----------
-async function nobitexRaw(env, path, { method = "GET", query, body, auth = false, timeoutMs = 12000, attempts } = {}) {
-  const url = new URL(NOBITEX_BASE + path);
+// ---------- ارتباط با والکس ----------
+async function wallexRaw(env, path, { method = "GET", query, body, auth = false, timeoutMs = 12000, attempts } = {}) {
+  const url = new URL(WALLEX_BASE + path);
   for (const [k, v] of Object.entries(query || {})) if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
   const headers = { Accept: "application/json", "User-Agent": UA };
   if (auth) {
-    if (!env.NOBITEX_TOKEN) throw new HttpError(503, "TOKEN_NOT_CONFIGURED", "توکن نوبیتکس (NOBITEX_TOKEN) در Secrets تنظیم نشده است.");
-    headers.Authorization = "Token " + env.NOBITEX_TOKEN;
+    if (!env.WALLEX_API_KEY) throw new HttpError(503, "TOKEN_NOT_CONFIGURED", "کلید API والکس (WALLEX_API_KEY) در Secrets تنظیم نشده است.");
+    headers["X-API-Key"] = env.WALLEX_API_KEY;
   }
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  const maxAttempts = attempts || (method === "GET" ? 2 : 1); // POST هرگز خودکار تکرار نمی‌شود
+  const maxAttempts = attempts || (method === "GET" ? 2 : 1); // POST/DELETE هرگز خودکار تکرار نمی‌شوند
   let lastErr;
   for (let i = 1; i <= maxAttempts; i++) {
     const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), timeoutMs);
@@ -216,161 +217,176 @@ async function nobitexRaw(env, path, { method = "GET", query, body, auth = false
       return { httpStatus: res.status, json, retryAfter: res.headers.get("Retry-After"), snippet };
     } catch (e) {
       clearTimeout(timer);
-      lastErr = new HttpError(504, e && e.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_NETWORK", "ارتباط با نوبیتکس برقرار نشد یا زمان آن تمام شد.");
+      lastErr = new HttpError(504, e && e.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_NETWORK", "ارتباط با والکس برقرار نشد یا زمان آن تمام شد.");
       if (i < maxAttempts) await sleep(300);
     }
   }
   throw lastErr;
 }
-async function nobitex(env, path, opts = {}) {
-  const { httpStatus, json, retryAfter, snippet } = await nobitexRaw(env, path, opts);
-  if (httpStatus === 429) throw new HttpError(429, "RATE_LIMITED", "محدودیت تعداد درخواست نوبیتکس اعمال شد؛ کمی بعد دوباره تلاش کنید.", { retryAfter: Number(retryAfter) || 30 });
-  if (httpStatus === 401 || httpStatus === 403) throw new HttpError(502, "UPSTREAM_AUTH", "نوبیتکس دسترسی را رد کرد: توکن نامعتبر است یا مجوز لازم را ندارد.");
-  if (json && json.status === "failed") throw new HttpError(502, "UPSTREAM_FAILED", String(json.message || json.code || "درخواست توسط نوبیتکس ناموفق اعلام شد.").slice(0, 200), { public: { upstreamCode: json.code ? String(json.code).slice(0, 60) : undefined } });
-  if (httpStatus < 200 || httpStatus >= 300 || !json) throw new HttpError(502, "UPSTREAM_ERROR", `پاسخ نامعتبر از نوبیتکس (HTTP ${httpStatus})${snippet ? " — " + snippet : ""}`);
+// plain: پاسخ‌هایی مثل udf/history که فیلد success ندارند
+async function wallex(env, path, opts = {}) {
+  const { httpStatus, json, retryAfter, snippet } = await wallexRaw(env, path, opts);
+  if (httpStatus === 429) throw new HttpError(429, "RATE_LIMITED", "محدودیت تعداد درخواست والکس اعمال شد؛ کمی بعد دوباره تلاش کنید.", { retryAfter: Number(retryAfter) || 5 });
+  if (httpStatus === 401 || httpStatus === 403) throw new HttpError(502, "UPSTREAM_AUTH", "والکس دسترسی را رد کرد: کلید API نامعتبر یا منقضی است، یا مجوز لازم را ندارد، یا IP مجاز نیست.");
+  if (json && json.success === false) throw new HttpError(502, "UPSTREAM_FAILED", String(json.message || "درخواست توسط والکس ناموفق اعلام شد.").slice(0, 200));
+  if (httpStatus < 200 || httpStatus >= 300 || !json) throw new HttpError(502, "UPSTREAM_ERROR", `پاسخ نامعتبر از والکس (HTTP ${httpStatus})${snippet ? " — " + snippet : ""}`);
+  if (!opts.plain && json.success !== true) throw unexpected(path);
   return json;
 }
 
 // ---------- بازار (عمومی) ----------
-// UNVERIFIED: ساختار {stats:{"btc-rls":{latest,dayOpen,dayHigh,dayLow,bestBuy,bestSell,volumeDst,...}}}
-function normStat(r, dst) {
-  if (!r || typeof r !== "object") return null;
-  const f = dst === "rls" ? 0.1 : 1; // ریال → تومان
-  const latest = num(r.latest); if (!(latest > 0)) return null;
-  const open = num(r.dayOpen);
-  let change = open > 0 ? ((latest - open) / open) * 100 : num(r.dayChange);
-  if (!Number.isFinite(change)) change = null;
-  return { price: latest * f, change, high: scale(num(r.dayHigh), f), low: scale(num(r.dayLow), f),
-    bestBuy: scale(num(r.bestBuy), f), bestSell: scale(num(r.bestSell), f), volume: scale(num(r.volumeDst), f) };
-}
-function getStats(env, srcs, dst) {
-  return memo(`stats:${dst}:${srcs.join(",")}`, 8000, async () => {
-    const out = {};
-    const json = await nobitex(env, "/market/stats", { query: { srcCurrency: srcs.join(","), dstCurrency: dst } });
-    if (!json.stats || typeof json.stats !== "object") throw unexpected("market/stats");
-    for (const s of srcs) { const n = normStat(json.stats[`${s}-${dst}`], dst); if (n) out[s] = n; }
-    // اگر ارسال چندارزی پشتیبانی نشده باشد، برای موارد جاافتاده تک‌تک می‌پرسیم (سقف ۱۵)
-    for (const s of srcs.filter((x) => !out[x]).slice(0, 15)) {
-      try {
-        const j = await nobitex(env, "/market/stats", { query: { srcCurrency: s, dstCurrency: dst } });
-        const n = normStat(j.stats && j.stats[`${s}-${dst}`], dst); if (n) out[s] = n;
-      } catch (e) { if (e.code === "RATE_LIMITED") throw e; }
-    }
-    return out;
+// نمونه‌ی مستند: GET /v1/markets → {success, result:{symbols:{BTCTMN:{stats:{bidPrice,askPrice,"24h_ch","24h_volume",
+//   lastPrice?, "24h_highPrice"?, "24h_lowPrice"?}, stepSize, tickSize, minQty, minNotional}}}}
+// UNVERIFIED: دو نمونه‌ی مستندات یکسان نیستند؛ lastPrice/high/low ممکن است نباشند.
+function getMarkets(env) {
+  return memo("markets", 8000, async () => {
+    const j = await wallex(env, "/v1/markets");
+    const sym = j.result && j.result.symbols;
+    if (!sym || typeof sym !== "object") throw unexpected("v1/markets");
+    return sym;
   });
 }
+function priceOf(m) {
+  const st = m && m.stats; if (!st) return null;
+  const last = num(st.lastPrice); if (last > 0) return { price: last, source: "last" };
+  const bid = num(st.bidPrice), ask = num(st.askPrice);
+  if (bid > 0 && ask > 0) return { price: (bid + ask) / 2, source: "mid" }; // میانگین خرید/فروش، نه آخرین معامله
+  return null;
+}
+function normMarket(m) {
+  const p = priceOf(m); if (!p) return null; const st = m.stats;
+  const ch = num(st["24h_ch"]); const baseVol = num(st["24h_volume"]);
+  return { price: p.price, source: p.source, change: Number.isFinite(ch) ? ch : null,
+    high: scale(num(st["24h_highPrice"]), 1), low: scale(num(st["24h_lowPrice"]), 1),
+    bestBuy: scale(num(st.bidPrice), 1), bestSell: scale(num(st.askPrice), 1),
+    volume: Number.isFinite(baseVol) ? baseVol * p.price : null /* تخمینی: حجم پایه × قیمت */ };
+}
+const tmnSymbol = (id) => `${id.toUpperCase()}TMN`;
 async function getMarketCoins(env) {
-  const st = await getStats(env, COINS.map((c) => c.id), "rls");
-  const data = COINS.filter((c) => st[c.id]).map((c) => {
-    const s = st[c.id];
-    return { id: c.id, name: c.name, symbol: `${c.id.toUpperCase()}/IRT`, price: s.price, change24h: s.change, high24h: s.high, low24h: s.low, volume24h: s.volume, bestBuy: s.bestBuy, bestSell: s.bestSell };
-  });
-  if (!data.length) throw unexpected("market/stats (هیچ جفت‌ارزی معتبر نبود)");
-  return { data, missing: COINS.filter((c) => !st[c.id]).map((c) => c.id) };
+  const sym = await getMarkets(env); const sources = new Set();
+  const data = [];
+  for (const c of COINS) {
+    const n = normMarket(sym[tmnSymbol(c.id)]); if (!n) continue; sources.add(n.source);
+    data.push({ id: c.id, name: c.name, symbol: `${c.id.toUpperCase()}/IRT`, price: n.price, change24h: n.change, high24h: n.high, low24h: n.low, volume24h: n.volume, bestBuy: n.bestBuy, bestSell: n.bestSell });
+  }
+  if (!data.length) throw unexpected("v1/markets (هیچ جفت‌ارز تومانی معتبر نبود)");
+  return { data, missing: COINS.filter((c) => !data.find((d) => d.id === c.id)).map((c) => c.id),
+    priceSources: [...sources], note: "حجم ۲۴ساعته = حجم پایه × قیمت (تخمینی). اگر منبع قیمت mid باشد، قیمت میانگین خرید و فروش است." };
 }
 const RANGE_DAYS = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 };
-// UNVERIFIED: ساختار UDF {s:"ok", t:[...unix], c:[...]}
+let dailyResolutionOk = null; // UNVERIFIED: آیا resolution=D پذیرفته می‌شود؟
+function downsampleDaily(pts) {
+  const byDay = new Map(); for (const p of pts) byDay.set(p.t.slice(0, 10), p); return [...byDay.values()];
+}
+// نمونه‌ی مستند: GET /v1/udf/history?symbol=BTCTMN&resolution=60&from&to → {s:"ok", t:[...], c:[...]}
+async function fetchCandles(env, symbol, resolution, from, to) {
+  const j = await wallex(env, "/v1/udf/history", { query: { symbol, resolution, from, to }, plain: true });
+  if (j.s === "no_data") return [];
+  if (j.s !== "ok" || !Array.isArray(j.t) || !Array.isArray(j.c) || j.t.length !== j.c.length) throw unexpected("v1/udf/history");
+  return j.t.map((t, i) => ({ t: new Date(t * 1000).toISOString(), v: Number(num(j.c[i]).toFixed(2)) })).filter((p) => Number.isFinite(p.v));
+}
 function getHistory(env, id, days) {
   if (!coinById(id)) throw new HttpError(404, "UNKNOWN_COIN", "ارز ناشناخته است.");
   return memo(`hist:${id}:${days}`, 10 * 60000, async () => {
-    const to = Math.floor(Date.now() / 1000);
-    const j = await nobitex(env, "/market/udf/history", { query: { symbol: `${id.toUpperCase()}IRT`, resolution: "D", from: to - days * 86400, to } });
-    if (j.s === "no_data") return [];
-    if (j.s === "error") throw new HttpError(502, "UPSTREAM_FAILED", String(j.errmsg || "خطا در دریافت تاریخچه").slice(0, 200));
-    if (j.s !== "ok" || !Array.isArray(j.t) || !Array.isArray(j.c) || j.t.length !== j.c.length) throw unexpected("market/udf/history");
-    return j.t.map((t, i) => ({ t: new Date(t * 1000).toISOString(), v: Number((num(j.c[i]) * 0.1).toFixed(2)) })).filter((p) => Number.isFinite(p.v));
+    const to = Math.floor(Date.now() / 1000), from = to - days * 86400, symbol = tmnSymbol(id);
+    if (days <= 7) return fetchCandles(env, symbol, "60", from, to);
+    if (dailyResolutionOk !== false) {
+      try { const r = await fetchCandles(env, symbol, "D", from, to); if (r.length) { dailyResolutionOk = true; return r; } dailyResolutionOk = false; }
+      catch (e) { if (e.code === "RATE_LIMITED") throw e; dailyResolutionOk = false; }
+    }
+    return downsampleDaily(await fetchCandles(env, symbol, "60", from, to)); // مستند: resolution=60
   });
 }
-// UNVERIFIED: ساختار {bids:[[price,amount]...], asks:[...]}
+// نمونه‌ی مستند: GET /v1/depth?symbol=BTCUSDT → {result:{ask:[{price,quantity}], bid:[...]}}
 async function getOrderbook(env, id) {
   if (!coinById(id)) throw new HttpError(404, "UNKNOWN_COIN", "ارز ناشناخته است.");
   return memo(`ob:${id}`, 3000, async () => {
-    const j = await nobitex(env, `/v3/orderbook/${id.toUpperCase()}IRT`);
+    const j = await wallex(env, "/v1/depth", { query: { symbol: tmnSymbol(id) } });
     const side = (a) => {
-      if (!Array.isArray(a)) throw unexpected("v3/orderbook");
-      return a.slice(0, 8).map((r) => ({ price: scale(num(r[0]), 0.1), amount: num(r[1]) })).filter((r) => r.price !== null && Number.isFinite(r.amount));
+      if (!Array.isArray(a)) throw unexpected("v1/depth");
+      return a.slice(0, 8).map((r) => ({ price: num(r.price), amount: num(r.quantity) })).filter((r) => Number.isFinite(r.price) && Number.isFinite(r.amount));
     };
-    return { bids: side(j.bids), asks: side(j.asks) };
+    return { bids: side(j.result && j.result.bid), asks: side(j.result && j.result.ask) };
   });
 }
 
 // ---------- حساب (خصوصی) ----------
-// UNVERIFIED: ساختار {wallets:[{currency,balance,activeBalance,blockedBalance}]} (یا شیء کلیددار)
-function normalizeWallets(json) {
-  let list = json && json.wallets;
-  if (list && !Array.isArray(list) && typeof list === "object") list = Object.entries(list).map(([cur, w]) => ({ currency: cur, ...w }));
-  if (!Array.isArray(list)) throw unexpected("users/wallets/list");
-  const out = list.map((w) => {
-    const total = num(w.balance); const locked = Number.isFinite(num(w.blockedBalance)) ? num(w.blockedBalance) : 0;
-    const available = Number.isFinite(num(w.activeBalance)) ? num(w.activeBalance) : total - locked;
-    return { cur: String(w.currency || "").toLowerCase(), total, available, locked };
+// نمونه‌ی مستند: GET /v1/account/balances → {result:{balances:{TMN:{asset,faName,fiat,value,locked}, USDT:{...}}}}
+// UNVERIFIED: معلوم نیست «value» کل موجودی است یا فقط قابل‌استفاده. اینجا value = کل و قابل‌استفاده = value − locked
+//   فرض شده؛ این فرض در محیط واقعی باید با یک سفارش باز (که locked را تغییر می‌دهد) بررسی شود.
+function normalizeBalances(json) {
+  const b = json && json.result && json.result.balances;
+  if (!b || typeof b !== "object" || Array.isArray(b)) throw unexpected("v1/account/balances");
+  const out = Object.entries(b).map(([k, w]) => {
+    const total = num(w.value); const locked = Number.isFinite(num(w.locked)) ? num(w.locked) : 0;
+    return { cur: String(w.asset || k).toLowerCase(), fa: w.faName, total, locked, available: Math.max(total - locked, 0) };
   }).filter((w) => w.cur && Number.isFinite(w.total));
-  if (list.length && !out.length) throw unexpected("users/wallets/list");
+  if (Object.keys(b).length && !out.length) throw unexpected("v1/account/balances");
   return out;
 }
 async function getPrices(env, curs) {
-  const out = {};
-  const st = await getStats(env, curs, "rls");
-  for (const c of curs) if (st[c]) out[c] = { priceIrt: st[c].price, change24h: st[c].change };
-  const missing = curs.filter((c) => !out[c] && c !== "usdt");
-  if (missing.length) { // جفت تومانی ندارد → از جفت تتری × نرخ تتر
-    const usdtRls = out.usdt ? out.usdt.priceIrt : ((await getStats(env, ["usdt"], "rls")).usdt || {}).price;
-    if (usdtRls) {
-      const su = await getStats(env, missing, "usdt");
-      for (const c of missing) if (su[c]) out[c] = { priceIrt: su[c].price * usdtRls, change24h: su[c].change };
-    }
+  const sym = await getMarkets(env); const usdt = normMarket(sym.USDTTMN); const out = {};
+  for (const c of curs) {
+    const C = c.toUpperCase();
+    const tmn = normMarket(sym[`${C}TMN`]);
+    if (tmn) { out[c] = { priceIrt: tmn.price, change24h: tmn.change }; continue; }
+    const u = normMarket(sym[`${C}USDT`]);
+    if (u && usdt) out[c] = { priceIrt: u.price * usdt.price, change24h: u.change }; // از جفت تتری × نرخ تتر
   }
   return out;
 }
 async function buildAssets(env) {
-  const wallets = normalizeWallets(await memo("wallets", 5000, () => nobitex(env, "/users/wallets/list", { auth: true })));
-  const held = wallets.filter((w) => w.total > 0 || w.locked > 0);
-  const curs = [...new Set(held.map((w) => w.cur).filter((c) => c !== "rls"))];
+  const bal = normalizeBalances(await memo("balances", 5000, () => wallex(env, "/v1/account/balances", { auth: true })));
+  const held = bal.filter((w) => w.total > 0 || w.locked > 0);
+  const curs = held.map((w) => w.cur).filter((c) => c !== "tmn");
   const prices = curs.length ? await getPrices(env, curs) : {};
   const assets = held.map((w) => {
-    if (w.cur === "rls") return { coinId: "irt", name: "تومان", symbol: "IRT", total: w.total / 10, available: w.available / 10, locked: w.locked / 10, change24h: null, priceIrt: 1, valueIrt: w.total / 10 };
+    if (w.cur === "tmn") return { coinId: "irt", name: "تومان", symbol: "IRT", total: w.total, available: w.available, locked: w.locked, change24h: null, priceIrt: 1, valueIrt: w.total };
     const p = prices[w.cur];
-    return { coinId: w.cur, name: (coinById(w.cur) || {}).name || w.cur.toUpperCase(), symbol: w.cur.toUpperCase(), total: w.total, available: w.available, locked: w.locked,
+    return { coinId: w.cur, name: (coinById(w.cur) || {}).name || w.fa || w.cur.toUpperCase(), symbol: w.cur.toUpperCase(), total: w.total, available: w.available, locked: w.locked,
       change24h: p ? p.change24h : null, priceIrt: p ? p.priceIrt : null, valueIrt: p ? w.total * p.priceIrt : null };
   });
   assets.sort((a, b) => (b.valueIrt ?? -1) - (a.valueIrt ?? -1));
   return assets;
 }
-// UNVERIFIED: ساختار {orders:[{id,type,execution,status,srcCurrency,dstCurrency,price,amount,matchedAmount,created_at}]}
+// نمونه‌ی مستند: {result:{orders:[{symbol,type,side,price,origQty,executedQty,status,active,clientOrderId,created_at}]}}
+function normOrder(o) {
+  const sym = String(o.symbol || ""); const m = sym.match(/^(.*?)(TMN|USDT)$/);
+  const price = num(o.price);
+  return { id: String(o.clientOrderId || "—"), side: String(o.side || "").toLowerCase(), execution: String(o.type || ""), status: String(o.status || ""),
+    active: o.active === true, src: (m ? m[1] : sym).toLowerCase(), dst: m ? m[2].toLowerCase() : "", price: Number.isFinite(price) ? price : null,
+    amount: num(o.origQty), matched: num(o.executedQty), createdAt: toIso(o.created_at) };
+}
 function normalizeOrders(json) {
-  if (!json || !Array.isArray(json.orders)) throw unexpected("market/orders");
-  return json.orders.map((o) => {
-    const dst = String(o.dstCurrency || "").toLowerCase(); const f = dst === "rls" ? 0.1 : 1;
-    return { id: String(o.id ?? "—"), side: String(o.type || "").toLowerCase(), execution: String(o.execution || ""), status: String(o.status || ""),
-      src: String(o.srcCurrency || "").toLowerCase(), dst, price: scale(num(o.price), f), amount: num(o.amount), matched: num(o.matchedAmount),
-      createdAt: toIso(o.created_at || o.createdAt) };
-  });
+  const list = json && json.result && json.result.orders;
+  if (!Array.isArray(list)) throw unexpected("v1/account/openOrders");
+  return list.map(normOrder);
 }
-const isOpen = (o) => ["active", "inactive"].includes(o.status.toLowerCase());
-function fetchOrders(env, scope) {
-  return memo(`orders:${scope}`, 5000, async () => normalizeOrders(await nobitex(env, "/market/orders/list", { auth: true, query: { status: scope } })));
-}
-function orderToRow(o) {
-  const st = o.status.toLowerCase();
-  const status = st === "done" ? "موفق" : isOpen(o) ? "در انتظار" : st === "canceled" ? "لغو شده" : o.status || "—";
-  const pair = `${o.src.toUpperCase()}/${o.dst === "rls" ? "IRT" : o.dst.toUpperCase()}`;
+// UNVERIFIED: page/per_page در مستندات مقدار نمونه‌ی 0 دارند و پیش‌فرض‌هایشان نامشخص است؛ بنابراین ارسال نمی‌شوند.
+const fetchOpenOrders = (env) => memo("orders:open", 5000, async () => normalizeOrders(await wallex(env, "/v1/account/openOrders", { auth: true })));
+function orderToRow(o, forceOpen) {
+  const st = o.status.toUpperCase(); const open = forceOpen || o.active;
+  const status = open ? "در انتظار" : st.includes("CANCEL") ? "لغو شده" : st.includes("FILL") ? "موفق" : o.status || "—";
+  const pair = `${o.src.toUpperCase()}/${o.dst === "tmn" ? "IRT" : o.dst.toUpperCase()}`;
   const parts = [`${o.execution || "سفارش"} ${pair}`];
-  if (o.price !== null) parts.push(`قیمت ${o.price.toLocaleString("en-US", { maximumFractionDigits: 6 })} ${o.dst === "rls" ? "تومان" : o.dst.toUpperCase()}`);
-  if (isOpen(o) && o.matched > 0) parts.push("اجرای جزئی");
+  if (o.price !== null) parts.push(`قیمت ${o.price.toLocaleString("en-US", { maximumFractionDigits: 6 })} ${o.dst === "tmn" ? "تومان" : o.dst.toUpperCase()}`);
+  if (open && o.matched > 0) parts.push("اجرای جزئی");
   return { id: o.id, date: o.createdAt, type: o.side === "buy" ? "خرید" : o.side === "sell" ? "فروش" : o.side || "—",
-    coin: o.src.toUpperCase(), amount: o.matched > 0 && !isOpen(o) ? o.matched : o.amount, status, desc: parts.join(" · "), side: o.side, open: isOpen(o) };
+    coin: o.src.toUpperCase(), amount: o.matched > 0 && !open ? o.matched : o.amount, status, desc: parts.join(" · "), side: o.side, open: !!open };
 }
-// UNVERIFIED: ساختار {profile:{nickname,username,firstName,email,mobile,phone}}
+// نمونه‌ی مستند: GET /v1/account/profile → {result:{tracking_id, first_name, mobile_number:"0912****789", email:"as***@g***.com"}}
 function normalizeProfile(json) {
-  const p = json && json.profile; if (!p || typeof p !== "object") throw unexpected("users/profile");
-  return { username: p.nickname || p.username || p.firstName || null, accountId: null, phoneMasked: maskPhone(p.mobile || p.phone), emailMasked: maskEmail(p.email) };
+  const p = json && json.result; if (!p || typeof p !== "object") throw unexpected("v1/account/profile");
+  const masked = (v, fn) => (typeof v === "string" && v ? (v.includes("*") ? v : fn(v)) : null);
+  return { username: p.first_name || null, accountId: p.tracking_id !== undefined ? String(p.tracking_id) : null,
+    phoneMasked: masked(p.mobile_number, maskPhone), emailMasked: masked(p.email, maskEmail) };
 }
 
 // ---------- پرتفو ----------
 async function buildPortfolio(env, { snapshot } = {}) {
   const assets = await buildAssets(env);
   let openOrders = null; let ordersError = null;
-  try { openOrders = (await fetchOrders(env, "open")).filter(isOpen).length; } catch (e) { ordersError = e.code || "ERROR"; }
+  try { openOrders = (await fetchOpenOrders(env)).length; } catch (e) { ordersError = e.code || "ERROR"; }
   const priced = assets.filter((a) => a.valueIrt !== null);
   const total = priced.reduce((s, a) => s + a.valueIrt, 0);
   const available = priced.reduce((s, a) => s + a.available * a.priceIrt, 0);
@@ -381,14 +397,14 @@ async function buildPortfolio(env, { snapshot } = {}) {
   return { summary: { totalValueIrt: total, availableValueIrt: available, assetCount: assets.length, openOrders, change24hPercent: openSum > 0 ? ((nowSum - openSum) / openSum) * 100 : null },
     meta: { unpricedAssets: unpriced, ordersError, changeNote: "تغییر ۲۴ساعته بر اساس موجودی فعلی و قیمت‌های امروز محاسبه می‌شود، نه تاریخچه واقعی ارزش پرتفو." } };
 }
-async function takeSnapshot(env) { if (env.NOBITEX_TOKEN && env.STORE) await buildPortfolio(env, { snapshot: true }); }
+async function takeSnapshot(env) { if (env.WALLEX_API_KEY && env.STORE) await buildPortfolio(env, { snapshot: true }); }
 
 // ---------- سفارش‌گذاری ----------
 function tradingState(env) {
   const reasons = [];
   if (env.TRADING_ENABLED !== "true") reasons.push("TRADING_DISABLED");
   if (!env.STORE) reasons.push("NO_STORE");
-  if (!env.NOBITEX_TOKEN) reasons.push("NO_TOKEN");
+  if (!env.WALLEX_API_KEY) reasons.push("NO_TOKEN");
   const cap = Number(env.MAX_ORDER_VALUE_IRT); if (!(cap > 0)) reasons.push("NO_CAP");
   return { enabled: reasons.length === 0, reasons, cap: cap > 0 ? cap : null };
 }
@@ -401,29 +417,34 @@ function parseOrder(o) {
   let price = null;
   if (execution === "limit") {
     const p = Number(o.price); if (!(p > 0) || !Number.isFinite(p)) throw bad("قیمت سفارش محدود نامعتبر است.");
-    if (Math.abs(Math.round(p * 10) - p * 10) > 1e-6) throw bad("قیمت باید مضرب ۱۰ ریال (حداکثر یک رقم اعشار تومان) باشد.");
-    price = decimalStr(p, 1);
+    price = decimalStr(p, 8);
   }
   return { coinId: coin.id, side, execution, amount: decimalStr(amount, 8), price };
 }
+const decimals = (str) => (String(str).split(".")[1] || "").length;
 async function evaluateOrder(env, order) {
-  const st = (await getStats(env, [order.coinId], "rls"))[order.coinId];
-  if (!st) throw new HttpError(502, "NO_PRICE", "قیمت بازار برای این ارز در دسترس نیست.");
-  const warnings = [];
+  const m = (await getMarkets(env))[tmnSymbol(order.coinId)]; const ref = priceOf(m);
+  if (!m || !ref) throw new HttpError(502, "NO_PRICE", "قیمت بازار برای این ارز در دسترس نیست.");
+  const bad = (msg) => new HttpError(400, "INVALID_ORDER", msg); const warnings = [];
+  const step = num(m.stepSize), tick = num(m.tickSize), minQty = num(m.minQty), minNotional = num(m.minNotional);
+  if (Number.isFinite(step) && decimals(order.amount) > step) throw bad(`حداکثر ${step} رقم اعشار برای مقدار مجاز است.`);
+  if (minQty > 0 && Number(order.amount) < minQty) throw bad(`حداقل مقدار سفارش ${minQty} است.`);
   let unit;
   if (order.execution === "limit") {
     unit = Number(order.price);
-    const band = Number(env.PRICE_BAND_PCT || 20);
-    const dev = Math.abs(unit - st.price) / st.price * 100;
+    if (Number.isFinite(tick) && decimals(order.price) > tick) throw bad(`حداکثر ${tick} رقم اعشار برای قیمت مجاز است.`);
+    const band = Number(env.PRICE_BAND_PCT || 20); const dev = Math.abs(unit - ref.price) / ref.price * 100;
     if (dev > band) throw new HttpError(400, "PRICE_FAR_FROM_MARKET", `قیمت وارد‌شده ${dev.toFixed(1)}٪ با قیمت بازار فاصله دارد (سقف مجاز ${band}٪).`);
   } else {
-    unit = (order.side === "buy" ? st.bestSell : st.bestBuy) || st.price;
+    const st = m.stats || {}; unit = (order.side === "buy" ? num(st.askPrice) : num(st.bidPrice)); if (!(unit > 0)) unit = ref.price;
     warnings.push("سفارش بازار با بهترین قیمت لحظه‌ای اجرا می‌شود و مبلغ نهایی ممکن است تفاوت کند.");
   }
+  if (ref.source === "mid") warnings.push("قیمت مرجع بازار میانگین خرید و فروش است (آخرین قیمت معامله در پاسخ والکس نبود).");
   const estimate = Number(order.amount) * unit;
+  if (minNotional > 0 && estimate < minNotional) throw bad(`حداقل ارزش سفارش ${minNotional.toLocaleString("en-US")} تومان است.`);
   const { cap } = tradingState(env);
   if (cap && estimate > cap) throw new HttpError(400, "ORDER_OVER_CAP", `مبلغ سفارش از سقف تنظیم‌شده‌ی سرور (${cap.toLocaleString("en-US")} تومان) بیشتر است.`);
-  return { estimateIrt: estimate, marketPriceIrt: st.price, warnings };
+  return { estimateIrt: estimate, marketPriceIrt: ref.price, warnings };
 }
 const canon = (o) => JSON.stringify([o.coinId, o.side, o.execution, o.amount, o.price]);
 async function confirmSig(env, clientOrderId, exp, order) { return hmacB64u(env.SESSION_SECRET, `c.${clientOrderId}.${exp}.${canon(order)}`); }
@@ -447,37 +468,37 @@ async function tradeSubmit(env, body) {
   const id = String(body.clientOrderId || ""); const [exp, sig] = String(body.confirmToken || "").split(".");
   if (!/^[A-Za-z0-9]{8,40}$/.test(id) || !exp || !sig || !(Number(exp) > Date.now() / 1000) || !safeEqual(await confirmSig(env, id, exp, order), sig))
     throw new HttpError(400, "CONFIRM_INVALID", "تأیید سفارش نامعتبر یا منقضی است؛ پیش‌نمایش را دوباره بسازید.");
-  await evaluateOrder(env, order); // سقف مبلغ و فاصله قیمت یک‌بار دیگر
+  await evaluateOrder(env, order); // سقف مبلغ، دقت و فاصله قیمت یک‌بار دیگر
   const claim = await store(env, "/order/claim", { id, order });
   if (!claim.claimed) throw new HttpError(409, "DUPLICATE_ORDER", "این سفارش قبلاً ارسال شده است و دوباره ارسال نمی‌شود. وضعیت را در تاریخچه بررسی کنید.", { public: { record: { state: claim.record.state, orderId: claim.record.orderId || null } } });
-  const reqBody = { type: order.side, srcCurrency: order.coinId, dstCurrency: "rls", amount: order.amount, execution: order.execution, clientOrderId: id };
-  if (order.execution === "limit") reqBody.price = String(Math.round(Number(order.price) * 10)); // UNVERIFIED: قالب فیلدها
+  const reqBody = { symbol: tmnSymbol(order.coinId), type: order.execution.toUpperCase(), side: order.side.toUpperCase(), quantity: order.amount, client_id: id };
+  if (order.execution === "limit") reqBody.price = order.price; // سفارش MARKET نباید قیمت داشته باشد (خطای مستند ۱۰۰۳)
   let raw;
-  try { raw = await nobitexRaw(env, "/market/orders/add", { method: "POST", body: reqBody, auth: true, attempts: 1, timeoutMs: 15000 }); }
+  try { raw = await wallexRaw(env, "/v1/account/orders", { method: "POST", body: reqBody, auth: true, attempts: 1, timeoutMs: 15000 }); }
   catch (e) {
     await store(env, "/order/update", { id, patch: { state: "unknown" } });
-    throw new HttpError(504, "UNKNOWN_OUTCOME", "نتیجه‌ی ارسال سفارش نامشخص است (زمان پاسخ تمام شد یا شبکه قطع شد). سفارش را دوباره ارسال نکنید؛ ابتدا تاریخچه سفارش‌ها را در داشبورد یا پنل نوبیتکس بررسی کنید.", { public: { clientOrderId: id } });
+    throw new HttpError(504, "UNKNOWN_OUTCOME", "نتیجه‌ی ارسال سفارش نامشخص است (زمان پاسخ تمام شد یا شبکه قطع شد). سفارش را دوباره ارسال نکنید؛ ابتدا سفارش‌های باز را در داشبورد یا پنل والکس بررسی کنید.", { public: { clientOrderId: id } });
   }
-  memoClear("wallets"); memoClear("orders:");
+  memoClear("balances"); memoClear("orders:");
   const j = raw.json;
-  if (raw.httpStatus === 429) { await store(env, "/order/update", { id, patch: { state: "rate_limited" } }); throw new HttpError(429, "RATE_LIMITED", "نوبیتکس محدودیت نرخ اعمال کرد؛ سفارش ثبت‌شده تلقی نمی‌شود، اما برای اطمینان تاریخچه را ببینید. برای تلاش دوباره پیش‌نمایش جدید بسازید."); }
-  if (j && j.status === "failed") { await store(env, "/order/update", { id, patch: { state: "rejected", code: String(j.code || "") } }); throw new HttpError(422, "ORDER_REJECTED", String(j.message || j.code || "سفارش توسط نوبیتکس رد شد.").slice(0, 200), { public: { upstreamCode: j.code ? String(j.code).slice(0, 60) : undefined } }); }
-  if (raw.httpStatus >= 200 && raw.httpStatus < 300 && j && j.status === "ok" && j.order && j.order.id !== undefined) {
-    const orderId = String(j.order.id);
+  if (raw.httpStatus === 429) { await store(env, "/order/update", { id, patch: { state: "rate_limited" } }); throw new HttpError(429, "RATE_LIMITED", "والکس محدودیت نرخ اعمال کرد؛ برای اطمینان سفارش‌های باز را ببینید. برای تلاش دوباره پیش‌نمایش جدید بسازید."); }
+  if (j && j.success === false) { await store(env, "/order/update", { id, patch: { state: "rejected" } }); throw new HttpError(422, "ORDER_REJECTED", String(j.message || "سفارش توسط والکس رد شد.").slice(0, 200)); }
+  if (raw.httpStatus >= 200 && raw.httpStatus < 300 && j && j.success === true && j.result && j.result.clientOrderId) {
+    const orderId = String(j.result.clientOrderId);
     await store(env, "/order/update", { id, patch: { state: "accepted", orderId } });
     let verified = false, final = null;
     try { final = await verifyOrder(env, orderId); verified = true; } catch (_) { /* تأیید وضعیت ممکن نشد */ }
     return { accepted: true, orderId, clientOrderId: id, verified, order: final ? orderToRow(final) : null,
-      message: verified ? "سفارش ثبت و وضعیت آن از نوبیتکس تأیید شد." : "نوبیتکس ثبت سفارش را اعلام کرد، اما بررسی وضعیت ممکن نشد؛ تاریخچه را بررسی کنید." };
+      message: verified ? "سفارش ثبت و وضعیت آن از والکس تأیید شد." : "والکس ثبت سفارش را اعلام کرد، اما بررسی وضعیت ممکن نشد؛ سفارش‌های باز را بررسی کنید." };
   }
   await store(env, "/order/update", { id, patch: { state: "unknown", httpStatus: raw.httpStatus } });
-  throw new HttpError(502, "UNKNOWN_OUTCOME", "پاسخ نوبیتکس قابل تفسیر نبود و نتیجه‌ی سفارش نامشخص است. دوباره ارسال نکنید و تاریخچه را بررسی کنید.", { public: { clientOrderId: id } });
+  throw new HttpError(502, "UNKNOWN_OUTCOME", "پاسخ والکس قابل تفسیر نبود و نتیجه‌ی سفارش نامشخص است. دوباره ارسال نکنید و سفارش‌های باز را بررسی کنید.", { public: { clientOrderId: id } });
 }
-async function verifyOrder(env, orderId) {
-  const j = await nobitex(env, "/market/orders/status", { method: "POST", auth: true, body: { id: orderId }, attempts: 1 });
-  const list = normalizeOrders({ orders: j.order ? [j.order] : [] });
-  if (!list.length) throw unexpected("market/orders/status");
-  return list[0];
+// نمونه‌ی مستند: GET /v1/account/orders/{clientOrderId} → {result:{symbol,type,side,status,active,clientOrderId,...}}
+async function verifyOrder(env, clientOrderId) {
+  const j = await wallex(env, `/v1/account/orders/${encodeURIComponent(clientOrderId)}`, { auth: true, attempts: 1 });
+  if (!j.result || typeof j.result !== "object") throw unexpected("v1/account/orders/{id}");
+  return normOrder(j.result);
 }
 
 // ---------- مسیریابی ----------
@@ -499,8 +520,8 @@ async function route(request, env, ctx, url) {
 
   await requireSession(request, env);
 
-  if (p === "/api/session/check" && m === "GET") return ok({ authenticated: true, nobitexTokenConfigured: !!env.NOBITEX_TOKEN, tradingEnabled: tradingState(env).enabled });
-  if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing }); }
+  if (p === "/api/session/check" && m === "GET") return ok({ authenticated: true, exchangeKeyConfigured: !!env.WALLEX_API_KEY, tradingEnabled: tradingState(env).enabled });
+  if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing, priceSources: r.priceSources, note: r.note }); }
   let mt;
   if ((mt = p.match(/^\/api\/history\/([a-z0-9]+)$/)) && m === "GET") {
     const range = url.searchParams.get("range") || "30d"; if (!RANGE_DAYS[range]) throw new HttpError(400, "BAD_RANGE", "بازه نامعتبر است.");
@@ -522,14 +543,14 @@ async function route(request, env, ctx, url) {
     return ok(snaps.filter((s) => s.t >= since).map((s) => ({ t: new Date(s.t).toISOString(), v: s.v })),
       { available: true, collectedSince: snaps[0] ? new Date(snaps[0].t).toISOString() : null, note: "نوبیتکس تاریخچه ارزش پرتفو ارائه نمی‌کند؛ این نمودار فقط از نمونه‌هایی ساخته می‌شود که این سرور ذخیره کرده است." });
   }
-  if (p === "/api/orders/open" && m === "GET") return ok((await fetchOrders(env, "open")).filter(isOpen).map(orderToRow));
-  if (p === "/api/orders/history" && m === "GET") return ok((await fetchOrders(env, "all")).map(orderToRow), { note: "فقط سفارش‌های بازار؛ واریز و برداشت پیاده‌سازی نشده است." });
-  if (p === "/api/profile" && m === "GET") return ok(normalizeProfile(await memo("profile", 60000, () => nobitex(env, "/users/profile", { auth: true }))));
+  if (p === "/api/orders/open" && m === "GET") return ok((await fetchOpenOrders(env)).map((o) => orderToRow(o, true)));
+  if (p === "/api/orders/history" && m === "GET") return ok((await fetchOpenOrders(env)).map((o) => orderToRow(o, true)), { note: "مستندات والکس endpoint تاریخچه‌ی سفارش‌ها را مشخص نکرده؛ فقط سفارش‌های باز نمایش داده می‌شوند." });
+  if (p === "/api/profile" && m === "GET") return ok(normalizeProfile(await memo("profile", 60000, () => wallex(env, "/v1/account/profile", { auth: true }))));
   if (p === "/api/trade/config" && m === "GET") { const ts = tradingState(env); return ok({ tradingEnabled: ts.enabled, reasons: ts.reasons, maxOrderValueIrt: ts.cap, markets: COINS.map((c) => ({ id: c.id, name: c.name })) }); }
   if (p === "/api/trade/preview" && m === "POST") return ok(await tradePreview(env, await readJson(request)));
   if (p === "/api/trade/submit" && m === "POST") return ok(await tradeSubmit(env, await readJson(request)));
   if (p === "/api/trade/status" && m === "POST") {
-    const b = await readJson(request); if (!/^\d{1,20}$/.test(String(b.id || ""))) throw new HttpError(400, "BAD_ID", "شناسه سفارش نامعتبر است.");
+    const b = await readJson(request); if (!/^[A-Za-z0-9_-]{1,64}$/.test(String(b.id || ""))) throw new HttpError(400, "BAD_ID", "شناسه سفارش نامعتبر است.");
     return ok(orderToRow(await verifyOrder(env, String(b.id))));
   }
   throw new HttpError(404, "NOT_FOUND", "مسیر یافت نشد.");
@@ -546,4 +567,4 @@ export default {
   },
   async scheduled(event, env, ctx) { ctx.waitUntil(takeSnapshot(env).catch(() => {})); },
 };
-export const __test = { parseOrder, normStat, normalizeWallets, normalizeOrders, orderToRow, tradingState };
+
