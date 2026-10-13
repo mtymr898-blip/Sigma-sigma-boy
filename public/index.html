@@ -1259,6 +1259,9 @@ const Api = (() => {
 
   async function getMarketList(){
     const res = await get("/api/market");
+    if(res.meta && res.meta.stale){
+      if(!Api._staleShown){ Api._staleShown = true; Toast.info("قیمت‌ها قدیمی‌اند", "والکس موقتاً درخواست را رد کرد؛ آخرین قیمت دریافت‌شده نمایش داده می‌شود: " + Utils.timeAgo(res.fetchedAt)); }
+    }else Api._staleShown = false;
     const usdt = res.data.find(c => c.id === "usdt");
     Utils.setUsdtRate(usdt ? usdt.price : null);
     return res;
@@ -1292,9 +1295,10 @@ const Api = (() => {
     request("/api/trade/submit", { method:"POST", body:{ order, clientOrderId, confirmToken } }).then(j => j.data);
   const getOrderStatus = (id) => request("/api/trade/status", { method:"POST", body:{ id } }).then(j => j.data);
 
-  return { connect, disconnect, checkConnection, getMarketList, getCoin, getCoinHistory, getSparklines, getOrderbook,
+  const api = { connect, disconnect, checkConnection, getMarketList, getCoin, getCoinHistory, getSparklines, getOrderbook,
     getPortfolioSummary, getPortfolioHistory, getWalletAssets, getOpenOrders, getProfile, getTransactions,
     getTradeConfig, previewOrder, submitOrder, getOrderStatus };
+  return api;
 })();
 // ===================================================================
 // لایه حساب کاربری برنامه (جدا از اتصال صرافی)
