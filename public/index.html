@@ -1211,12 +1211,14 @@ const Api = (() => {
     if(body !== undefined) headers["Content-Type"] = "application/json";
     if(auth && sessionToken) headers.Authorization = "Bearer " + sessionToken;
     let res;
+    const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), 35000); // جلوگیری از اسکلتون بی‌پایان
     try{
-      res = await fetch(API_BASE + path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+      res = await fetch(API_BASE + path, { method, headers, signal: ctl.signal, body: body !== undefined ? JSON.stringify(body) : undefined });
     }catch(e){
-      const err = new Error("اتصال به سرور برقرار نشد. اینترنت یا آدرس Worker را بررسی کنید.");
-      err.code = "NETWORK"; throw err;
-    }
+      const timedOut = e && e.name === "AbortError";
+      const err = new Error(timedOut ? "پاسخی از سرور نرسید (زمان انتظار تمام شد)؛ احتمالاً والکس کند یا در دسترس نیست." : "اتصال به سرور برقرار نشد. اینترنت یا آدرس Worker را بررسی کنید.");
+      err.code = timedOut ? "TIMEOUT" : "NETWORK"; throw err;
+    }finally{ clearTimeout(timer); }
     let json = null;
     try{ json = await res.json(); }catch(e){ /* غیر JSON */ }
     if(!res.ok || !json || json.ok !== true){
