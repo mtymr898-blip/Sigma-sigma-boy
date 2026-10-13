@@ -203,7 +203,7 @@ async function throttle(env) {
   const now = Date.now(); const at = Math.max(now, nextSlot); nextSlot = at + gap;
   if (at > now) await sleep(at - now);
 }
-async function wallexRaw(env, path, { method = "GET", query, body, auth = false, timeoutMs = 12000, attempts } = {}) {
+async function wallexRaw(env, path, { method = "GET", query, body, auth = false, timeoutMs = 8000, attempts } = {}) {
   const url = new URL(WALLEX_BASE + path);
   for (const [k, v] of Object.entries(query || {})) if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
   const headers = { Accept: "application/json", "User-Agent": UA };
