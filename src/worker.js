@@ -77,8 +77,8 @@ function maskPhone(p) {
 }
 
 // ---------- پاسخ‌ها و CORS ----------
-function ok(data, meta) {
-  return new Response(JSON.stringify({ ok: true, data, meta: meta || null, fetchedAt: new Date().toISOString() }), {
+function ok(data, meta, fetchedAtMs) {
+  return new Response(JSON.stringify({ ok: true, data, meta: meta || null, fetchedAt: new Date(fetchedAtMs || Date.now()).toISOString() }), {
     status: 200, headers: { "Content-Type": "application/json; charset=utf-8" },
   });
 }
@@ -195,6 +195,14 @@ async function requireSession(request, env) {
 }
 
 // ---------- ارتباط با والکس ----------
+// فاصله‌ی حداقلی بین درخواست‌های ارسالی به والکس (جلوگیری از موج درخواست که ممکن است قاعده‌ی مسدودسازی را فعال کند)
+let nextSlot = 0;
+async function throttle(env) {
+  const gap = env.UPSTREAM_GAP_MS === undefined ? 200 : Number(env.UPSTREAM_GAP_MS);
+  if (!(gap > 0)) return;
+  const now = Date.now(); const at = Math.max(now, nextSlot); nextSlot = at + gap;
+  if (at > now) await sleep(at - now);
+}
 async function wallexRaw(env, path, { method = "GET", query, body, auth = false, timeoutMs = 12000, attempts } = {}) {
   const url = new URL(WALLEX_BASE + path);
   for (const [k, v] of Object.entries(query || {})) if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
@@ -207,6 +215,7 @@ async function wallexRaw(env, path, { method = "GET", query, body, auth = false,
   const maxAttempts = attempts || (method === "GET" ? 2 : 1); // POST/DELETE هرگز خودکار تکرار نمی‌شوند
   let lastErr;
   for (let i = 1; i <= maxAttempts; i++) {
+    await throttle(env);
     const ctl = new AbortController(); const timer = setTimeout(() => ctl.abort(), timeoutMs);
     try {
       const res = await fetch(url, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined, signal: ctl.signal });
@@ -243,13 +252,23 @@ async function wallex(env, path, opts = {}) {
 // نمونه‌ی مستند: GET /v1/markets → {success, result:{symbols:{BTCTMN:{stats:{bidPrice,askPrice,"24h_ch","24h_volume",
 //   lastPrice?, "24h_highPrice"?, "24h_lowPrice"?}, stepSize, tickSize, minQty, minNotional}}}}
 // UNVERIFIED: دو نمونه‌ی مستندات یکسان نیستند؛ lastPrice/high/low ممکن است نباشند.
+let lastGoodMarkets = null; // آخرین پاسخ موفق (فقط برای نمایش لیست بازار با برچسب «قدیمی»)
 function getMarkets(env) {
-  return memo("markets", 8000, async () => {
+  return memo("markets", 15000, async () => {
     const j = await wallex(env, "/v1/markets");
     const sym = j.result && j.result.symbols;
     if (!sym || typeof sym !== "object") throw unexpected("v1/markets");
+    lastGoodMarkets = { t: Date.now(), sym };
     return sym;
   });
+}
+async function getMarketsForDisplay(env) {
+  try { return { sym: await getMarkets(env), stale: false, t: Date.now() }; }
+  catch (e) {
+    const soft = ["UPSTREAM_BLOCKED", "UPSTREAM_NETWORK", "UPSTREAM_TIMEOUT", "UPSTREAM_ERROR", "RATE_LIMITED"].includes(e.code);
+    if (soft && lastGoodMarkets && Date.now() - lastGoodMarkets.t < 30 * 60000) return { sym: lastGoodMarkets.sym, stale: true, t: lastGoodMarkets.t, reason: e.code };
+    throw e;
+  }
 }
 function priceOf(m) {
   const st = m && m.stats; if (!st) return null;
@@ -268,14 +287,14 @@ function normMarket(m) {
 }
 const tmnSymbol = (id) => `${id.toUpperCase()}TMN`;
 async function getMarketCoins(env) {
-  const sym = await getMarkets(env); const sources = new Set();
+  const { sym, stale, t, reason } = await getMarketsForDisplay(env); const sources = new Set();
   const data = [];
   for (const c of COINS) {
     const n = normMarket(sym[tmnSymbol(c.id)]); if (!n) continue; sources.add(n.source);
     data.push({ id: c.id, name: c.name, symbol: `${c.id.toUpperCase()}/IRT`, price: n.price, change24h: n.change, high24h: n.high, low24h: n.low, volume24h: n.volume, bestBuy: n.bestBuy, bestSell: n.bestSell });
   }
   if (!data.length) throw unexpected("v1/markets (هیچ جفت‌ارز تومانی معتبر نبود)");
-  return { data, missing: COINS.filter((c) => !data.find((d) => d.id === c.id)).map((c) => c.id),
+  return { data, stale, t, reason, missing: COINS.filter((c) => !data.find((d) => d.id === c.id)).map((c) => c.id),
     priceSources: [...sources], note: "حجم ۲۴ساعته = حجم پایه × قیمت (تخمینی). اگر منبع قیمت mid باشد، قیمت میانگین خرید و فروش است." };
 }
 const RANGE_DAYS = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 };
@@ -526,7 +545,7 @@ async function route(request, env, ctx, url) {
   await requireSession(request, env);
 
   if (p === "/api/session/check" && m === "GET") return ok({ authenticated: true, exchangeKeyConfigured: !!env.WALLEX_API_KEY, tradingEnabled: tradingState(env).enabled });
-  if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing, priceSources: r.priceSources, note: r.note }); }
+  if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing, priceSources: r.priceSources, note: r.note, stale: r.stale, staleReason: r.stale ? r.reason : undefined }, r.t); }
   let mt;
   if ((mt = p.match(/^\/api\/history\/([a-z0-9]+)$/)) && m === "GET") {
     const range = url.searchParams.get("range") || "30d"; if (!RANGE_DAYS[range]) throw new HttpError(400, "BAD_RANGE", "بازه نامعتبر است.");
@@ -534,8 +553,13 @@ async function route(request, env, ctx, url) {
   }
   if (p === "/api/sparklines" && m === "GET") {
     const ids = (url.searchParams.get("ids") || "").split(",").filter((x) => coinById(x)).slice(0, 12);
-    const rs = await Promise.allSettled(ids.map((id) => getHistory(env, id, 14)));
-    const out = {}; rs.forEach((r, i) => { if (r.status === "fulfilled" && r.value.length > 1) out[ids[i]] = r.value.slice(-14); });
+    const out = await memo(`spark:${ids.join(",")}`, 30 * 60000, async () => {
+      const res = {};
+      for (const id of ids) { // ترتیبی؛ با اولین خطا متوقف می‌شود تا موج درخواست ساخته نشود
+        try { const h = await getHistory(env, id, 14); if (h.length > 1) res[id] = h.slice(-14); } catch (e) { break; }
+      }
+      return res;
+    });
     return ok(out);
   }
   if ((mt = p.match(/^\/api\/orderbook\/([a-z0-9]+)$/)) && m === "GET") return ok(await getOrderbook(env, mt[1]));
