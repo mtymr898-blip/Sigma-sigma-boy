@@ -1,0 +1,6 @@
+# به‌جای dashboard.example.com دامنه‌ی خودت را بگذار
+# (رکورد A دامنه باید به IP همین VPS اشاره کند)
+dashboard.example.com {
+	encode gzip
+	reverse_proxy 127.0.0.1:8787
+}

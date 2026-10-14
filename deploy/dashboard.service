@@ -1,0 +1,21 @@
+[Unit]
+Description=Wallex personal dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dashboard
+WorkingDirectory=/opt/dashboard
+EnvironmentFile=/opt/dashboard/.env
+ExecStart=/usr/bin/node /opt/dashboard/server.js
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/opt/dashboard/data
+
+[Install]
+WantedBy=multi-user.target
