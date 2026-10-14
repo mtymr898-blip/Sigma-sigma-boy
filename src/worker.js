@@ -223,7 +223,9 @@ async function wallexRaw(env, path, { method = "GET", query, body, auth = false,
       if (res.status >= 500 && i < maxAttempts) { await sleep(300); continue; }
       const text = await res.text(); let json = null; try { json = JSON.parse(text); } catch (_) { /* غیر JSON */ }
       const snippet = json ? "" : text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
-      return { httpStatus: res.status, json, retryAfter: res.headers.get("Retry-After"), snippet };
+      const hdr = []; // فقط سربرگ‌های بی‌خطر و مفید برای شناسایی لایه‌ی مسدودکننده
+      for (const k of ["server", "via", "cf-ray", "x-request-id", "x-cache", "x-served-by", "content-type"]) { const v = res.headers.get(k); if (v) hdr.push(`${k}=${String(v).slice(0, 60)}`); }
+      return { httpStatus: res.status, json, retryAfter: res.headers.get("Retry-After"), snippet, hdr: hdr.join("; ") };
     } catch (e) {
       clearTimeout(timer);
       lastErr = new HttpError(504, e && e.name === "AbortError" ? "UPSTREAM_TIMEOUT" : "UPSTREAM_NETWORK", "ارتباط با والکس برقرار نشد یا زمان آن تمام شد.");
@@ -234,12 +236,12 @@ async function wallexRaw(env, path, { method = "GET", query, body, auth = false,
 }
 // plain: پاسخ‌هایی مثل udf/history که فیلد success ندارند
 async function wallex(env, path, opts = {}) {
-  const { httpStatus, json, retryAfter, snippet } = await wallexRaw(env, path, opts);
+  const { httpStatus, json, retryAfter, snippet, hdr } = await wallexRaw(env, path, opts);
   if (httpStatus === 429) throw new HttpError(429, "RATE_LIMITED", "محدودیت تعداد درخواست والکس اعمال شد؛ کمی بعد دوباره تلاش کنید.", { retryAfter: Number(retryAfter) || 5 });
   if (httpStatus === 401 || httpStatus === 403) {
     const detail = (json && json.message ? String(json.message) : snippet || "").slice(0, 120);
     throw new HttpError(502, opts.auth ? "UPSTREAM_AUTH" : "UPSTREAM_BLOCKED",
-      (opts.auth ? "والکس درخواست خصوصی را رد کرد" : "والکس درخواست عمومی بازار را رد کرد (بدون کلید)") + ` (HTTP ${httpStatus})` + (detail ? ` — ${detail}` : "") +
+      (opts.auth ? "والکس درخواست خصوصی را رد کرد" : "والکس درخواست عمومی بازار را رد کرد (بدون کلید)") + ` (HTTP ${httpStatus})` + (detail ? ` — ${detail}` : "") + (hdr ? ` [${hdr}]` : "") +
       (opts.auth ? ". کلید نامعتبر/منقضی، مجوز ناکافی یا IP غیرمجاز ممکن است." : ". احتمالاً مسدودسازی بر اساس IP/شبکه."));
   }
   if (json && json.success === false) throw new HttpError(502, "UPSTREAM_FAILED", String(json.message || "درخواست توسط والکس ناموفق اعلام شد.").slice(0, 200));
