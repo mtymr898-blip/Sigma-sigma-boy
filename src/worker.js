@@ -285,7 +285,8 @@ function normMarket(m) {
   return { price: p.price, source: p.source, change: Number.isFinite(ch) ? ch : null,
     high: scale(num(st["24h_highPrice"]), 1), low: scale(num(st["24h_lowPrice"]), 1),
     bestBuy: scale(num(st.bidPrice), 1), bestSell: scale(num(st.askPrice), 1),
-    volume: Number.isFinite(baseVol) ? baseVol * p.price : null /* تخمینی: حجم پایه × قیمت */ };
+    // نمونه‌ی واقعی پاسخ والکس (اسکرین‌شات کاربر) فیلدهای 24h_tmnVolume و 24h_quoteVolume را دارد؛ فقط اگر نبودند تخمین می‌زنیم
+    volume: Number.isFinite(num(st["24h_tmnVolume"])) ? num(st["24h_tmnVolume"]) : Number.isFinite(num(st["24h_quoteVolume"])) ? num(st["24h_quoteVolume"]) : (Number.isFinite(baseVol) ? baseVol * p.price : null) };
 }
 const tmnSymbol = (id) => `${id.toUpperCase()}TMN`;
 async function getMarketCoins(env) {
@@ -297,7 +298,7 @@ async function getMarketCoins(env) {
   }
   if (!data.length) throw unexpected("v1/markets (هیچ جفت‌ارز تومانی معتبر نبود)");
   return { data, stale, t, reason, missing: COINS.filter((c) => !data.find((d) => d.id === c.id)).map((c) => c.id),
-    priceSources: [...sources], note: "حجم ۲۴ساعته = حجم پایه × قیمت (تخمینی). اگر منبع قیمت mid باشد، قیمت میانگین خرید و فروش است." };
+    priceSources: [...sources], note: "حجم ۲۴ساعته از فیلد حجم تومانی والکس؛ در نبود آن تخمین (حجم پایه × قیمت). اگر منبع قیمت mid باشد، قیمت میانگین خرید و فروش است." };
 }
 const RANGE_DAYS = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 };
 let dailyResolutionOk = null; // UNVERIFIED: آیا resolution=D پذیرفته می‌شود؟
