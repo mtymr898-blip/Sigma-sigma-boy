@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "start": "node server.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "cap:add-android": "cap add android",
@@ -17,5 +18,8 @@
   "devDependencies": {
     "@capacitor/cli": "^6.1.2",
     "wrangler": "^4"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }
