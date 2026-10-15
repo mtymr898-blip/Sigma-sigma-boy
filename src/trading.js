@@ -69,7 +69,7 @@ export function createTrading(deps) {
   function marketInfo(mk, coinId) {
     const m = mk.sym[tmnSymbol(coinId)]; const ref = priceOf(m); if (!m || !ref) return null;
     const st = m.stats || {}; const ask = num(st.askPrice), bid = num(st.bidPrice);
-    return { price: ref.price, source: ref.source, ask: ask > 0 ? ask : ref.price, bid: bid > 0 ? bid : ref.price, step: num(m.stepSize), minQty: num(m.minQty), minNotional: num(m.minNotional),
+    return { price: ref.price, source: ref.source, ask: ask > 0 ? ask : ref.price, bid: bid > 0 ? bid : ref.price, step: num(m.stepSize), minQty: num(m.minQty), minNotional: num(m.minNotional), tick: num(m.tickSize),
       stale: !!mk.stale, ageSec: mk.stale ? 9999 : Math.max(0, (now() - mk.t) / 1000) };
   }
   const feeRate = (s) => s.feePct / 100, slip = (s) => s.slippagePct / 100;
@@ -289,7 +289,8 @@ export function createTrading(deps) {
       let holding = trades.some((x) => x.mode === ctl.mode && x.coinId === coinId && x.status === "open" && x.kind === "strategy");
       if (!holding && balances && info) { const w = balances.find((x) => x.cur === coinId); holding = !!(w && w.available * info.price >= (info.minNotional || 0) && w.available > 0); }
       const a = analyzeCandles(ohlc.candles, ohlc.meta, s, { holding, price: info ? info.ask : null, nowMs: t });
-      state.analysis[coinId] = { coinId, symbol: `${coinId.toUpperCase()}/IRT`, ...a, marketPrice: info ? info.price : null, priceSource: info ? info.source : null, holding, mode: ctl.mode };
+      const sug = ctl.mode === "suggest" ? buildSuggestion(coinId, a, info, s, balances) : null;
+      state.analysis[coinId] = { coinId, symbol: `${coinId.toUpperCase()}/IRT`, ...a, marketPrice: info ? info.price : null, priceSource: info ? info.source : null, holding, mode: ctl.mode, suggestion: sug };
       for (const sg of signals) if (sg.coinId === coinId && sg.signal === "buy" && (!sg.outcome || sg.outcome.status === "pending")) {
         const o = evaluateSignalOutcome(sg, ohlc.candles, tfMs, 48); if (o.status !== (sg.outcome || {}).status) { sg.outcome = o; changed = true; }
       }
@@ -299,7 +300,7 @@ export function createTrading(deps) {
       const sg = { id: "s" + hashId(key), key, at: iso(t), coinId, symbol: `${coinId.toUpperCase()}/IRT`, signal: a.signal, mode: ctl.mode, candleT: a.candleT, timeframe: s.timeframe, strategy: s.strategy,
         price: info ? info.price : a.price, changePct24h: a.changePct24h, trend: a.trend, indicators: a.indicators, entry: a.entry, stop: a.stop, takeProfit: a.takeProfit, rr: a.rr, riskPct: a.riskPct,
         score: a.score, scoreNote: a.scoreNote, reasons: a.reasons, dataQuality: { ok: a.dataQuality.ok, warnings: a.dataQuality.warnings, bars: a.dataQuality.bars, lastCandleAt: a.dataQuality.lastCandleAt },
-        status: "new", statusNote: "", tradeId: null, outcome: a.signal === "buy" ? { status: "pending" } : null };
+        status: "new", statusNote: "", tradeId: null, outcome: a.signal === "buy" ? { status: "pending" } : null, suggestion: sug };
       signals.push(sg); changed = true;
       await actOnSignal(sg, a, ctx);
     }
@@ -374,6 +375,80 @@ export function createTrading(deps) {
     return { did };
   }
 
+  // ---------- پیشنهاد قابل‌اجرا (چه ارزی، چقدر، کی بفروشد) ----------
+  const nf = (n) => Math.round(Number(n)).toLocaleString("en-US");
+  const dpOf = (info) => (Number.isFinite(info.tick) && info.tick >= 0 ? info.tick : 0);
+  function buildSuggestion(coinId, a, info, s, balances) {
+    if (!info || (a.signal !== "buy" && a.signal !== "sell") || !a.entry) return null;
+    const dp = stepDp(info); const price = a.signal === "buy" ? info.ask : info.bid; const notes = [];
+    if (a.signal === "buy") {
+      let amount = s.maxOrderIrt;
+      const tmn = balances ? (balances.find((x) => x.cur === "tmn") || {}).available : undefined;
+      if (Number.isFinite(tmn) && tmn * 0.98 < amount) { amount = tmn * 0.98; notes.push("مبلغ به‌اندازه‌ی موجودی تومانی شما (با کمی حاشیه) کاهش یافت."); }
+      const qty = floorQty(amount / price, info.step); const cost = qty * price;
+      if (!(qty > 0) || (info.minNotional > 0 && cost < info.minNotional)) notes.push("با سقف/موجودی فعلی به حداقل سفارش صرافی نمی‌رسد؛ سقف هر معامله را در تنظیمات بالاتر ببرید یا موجودی را افزایش دهید.");
+      const sellPlan = [`حد سود: ${nf(a.takeProfit)} تومان (حدود ${(((a.takeProfit / price) - 1) * 100).toFixed(1)}٪ بالاتر از ورود) — با رسیدن به آن بفروشید.`,
+        `حد ضرر: ${nf(a.stop)} تومان (حدود ${(((1 - a.stop / price)) * 100).toFixed(1)}٪ پایین‌تر) — اگر قیمت به آن رسید برای محدود کردن زیان بفروشید.`,
+        `اگر روند نزولی شد یا RSI به ${s.params.rsiExit} رسید، همین‌جا سیگنال فروش اعلام می‌شود.`, `سقف زمان نگهداری پیشنهادی: ${s.maxHoldHours} ساعت.`];
+      return { side: "buy", coinId, price: decimalStr(price, dpOf(info)), qty: decimalStr(qty, dp), amountIrt: round(cost), stop: a.stop, takeProfit: a.takeProfit, rr: a.rr, sellPlan, notes,
+        sizing: `مبلغ = سقف هر معامله در تنظیمات (${nf(s.maxOrderIrt)} تومان)` + (notes.length ? " با اصلاح بالا" : "") + ". حد ضرر و سود باید خودتان پایش کنید (در سفارش دستی خودکار نیست)." };
+    }
+    const w = balances ? balances.find((x) => x.cur === coinId) : null; const qty = w ? floorQty(w.available, info.step) : null;
+    if (qty === null) notes.push("موجودی شما در دسترس نبود؛ مقدار را خودتان وارد کنید.");
+    return { side: "sell", coinId, price: decimalStr(price, dpOf(info)), qty: qty !== null ? decimalStr(qty, dp) : "", amountIrt: qty !== null ? round(qty * price) : null, sellPlan: a.exitReasons || [], notes, sizing: "فروش کل موجودی این ارز پیشنهاد شده؛ هر مقدار خواستید تغییر دهید." };
+  }
+
+  // ---------- فید گزارش (صفحه‌ی گفتگوی فقط‌خواندنی) ----------
+  const SIG_FA = { buy: "خرید", sell: "فروش" };
+  const EXIT_FA = { stop: "حد ضرر", take_profit: "حد سود", signal: "سیگنال خروج", timeout: "پایان زمان نگهداری", manual: "بستن دستی", manual_resolved: "رفع دستی" };
+  const KIND_FA = { strategy: "خرید خودکار", dca: "خرید دوره‌ای (DCA)", manual: "سفارش هوشمند دستی" };
+  const OUT_FA = { pending: "هنوز نتیجه‌ای نشده", take_profit: "به حد سود رسید ✅", stop: "به حد ضرر خورد ❌", expired: "بدون رسیدن به حد سود/ضرر منقضی شد" };
+  async function buildFeed() {
+    const ctl = await getCtl(); const s = await getSettings(); const state = await load(K.state, {});
+    const trades = await load(K.trades, []); const signals = await load(K.signals, []); const events = await load(K.events, []);
+    const tfMs = TF_MS[s.timeframe]; const msgs = []; const seen = new Set();
+    const push = (m) => { if (seen.has(m.id)) return; seen.add(m.id); msgs.push({ important: false, severity: "info", lines: [], ...m }); };
+    const modeFa = ctl.mode === "live" ? "واقعی" : "آزمایشی";
+    if (ctl.mode === "suggest") {
+      for (const a of Object.values(state.analysis || {})) {
+        const sym = a.symbol || `${a.coinId.toUpperCase()}/IRT`;
+        if (a.error || (a.dataQuality && !a.dataQuality.ok)) push({ id: `err:${a.coinId}`, t: a.analyzedAt, kind: "analysis", severity: "warn", title: `${sym}: تحلیل معتبر نیست`, lines: (a.dataQuality && a.dataQuality.issues) || [a.error] });
+        else if ((a.signal === "buy" || a.signal === "sell") && a.suggestion) {
+          const g = a.suggestion; const lines = [...(a.reasons || []).map((r) => "• " + r)];
+          lines.push(`قیمت لحظه‌ای: ${nf(a.marketPrice || g.price)} تومان | RSI ${a.indicators.rsi.toFixed(0)} | امتیاز انطباق ${a.score}/100`);
+          if (g.side === "buy") lines.push(`چقدر بخرید: ${g.qty} ${a.coinId.toUpperCase()} ≈ ${nf(g.amountIrt)} تومان`, `قیمت ورود پیشنهادی: ${g.price} تومان`);
+          else lines.push(g.qty ? `چقدر بفروشید: ${g.qty} ${a.coinId.toUpperCase()} ≈ ${nf(g.amountIrt)} تومان` : "مقدار فروش را خودتان وارد کنید.");
+          push({ id: `now:${a.coinId}:${a.candleT}:${a.signal}`, t: iso(a.candleT + tfMs), kind: "suggestion", important: true, severity: g.side === "buy" ? "good" : "warn", title: `پیشنهاد ${SIG_FA[a.signal]} ${sym}`,
+            lines, sellPlan: g.sellPlan, notes: [...g.notes, g.sizing, a.scoreNote, ...((a.dataQuality && a.dataQuality.warnings) || [])].filter(Boolean),
+            action: { type: "trade", coinId: a.coinId, side: g.side, qty: g.qty, price: g.price, amountIrt: g.amountIrt } });
+        } else push({ id: `none:${a.coinId}`, t: a.analyzedAt, kind: "analysis", title: `${sym}: فعلاً ${a.holding ? "فروشی" : "خریدی"} پیشنهاد نمی‌شود`, lines: (a.reasons || []).map((r) => "• " + r) });
+      }
+      for (const sg of signals.filter((x) => x.mode === "suggest").slice(-20)) {
+        if (seen.has(`now:${sg.coinId}:${sg.candleT}:${sg.signal}`)) continue;
+        push({ id: `past:${sg.id}`, t: iso(sg.candleT + tfMs), kind: "suggestion_past", title: `پیشنهاد قبلی: ${SIG_FA[sg.signal]} ${sg.symbol}`,
+          lines: [`قیمت ورود ${nf(sg.entry)} | حد ضرر ${sg.stop ? nf(sg.stop) : "—"} | حد سود ${sg.takeProfit ? nf(sg.takeProfit) : "—"}`, sg.outcome ? "نتیجه: " + (OUT_FA[sg.outcome.status] || sg.outcome.status) : ""].filter(Boolean) });
+      }
+    } else {
+      for (const t of trades.filter((x) => x.mode === ctl.mode)) {
+        if (!t.entry) continue; const sym = t.symbol; const e = t.entry; const warn = (t.warnings || []).slice(-2);
+        push({ id: `open:${t.id}`, t: t.openedAt, kind: "trade_open", important: true, severity: "info", title: `${KIND_FA[t.kind] || "خرید"} ${sym} (${modeFa})`,
+          lines: [`مقدار: ${e.qty} ${t.coinId.toUpperCase()} | قیمت: ${nf(e.price)} تومان${e.priceSource === "exchange" ? "" : " (تخمینی)"} | مبلغ: ${nf(e.costIrt)} تومان`,
+            t.stop ? `حد ضرر: ${nf(t.stop)} | حد سود: ${t.takeProfit ? nf(t.takeProfit) : "—"}` : "بدون حد ضرر/سود خودکار", t.reasonIn ? "دلیل ورود: " + t.reasonIn.split(" | ").join(" • ") : "", ...warn].filter(Boolean) });
+        if (t.status === "closed" && t.exit) push({ id: `close:${t.id}`, t: t.closedAt, kind: "trade_close", important: true, severity: t.pnlIrt > 0 ? "good" : t.pnlIrt < 0 ? "bad" : "info", title: `فروش ${sym} — ${EXIT_FA[t.exitReason] || t.exitReason} (${modeFa})`,
+          lines: [t.exit.price ? `قیمت فروش: ${nf(t.exit.price)} تومان${t.exit.priceSource === "exchange" ? "" : " (تخمینی)"}` : "", Number.isFinite(t.pnlIrt) ? `سود/زیان خالص: ${nf(t.pnlIrt)} تومان (${t.pnlPct.toFixed(2)}٪) پس از کارمزد` : "سود/زیان ثبت نشد (رفع دستی)", `مدت نگهداری: ${Math.max(1, Math.round((Date.parse(t.closedAt) - Date.parse(t.openedAt)) / 60000))} دقیقه`].filter(Boolean) });
+        if (t.status === "needs_review") push({ id: `review:${t.id}`, t: t.openedAt, kind: "alert", important: true, severity: "bad", title: `${sym}: نیازمند بررسی دستی`, lines: warn.length ? warn : ["وضعیت سفارش نامشخص است؛ در والکس بررسی کنید."] });
+      }
+      for (const sg of signals.filter((x) => x.mode === ctl.mode && (x.status === "blocked" || x.status === "skipped")).slice(-10))
+        push({ id: `skip:${sg.id}`, t: sg.at, kind: "alert", severity: "warn", title: `سیگنال ${SIG_FA[sg.signal]} ${sg.symbol} اجرا نشد`, lines: [sg.statusNote] });
+    }
+    const SYS = { risk_block: "هشدار ریسک", risk_halt: "توقف ریسکی", needs_review: "نیازمند بررسی", kill_switch: "توقف اضطراری", kill_cleared: "لغو توقف اضطراری", mode_changed: "تغییر حالت", start: "شروع موتور", stop: "توقف موتور", pause: "توقف موقت", restart_pause: "توقف پس از ری‌استارت", engine_error: "خطای موتور" };
+    for (const ev of events.slice(-25)) if (SYS[ev.type]) push({ id: `ev:${ev.t}:${ev.type}`, t: ev.t, kind: "system", important: ["risk_halt", "needs_review", "kill_switch", "engine_error"].includes(ev.type), severity: ["risk_halt", "needs_review", "kill_switch", "engine_error"].includes(ev.type) ? "bad" : "info", title: SYS[ev.type], lines: [ev.detail] });
+    msgs.sort((a, b) => Date.parse(a.t) - Date.parse(b.t));
+    const out = msgs.slice(-60); const imp = out.filter((m) => m.important).map((m) => Date.parse(m.t));
+    return { mode: ctl.mode, running: ctl.running, killed: ctl.killed, messages: out, latestImportantAt: imp.length ? iso(Math.max(...imp)) : null, serverTime: iso(now()),
+      emptyHint: ctl.mode === "suggest" ? "هنوز تحلیلی انجام نشده؛ موتور باید در حال اجرا باشد." : "هنوز معامله‌ای انجام نشده است." };
+  }
+
   // ---------- خروجی‌های API ----------
   async function buildStatus() {
     const ctl = await getCtl(); const s = await getSettings(); const state = await load(K.state, {}); const trades = await load(K.trades, []);
@@ -416,6 +491,7 @@ export function createTrading(deps) {
     const route = `${method} ${sub.replace(/\/+$/, "") || "/"}`; let m;
     switch (route) {
       case "GET /status": return buildStatus();
+      case "GET /feed": return buildFeed();
       case "GET /settings": return { settings: await getSettings(), defaults: DEFAULT_SETTINGS, allowedCoins, serverCapIrt: tradingState().cap };
       case "PUT /settings": return withLock(async () => {
         const cur = await getSettings(); const v = validateSettings(body, { current: cur, allowedCoins, envCapIrt: tradingState().cap });
