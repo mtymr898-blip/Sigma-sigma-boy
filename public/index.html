@@ -944,6 +944,41 @@ hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:18px 0; }
 .ai-reasons{ margin:10px 0 0; padding-inline-start:20px; font-size:12.5px; line-height:1.9; color:var(--text-dim); }
 details > summary{ list-style:none; }
 @media (max-width:760px){ .ai-grid2{ grid-template-columns:1fr; } }
+
+/* ---------- دکمه‌ی شناور و گزارش هوش مصنوعی ---------- */
+.ai-fab{ position:fixed; left:16px; bottom:calc(86px + env(safe-area-inset-bottom)); z-index:40; width:54px; height:54px; border-radius:50%; border:none; cursor:pointer;
+  background:linear-gradient(145deg,#2f7bff,#1a5df0); color:#fff; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 22px rgba(30,100,255,.45); transition:transform .15s var(--ease); }
+.ai-fab:hover{ transform:scale(1.06); }
+.ai-fab .ic{ width:26px; height:26px; } .ai-fab .ic *{ stroke-width:1.9; }
+.ai-fab-dot{ display:none; position:absolute; top:3px; inset-inline-end:3px; width:13px; height:13px; border-radius:50%; background:#ff4d5e; border:2px solid #fff; }
+.ai-fab.has-unread .ai-fab-dot{ display:block; }
+.ai-fab.open{ background:linear-gradient(145deg,#4b556b,#343d52); box-shadow:none; }
+.ai-chat{ position:fixed; z-index:55; inset-inline:0; bottom:0; height:84vh; display:flex; flex-direction:column; background:var(--bg-soft); border:1px solid var(--border); border-radius:18px 18px 0 0; box-shadow:0 -10px 40px rgba(0,0,0,.35); }
+.ai-chat-head{ display:flex; align-items:center; gap:10px; padding:12px 14px; border-bottom:1px solid var(--border-soft); }
+.ai-chat-x{ flex:none; width:36px; height:36px; display:flex; align-items:center; justify-content:center; background:var(--surface); border:1px solid var(--border); color:var(--text); cursor:pointer; border-radius:10px; }
+.ai-chat-x .ic{ width:18px; height:18px; }
+.ai-chat-x:hover{ background:var(--surface-hover); }
+.ai-chat-feed{ flex:1; overflow-y:auto; padding:12px 12px 16px; display:flex; flex-direction:column; gap:12px; }
+.ai-chat-intro{ font-size:12.5px; color:var(--text-dim); background:var(--surface); border:1px dashed var(--border); border-radius:12px; padding:10px 12px; line-height:1.9; }
+.ai-chat-empty{ text-align:center; color:var(--text-faint); font-size:13px; padding:24px 8px; }
+.ai-chat-foot{ display:flex; gap:8px; padding:10px 12px calc(10px + env(safe-area-inset-bottom)); border-top:1px solid var(--border-soft); }
+.ai-chat-foot .input{ flex:1; opacity:.6; cursor:not-allowed; font-size:12.5px; }
+.ai-avatar{ flex:none; width:32px; height:32px; border-radius:50%; background:var(--accent-soft); color:var(--accent); display:flex; align-items:center; justify-content:center; }
+.ai-avatar .ic{ width:18px; height:18px; }
+.ai-msg-row{ display:flex; gap:8px; align-items:flex-start; }
+.ai-msg{ flex:1; min-width:0; background:var(--surface); border:1px solid var(--border-soft); border-inline-start:4px solid var(--accent); border-radius:6px 14px 14px 14px; padding:10px 12px; }
+.ai-msg-good{ border-inline-start-color:var(--green); } .ai-msg-bad{ border-inline-start-color:var(--red); } .ai-msg-warn{ border-inline-start-color:#e9a63c; }
+.ai-msg-dim{ opacity:.78; }
+.ai-msg-head{ display:flex; justify-content:space-between; gap:8px; align-items:baseline; flex-wrap:wrap; }
+.ai-msg-title{ font-weight:700; font-size:13.5px; } .ai-msg-time{ font-size:11px; color:var(--text-faint); }
+.ai-msg-line{ font-size:12.8px; line-height:1.95; margin-top:3px; word-break:break-word; }
+.ai-msg-sub{ font-weight:700; font-size:12.5px; margin-top:8px; }
+.ai-msg-note{ font-size:11.5px; color:var(--text-faint); margin-top:6px; line-height:1.8; }
+.ai-msg-btn{ margin-top:10px; width:100%; } .ai-msg-btn-old{ opacity:.6; }
+@media (min-width:861px){
+  .ai-fab{ bottom:24px; left:auto; right:24px; } /* در دسکتاپ سایدبار سمت چپ است؛ دکمه سمت دیگر */
+  .ai-chat{ inset-inline:auto; left:auto; right:24px; bottom:90px; width:410px; height:min(640px,calc(100vh - 120px)); border-radius:18px; }
+}
 </style>
 </head>
 <body>
@@ -2736,6 +2771,13 @@ const PageTrade = {
       return;
     }
     if(!coins.find(c => c.id === st.coinId)) st.coinId = coins[0].id;
+    if(TradePrefill.value){ // پیشنهاد هوش مصنوعی: مقادیر پر می‌شوند ولی کاملاً قابل ویرایش‌اند
+      const pf = TradePrefill.value; TradePrefill.value = null;
+      if(coins.find(c => c.id === pf.coinId)) st.coinId = pf.coinId;
+      st.side = pf.side === "sell" ? "sell" : "buy"; st.execution = "limit";
+      st.amount = String(pf.qty || ""); st.price = String(pf.price || "");
+      st.aiNote = `این مقادیر پیشنهاد هوش مصنوعی هستند (${st.side === "buy" ? "خرید" : "فروش"} ${st.coinId.toUpperCase()}). می‌توانید هر کدام را تغییر دهید؛ سفارش فقط پس از پیش‌نمایش و تأیید خودتان ثبت می‌شود.`;
+    }
     loadBook();
 
     const coin = () => coins.find(c => c.id === st.coinId);
@@ -2773,6 +2815,9 @@ const PageTrade = {
             ? "ثبت سفارش واقعی روی سرور فعال است. هر سفارش با پول واقعی انجام می‌شود و پیش از ارسال باید صریحاً تأیید شود."
             : "ثبت سفارش واقعی روی سرور غیرفعال است. می‌توانید سفارش را آماده و پیش‌نمایش کنید، اما ارسال نمی‌شود."),
       ]));
+
+      if(st.aiNote) body.appendChild(Utils.el("div", { class:"notice-box", style:"margin-bottom:14px;" }, [
+        Utils.el("div", { html: ic("bot") }), Utils.el("p", {}, st.aiNote)]));
 
       const grid = Utils.el("div", { class:"coin-grid" });
       const form = Utils.el("div", { class:"card card-pad" });
@@ -3773,6 +3818,129 @@ const PAGE_TITLES = {
   wallet:"کیف پول", history:"تاریخچه تراکنش‌ها", profile:"پروفایل", settings:"تنظیمات",
 };
 
+// ===================================================================
+// دکمه‌ی شناور هوش مصنوعی + صفحه‌ی گزارش (گفتگوی فقط‌خواندنی)
+// • کاربر نمی‌تواند پیام بفرستد؛ فقط گزارش‌های موتور را می‌خواند.
+// • حالت خودکار (Paper/Live): گزارش همه‌ی خرید و فروش‌ها و هشدارها
+// • حالت تحلیل و پیشنهاد: چه ارزی، چقدر، کی بفروشد + دکمه‌ی انتقال به صفحه‌ی خرید با مقادیر پرشده
+// همه‌ی متن‌ها از سرور می‌آیند و فقط با textContent نمایش داده می‌شوند.
+// ===================================================================
+const TradePrefill = { value: null };
+
+const AIChat = (() => {
+  const E = Utils.el;
+  const SEEN_KEY = "aiChatSeenAt"; // فقط یک زمان‌نگار (نه داده‌ی حساس)
+  let fab = null, panel = null, feedEl = null, timer = null, badgeTimer = null, last = null, open = false;
+
+  const getSeen = () => { try{ return localStorage.getItem(SEEN_KEY); }catch(_){ return null; } };
+  const setSeen = (v) => { try{ if(v) localStorage.setItem(SEEN_KEY, v); }catch(_){ /* بی‌اهمیت */ } };
+
+  function goToTrade(action){
+    TradePrefill.value = action;
+    close();
+    const target = "#/trade/" + action.coinId;
+    if(location.hash === target) window.dispatchEvent(new HashChangeEvent("hashchange"));
+    else Router.go("trade/" + action.coinId);
+  }
+
+  function messageEl(m, isLastSuggestion){
+    const sev = m.severity || "info";
+    const box = E("div", { class:`ai-msg ai-msg-${sev} ${m.kind === "suggestion_past" || m.kind === "analysis" ? "ai-msg-dim" : ""}` });
+    box.appendChild(E("div", { class:"ai-msg-head" }, [E("span", { class:"ai-msg-title" }, m.title), E("span", { class:"ai-msg-time num" }, Utils.formatDateTime(m.t))]));
+    (m.lines || []).forEach(l => box.appendChild(E("div", { class:"ai-msg-line" }, l)));
+    if(m.sellPlan && m.sellPlan.length){
+      box.appendChild(E("div", { class:"ai-msg-sub" }, m.kind === "suggestion" && m.action && m.action.side === "sell" ? "چرا فروش؟" : "کی بفروشید؟"));
+      box.appendChild(E("ul", { class:"ai-reasons" }, m.sellPlan.map(x => E("li", {}, x))));
+    }
+    (m.notes || []).forEach(n => box.appendChild(E("div", { class:"ai-msg-note" }, n)));
+    if(m.action && m.kind === "suggestion"){
+      const a = m.action;
+      const btn = E("button", { class:`btn btn-sm ${a.side === "buy" ? "btn-primary" : "btn-danger-ghost"} ai-msg-btn`, onClick:() => goToTrade(a) },
+        a.side === "buy" ? "پیشنهاد: برو به صفحه‌ی خرید با این مقادیر" : "پیشنهاد: برو به صفحه‌ی فروش با این مقادیر");
+      if(!isLastSuggestion) btn.classList.add("ai-msg-btn-old");
+      box.appendChild(btn);
+      box.appendChild(E("div", { class:"ai-msg-note" }, "مقادیر در صفحه‌ی خرید پر می‌شوند و می‌توانید تغییرشان دهید؛ سفارش فقط با تأیید خودتان ثبت می‌شود."));
+    }
+    return E("div", { class:"ai-msg-row" }, [E("div", { class:"ai-avatar", html: ic("bot") }), box]);
+  }
+
+  function renderFeed(data){
+    if(!feedEl) return;
+    const nearBottom = feedEl.scrollHeight - feedEl.scrollTop - feedEl.clientHeight < 80;
+    const first = !feedEl.dataset.ready;
+    feedEl.innerHTML = "";
+    const modeFa = data.mode === "live" ? "معامله‌ی واقعی" : data.mode === "paper" ? "معامله‌ی آزمایشی" : "تحلیل و پیشنهاد";
+    feedEl.appendChild(E("div", { class:"ai-chat-intro" }, data.mode === "suggest"
+      ? `حالت «${modeFa}»: من فقط تحلیل می‌کنم و پیشنهاد می‌دهم؛ هیچ سفارشی ثبت نمی‌شود. تصمیم نهایی با شماست و هیچ سودی تضمین نیست.`
+      : `حالت «${modeFa}»${data.running ? "" : " (موتور متوقف است)"}: همه‌ی خرید و فروش‌ها و هشدارها اینجا گزارش می‌شود.${data.killed ? " توقف اضطراری فعال است." : ""}`));
+    if(!data.messages.length) feedEl.appendChild(E("div", { class:"ai-chat-empty" }, data.emptyHint));
+    const lastSug = [...data.messages].reverse().find(m => m.kind === "suggestion");
+    data.messages.forEach(m => feedEl.appendChild(messageEl(m, lastSug && m.id === lastSug.id)));
+    feedEl.dataset.ready = "1";
+    if(first || nearBottom) feedEl.scrollTop = feedEl.scrollHeight;
+  }
+
+  async function load(){
+    try{
+      last = await Api.aiGet("/feed");
+      if(!document.body.contains(fab)) return stop();
+      if(open) renderFeed(last);
+      updateBadge();
+    }catch(e){
+      if(open && feedEl){ feedEl.innerHTML = ""; feedEl.appendChild(E("div", { class:"ai-chat-empty" }, "دریافت گزارش هوش مصنوعی ممکن نشد: " + ((e && e.message) || "خطا"))); }
+    }
+  }
+
+  function updateBadge(){
+    if(!fab || !last) return;
+    if(getSeen() === null) setSeen(last.serverTime); // سابقه‌ی قدیمی نشانگر ایجاد نکند
+    const seen = getSeen();
+    const unread = !open && last.latestImportantAt && seen && Date.parse(last.latestImportantAt) > Date.parse(seen);
+    fab.classList.toggle("has-unread", !!unread);
+  }
+
+  function openPanel(){
+    if(open) return; open = true;
+    panel = E("div", { class:"ai-chat", role:"dialog", "aria-label":"گزارش هوش مصنوعی معاملاتی" });
+    feedEl = E("div", { class:"ai-chat-feed" });
+    panel.append(
+      E("div", { class:"ai-chat-head" }, [
+        E("div", { class:"ai-avatar", html: ic("bot") }),
+        E("div", { style:"flex:1;min-width:0;" }, [E("div", { style:"font-weight:700;" }, "هوش مصنوعی معاملاتی"), E("div", { class:"text-faint", style:"font-size:12px;" }, "گزارش‌ها فقط برای مشاهده‌اند")]),
+        E("button", { class:"ai-chat-x", "aria-label":"بستن", html: ic("close"), onClick: close }),
+      ]),
+      feedEl,
+      E("div", { class:"ai-chat-foot" }, [
+        E("input", { class:"input", disabled:"disabled", placeholder:"ارسال پیام ممکن نیست — این صفحه فقط گزارش نمایش می‌دهد" }),
+        E("button", { class:"btn btn-primary btn-sm", disabled:"disabled" }, "ارسال"),
+      ]),
+    );
+    document.body.appendChild(panel);
+    feedEl.appendChild(UI.skeletonRows(4));
+    fab.classList.add("open"); fab.classList.remove("has-unread");
+    if(last){ renderFeed(last); setSeen(last.serverTime); }
+    load().then(() => { if(last) setSeen(last.serverTime); });
+    timer = setInterval(load, 15000);
+  }
+  function close(){
+    if(!open) return; open = false;
+    if(last) setSeen(last.serverTime);
+    if(timer){ clearInterval(timer); timer = null; }
+    if(panel){ panel.remove(); panel = null; feedEl = null; }
+    if(fab) fab.classList.remove("open");
+  }
+  function stop(){ close(); if(badgeTimer){ clearInterval(badgeTimer); badgeTimer = null; } }
+
+  function mount(host){
+    stop(); last = null;
+    fab = E("button", { class:"ai-fab", "aria-label":"گزارش هوش مصنوعی معاملاتی", title:"هوش مصنوعی معاملاتی", html: ic("bot") + '<span class="ai-fab-dot"></span>', onClick:() => (open ? close() : openPanel()) });
+    host.appendChild(fab);
+    load();
+    badgeTimer = setInterval(() => { if(!document.body.contains(fab)){ stop(); return; } if(!open) load(); }, 60000);
+  }
+  return { mount, close };
+})();
+
 const App = (() => {
   const root = document.getElementById("app");
   let refreshTimer = null;
@@ -3836,6 +4004,7 @@ const App = (() => {
 
     const shell = Utils.el("div", { class:"shell" }, [main, sidebarLayer]);
     root.append(shell, scrim, bottomNav);
+    AIChat.mount(root); // دکمه‌ی شناور گزارش هوش مصنوعی
 
     updateConnBadge();
   }
