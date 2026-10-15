@@ -209,3 +209,33 @@ test("خرید دوره‌ای (DCA): فقط در حالت آزمایشی/واق
 });
 
 test("hashId: قطعی و مناسب client_id", () => { assert.equal(hashId("a"), hashId("a")); assert.notEqual(hashId("a"), hashId("b")); assert.match("ae" + hashId("x"), /^[A-Za-z0-9]{16}$/); });
+
+test("فید (گفتگوی فقط‌خواندنی) در حالت پیشنهاد: پیشنهاد خرید با مقدار، دلیل، برنامه‌ی فروش و عمل «برو به خرید»", async () => {
+  const S = setup(); await S.tr.tick({ forceAnalysis: true });
+  const f = await S.api("GET", "/feed"); assert.equal(f.mode, "suggest");
+  const m = f.messages.find((x) => x.kind === "suggestion"); assert.ok(m, "پیشنهاد خرید باید در فید باشد");
+  assert.equal(m.important, true); assert.match(m.title, /پیشنهاد خرید BTC/);
+  assert.equal(m.action.type, "trade"); assert.equal(m.action.side, "buy"); assert.ok(Number(m.action.qty) > 0); assert.ok(Number(m.action.price) > 0);
+  assert.ok(m.action.amountIrt <= 500_000, "مبلغ از سقف هر معامله بیشتر نباشد");
+  assert.ok(m.sellPlan.length >= 3 && m.sellPlan.some((x) => /حد سود/.test(x)) && m.sellPlan.some((x) => /حد ضرر/.test(x)));
+  assert.ok(m.lines.some((x) => /چقدر بخرید/.test(x))); assert.ok(m.notes.some((x) => /احتمال واقعی/.test(x)));
+  assert.equal(S.st.calls.length, 0);
+  await assert.rejects(S.api("POST", "/feed", {}), (e) => e.code === "NOT_FOUND"); // فید فقط خواندنی است
+});
+
+test("فید: مقدار پیشنهادی به موجودی تومانی کاربر محدود می‌شود", async () => {
+  const S = setup({ envExtra: { WALLEX_API_KEY: "k" } }); S.st.balances.tmn = 100_000; await S.tr.tick({ forceAnalysis: true });
+  const m = (await S.api("GET", "/feed")).messages.find((x) => x.kind === "suggestion");
+  assert.ok(m.action.amountIrt <= 100_000 * 0.98 + 1); assert.ok(m.notes.some((x) => /موجودی تومانی/.test(x)));
+});
+
+test("فید در حالت خودکار: گزارش خرید و فروش (با سود/زیان) و هشدارها", async () => {
+  const S = setup(); await S.api("POST", "/mode", { mode: "paper" }); await S.api("POST", "/start"); await S.tr.tick({ forceAnalysis: true });
+  let f = await S.api("GET", "/feed"); const open = f.messages.find((x) => x.kind === "trade_open");
+  assert.ok(open); assert.match(open.title, /BTC\/IRT \(آزمایشی\)/); assert.ok(open.lines.some((x) => /حد ضرر/.test(x))); assert.ok(open.lines.some((x) => /دلیل ورود/.test(x)));
+  assert.equal(f.messages.some((x) => x.kind === "suggestion"), false);
+  const tr = (await S.api("GET", "/trades")).items[0]; S.st.price = tr.takeProfit * 1.01; S.st.now += 60_000; await S.tr.tick();
+  f = await S.api("GET", "/feed"); const close = f.messages.find((x) => x.kind === "trade_close");
+  assert.ok(close); assert.equal(close.severity, "good"); assert.match(close.title, /حد سود/); assert.ok(close.lines.some((x) => /سود\/زیان خالص/.test(x)));
+  assert.ok(Date.parse(f.latestImportantAt) >= Date.parse(close.t));
+});
