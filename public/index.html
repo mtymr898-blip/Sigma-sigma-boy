@@ -929,6 +929,21 @@ hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:18px 0; }
   .coin-price{ font-size:24px; }
   .chart-value{ font-size:21px; }
 }
+
+/* ---------- هوش مصنوعی معاملاتی ---------- */
+.ai-banner{ margin-bottom:0; }
+.ai-grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
+.ai-grid2 .field{ margin-top:0 !important; }
+.ai-modes{ display:grid; gap:10px; }
+.ai-mode-card{ border:1.5px solid var(--border); border-radius:var(--radius-md); padding:12px 14px; cursor:pointer; background:var(--surface); transition:border-color .15s var(--ease), background .15s var(--ease); }
+.ai-mode-card:hover{ background:var(--surface-hover); }
+.ai-mode-card.selected{ border-color:var(--accent); background:var(--accent-soft); }
+.ai-mode-card.locked{ opacity:.65; }
+.ai-kv{ display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-top:1px solid var(--border-soft); font-size:13px; }
+.ai-kv:first-of-type{ border-top:none; }
+.ai-reasons{ margin:10px 0 0; padding-inline-start:20px; font-size:12.5px; line-height:1.9; color:var(--text-dim); }
+details > summary{ list-style:none; }
+@media (max-width:760px){ .ai-grid2{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -1116,6 +1131,7 @@ const Icons = {
   zap: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2L4 14h6l-1 8 9-12h-6z" stroke-linejoin="round" stroke-linecap="round"/></svg>`,
   bell: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 10a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6z" stroke-linejoin="round"/><path d="M10 20a2 2 0 0 0 4 0" stroke-linecap="round"/></svg>`,
   logout: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 17l5-5-5-5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12H9" stroke-linecap="round"/></svg>`,
+  bot: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4" stroke-linecap="round"/><circle cx="12" cy="3.5" r="1"/><circle cx="9" cy="13.5" r="1.2" fill="currentColor"/><circle cx="15" cy="13.5" r="1.2" fill="currentColor"/><path d="M9.5 16.5h5" stroke-linecap="round"/></svg>`,
   clock: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
 };
 
@@ -1297,7 +1313,11 @@ const Api = (() => {
     request("/api/trade/submit", { method:"POST", body:{ order, clientOrderId, confirmToken } }).then(j => j.data);
   const getOrderStatus = (id) => request("/api/trade/status", { method:"POST", body:{ id } }).then(j => j.data);
 
-  const api = { connect, disconnect, checkConnection, getMarketList, getCoin, getCoinHistory, getSparklines, getOrderbook,
+  // --- هوش مصنوعی معاملاتی (همه‌ی منطق و ریسک سمت سرور) ---
+  const aiGet  = (path) => request("/api/trading" + path).then(j => j.data);
+  const aiCall = (method, path, body) => request("/api/trading" + path, { method, body: body === undefined ? {} : body }).then(j => j.data);
+
+  const api = { aiGet, aiCall, connect, disconnect, checkConnection, getMarketList, getCoin, getCoinHistory, getSparklines, getOrderbook,
     getPortfolioSummary, getPortfolioHistory, getWalletAssets, getOpenOrders, getProfile, getTransactions,
     getTradeConfig, previewOrder, submitOrder, getOrderStatus };
   return api;
@@ -1729,6 +1749,7 @@ const Router = (() => {
     { pattern: /^wallet$/,         name:"wallet",   page:() => PageWallet },
     { pattern: /^history$/,        name:"history",  page:() => PageHistory },
     { pattern: /^profile$/,        name:"profile",  page:() => PageProfile },
+    { pattern: /^ai$/,             name:"ai",       page:() => PageAI },
     { pattern: /^settings$/,       name:"settings", page:() => PageSettings },
   ];
 
@@ -3361,11 +3382,384 @@ const ThemeManager = {
   }
 };
 // ===================================================================
+// صفحه‌ی «هوش مصنوعی معاملاتی» — فقط رابط کاربری؛ همه‌ی منطق، ریسک و ارسال سفارش روی سرور است.
+// هیچ کلید یا داده‌ی حساسی در مرورگر نگه‌داری نمی‌شود.
+// ===================================================================
+const AI_MODE = { suggest:"تحلیل و پیشنهاد", paper:"معامله‌ی آزمایشی (Paper)", live:"معامله‌ی واقعی" };
+const AI_SIGNAL = { buy:"خرید", sell:"فروش", none:"عدم معامله" };
+const AI_TREND = { up:"صعودی", down:"نزولی", sideways:"خنثی" };
+const AI_TRADE_STATUS = { open:"باز", holding:"نگهداری (DCA)", closed:"بسته‌شده", needs_review:"نیازمند بررسی", pending_entry:"در حال ثبت", closing:"در حال بستن" };
+const AI_EXIT = { stop:"حد ضرر", take_profit:"حد سود", signal:"سیگنال خروج", timeout:"پایان زمان نگهداری", manual:"دستی", manual_resolved:"رفع دستی" };
+const AI_SIG_STATUS = { new:"جدید", suggested:"پیشنهاد", executed:"اجرا شد", skipped:"رد شد", blocked:"مسدود (ریسک)", not_executed:"اجرا نشد" };
+const AI_OUTCOME = { pending:"در انتظار", take_profit:"به حد سود رسید", stop:"به حد ضرر خورد", expired:"منقضی (۴۸ کندل)" };
+const AI_KIND = { strategy:"استراتژی", dca:"DCA", manual:"سفارش هوشمند" };
+const AI_COINS = ["btc","eth","sol","doge","ton","trx","xrp","ada","bnb","ltc"];
+
+const PageAI = {
+  _timer: null,
+  async mount(container){
+    if(PageAI._timer){ clearInterval(PageAI._timer); PageAI._timer = null; }
+    container.innerHTML = "";
+    const E = Utils.el, fmt = (v, d = 0) => Utils.formatNumber(v, { decimals:d });
+    const irt = (v) => (v === null || v === undefined || Number.isNaN(Number(v))) ? "—" : fmt(v) + " تومان";
+    const pct = (v, d = 2) => (v === null || v === undefined || Number.isNaN(Number(v))) ? "—" : Number(v).toFixed(d) + "٪";
+    const badge = (cls, text) => E("span", { class:`badge badge-${cls}` }, text);
+    const errMsg = (e) => (e && e.detail && e.detail.errors ? e.detail.errors.join(" ") : (e && e.message) || "خطای نامشخص");
+    const rid = () => "r" + Array.from(crypto.getRandomValues(new Uint8Array(10))).map(b => b.toString(36).padStart(2, "0")).join("");
+    const ui = { tab:"status", status:null, settings:null, defaults:null, allowed:[], serverCap:null };
+
+    const root = E("div", { id:"aiRoot" });
+    container.appendChild(root);
+    root.appendChild(E("div", { class:"page-head" }, [E("div", {}, [
+      E("h1", {}, "هوش مصنوعی معاملاتی"),
+      E("div", { class:"sub" }, "تحلیل بازار و معامله‌ی خودکار با موتور مستقل روی سرور — پیش‌فرض: فقط تحلیل و پیشنهاد"),
+    ])]));
+    const banner = E("div", { class:"card card-pad ai-banner" });
+    const tabsEl = E("div", { class:"tabs", style:"margin:14px 0;flex-wrap:wrap;" });
+    const body = E("div");
+    root.append(banner, tabsEl, body);
+
+    const TABS = [["status","وضعیت و تحلیل"],["signals","سیگنال‌ها"],["trades","معاملات"],["settings","تنظیمات"],["smart","سفارش هوشمند و DCA"],["backtest","بک‌تست"]];
+    function paintTabs(){
+      tabsEl.innerHTML = "";
+      TABS.forEach(([k, label]) => tabsEl.appendChild(E("button", { class:`tab-btn ${ui.tab === k ? "active" : ""}`, onClick:() => { ui.tab = k; paintTabs(); paintBody(); } }, label)));
+    }
+    const gone = () => !document.getElementById("aiRoot");
+    async function guarded(fn, okMsg){
+      try{ const r = await fn(); if(okMsg) Toast.success(okMsg); return r; }
+      catch(e){ Toast.error("انجام نشد", errMsg(e)); return null; }
+    }
+
+    // ---------- کمک‌ها ----------
+    function modal(title, content, actions){
+      const backdrop = E("div", { class:"modal-backdrop", onClick:(e) => { if(e.target === backdrop) backdrop.remove(); } });
+      const box = E("div", { class:"modal", style:"max-height:88vh;overflow:auto;" }, [E("h3", {}, title), ...[].concat(content), E("div", { class:"modal-actions" }, actions(() => backdrop.remove()))]);
+      backdrop.appendChild(box); document.body.appendChild(backdrop); return backdrop;
+    }
+    function field(label, input, hint){ return E("div", { class:"field", style:"margin-top:12px;" }, [E("label", {}, label), input, hint ? E("div", { class:"field-hint" }, hint) : null]); }
+    function numInput(value, attrs = {}){ return E("input", { class:"input num", inputmode:"decimal", autocomplete:"off", value: value === null || value === undefined ? "" : String(value), ...attrs }); }
+    function switchEl(checked, onChange){
+      return E("label", { class:"switch" }, [E("input", { type:"checkbox", checked: checked ? "checked" : false, onChange:(e) => onChange(e.target.checked) }), E("span", { class:"track" }, E("span", { class:"thumb" }))]);
+    }
+    function kv(label, value, cls){ return E("div", { class:"ai-kv" }, [E("span", { class:"text-faint" }, label), E("span", { class:`num ${cls || ""}` }, value)]); }
+    const pnlCls = (v) => (Number(v) > 0 ? "text-green" : Number(v) < 0 ? "text-red" : "");
+
+    // ---------- بنر و توقف اضطراری ----------
+    function paintBanner(){
+      const s = ui.status; banner.innerHTML = "";
+      if(!s){ banner.appendChild(UI.skeletonRows(2)); return; }
+      const modeCls = s.mode === "live" ? "red" : s.mode === "paper" ? "amber" : "blue";
+      const run = s.killed ? badge("red", "توقف اضطراری فعال") : s.running ? badge("green", "در حال اجرا") : badge("gray", "متوقف");
+      banner.appendChild(E("div", { style:"display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;" }, [
+        E("div", { style:"display:flex;flex-wrap:wrap;gap:8px;align-items:center;" }, [badge(modeCls, "حالت: " + AI_MODE[s.mode]), run,
+          s.counts.needsReview ? badge("red", `${s.counts.needsReview} معامله نیازمند بررسی`) : null]),
+        s.killed
+          ? E("button", { class:"btn btn-outline btn-sm", onClick: clearKill }, "لغو توقف اضطراری")
+          : E("button", { class:"btn btn-danger-ghost btn-sm", onClick: emergency }, [E("span", { html: ic("alert") }), " توقف اضطراری"]),
+      ]));
+      if(s.killed) banner.appendChild(E("div", { class:"text-faint", style:"margin-top:8px;font-size:12.5px;" }, `دلیل: ${s.killReason || "—"} — ${s.openPositionsPolicyText}`));
+      if(s.mode === "live") banner.appendChild(E("div", { class:"text-red", style:"margin-top:8px;font-size:12.5px;" }, "هشدار: حالت واقعی با پول واقعی انجام می‌شود. سودآوری هیچ استراتژی‌ای تضمین نیست."));
+    }
+    function emergency(){
+      modal("توقف اضطراری؟", [E("p", {}, "ایجاد معامله‌ی جدید فوراً متوقف و حالت واقعی غیرمسلح می‌شود. هیچ موقعیت بازی به‌صورت ناگهانی بسته نمی‌شود:"),
+        E("p", { class:"text-faint" }, ui.status ? ui.status.openPositionsPolicyText : "")],
+      (close) => [E("button", { class:"btn btn-outline", onClick: close }, "انصراف"),
+        E("button", { class:"btn btn-danger-ghost", onClick: async () => { close(); const r = await guarded(() => Api.aiCall("POST", "/emergency-stop", { reason:"توقف اضطراری از داشبورد" }), "توقف اضطراری ثبت شد"); if(r) await refresh(); } }, "توقف کن")]);
+    }
+    async function clearKill(){ const r = await guarded(() => Api.aiCall("POST", "/emergency-stop/clear", { confirm:true }), "توقف اضطراری لغو شد؛ موتور همچنان متوقف است"); if(r) await refresh(); }
+
+    // ---------- تب وضعیت ----------
+    function paintStatus(){
+      const s = ui.status; body.innerHTML = "";
+      if(!s){ body.appendChild(UI.skeletonRows(5)); return; }
+      const kpis = E("div", { class:"kpi-grid" });
+      const kpi = (label, value, cls) => E("div", { class:"card kpi-card" }, [E("div", { class:"kpi-label" }, label), E("div", { class:`kpi-value num ${cls || ""}`, style:"font-size:18px;" }, value)]);
+      kpis.append(kpi("سود/زیان امروز (تحقق‌یافته)", irt(s.pnl.realizedTodayIrt), pnlCls(s.pnl.realizedTodayIrt)), kpi("سود/زیان تحقق‌نیافته", irt(s.pnl.unrealizedIrt), pnlCls(s.pnl.unrealizedIrt)),
+        kpi("افت سرمایه از اوج", pct(s.pnl.drawdownPct)), kpi("موقعیت‌های باز", fmt(s.counts.open)));
+      body.appendChild(kpis);
+
+      const grid = E("div", { class:"ai-grid2" }); body.appendChild(grid);
+      // وضعیت موتور و اتصال‌ها
+      const st = E("div", { class:"card card-pad" }, [E("div", { class:"card-head" }, E("div", { class:"card-title" }, "وضعیت موتور"))]);
+      st.append(kv("اتصال به موتور", "برقرار (سرور پاسخ داد)"), kv("اتصال به صرافی (قیمت)", s.exchange.marketOk ? "برقرار" : (s.exchange.marketStale ? "قدیمی" : "قطع: " + (s.exchange.marketError || "—")), s.exchange.marketOk ? "text-green" : "text-red"),
+        kv("کلید حساب والکس", s.exchange.keyConfigured ? "تنظیم شده" : "تنظیم نشده"), kv("استراتژی / تایم‌فریم", `${s.engine.strategy} / ${s.engine.timeframe}`),
+        kv("آخرین تحلیل", s.engine.lastAnalysisAt ? Utils.formatDateTime(s.engine.lastAnalysisAt) : "—"), kv("آخرین تیک موتور", s.engine.lastTickAt ? Utils.timeAgo(s.engine.lastTickAt) : "—"),
+        kv("زیان امروز / سقف", `${fmt(s.pnl.dailyLossIrt)} / ${fmt(ui.settings ? ui.settings.maxDailyLossIrt : 0)}`), kv("مجموع موقعیت‌ها", irt(s.pnl.exposureIrt)),
+        s.pnl.paperCashIrt !== null ? kv("نقد کیف پول آزمایشی", irt(s.pnl.paperCashIrt)) : null);
+      if(s.engine.lastError) st.appendChild(E("div", { class:"text-red", style:"margin-top:10px;font-size:12.5px;" }, `آخرین خطا (${Utils.timeAgo(s.engine.lastError.at)}): ${s.engine.lastError.message}`));
+      st.appendChild(E("div", { class:"text-faint", style:"margin-top:10px;font-size:12px;" }, "سیاست موقعیت‌های باز پس از توقف: " + s.openPositionsPolicyText));
+      // کنترل حالت
+      const ctl = E("div", { class:"card card-pad" }, [E("div", { class:"card-head" }, E("div", { class:"card-title" }, "حالت فعالیت"))]);
+      const modes = E("div", { class:"ai-modes" });
+      [["suggest","تحلیل و پیشنهاد","سیگنال می‌دهد؛ هیچ سفارشی ارسال یا شبیه‌سازی نمی‌شود."], ["paper","معامله‌ی آزمایشی","معاملات فرضی روی قیمت واقعی بازار؛ بدون ارسال سفارش."],
+        ["live","معامله‌ی واقعی","با پول واقعی. به‌صورت پیش‌فرض قفل است و تأیید صریح می‌خواهد."]].forEach(([k, t, d]) => {
+        const locked = k === "live" && !s.live.serverUnlocked;
+        const card = E("div", { class:`ai-mode-card ${s.mode === k ? "selected" : ""} ${locked ? "locked" : ""}`, onClick:() => chooseMode(k) }, [E("div", { style:"font-weight:700;" }, t), E("div", { class:"text-faint", style:"font-size:12px;margin-top:4px;" }, d)]);
+        if(locked) card.appendChild(E("div", { class:"text-red", style:"font-size:11.5px;margin-top:6px;" }, "قفل سرور: TRADING_ENABLED و AUTO_TRADING_ENABLED باید true باشند و کلید API/سقف سفارش تنظیم شده باشد."));
+        modes.appendChild(card);
+      });
+      ctl.appendChild(modes);
+      ctl.appendChild(E("div", { style:"display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;" }, [
+        E("button", { class:"btn btn-primary btn-sm", disabled: s.running || s.killed ? "disabled" : false, onClick: () => act("/start", "موتور شروع شد") }, "شروع"),
+        E("button", { class:"btn btn-outline btn-sm", onClick: () => act("/pause", "موتور متوقف موقت شد") }, "توقف موقت"),
+        E("button", { class:"btn btn-outline btn-sm", onClick: () => act("/stop", "موتور متوقف شد") }, "توقف کامل"),
+        E("button", { class:"btn btn-ghost btn-sm", onClick: async () => { const r = await guarded(() => Api.aiCall("POST", "/analyze", {}), "تحلیل انجام شد"); if(r) await refresh(); } }, [E("span", { html: ic("refresh") }), " تحلیل اکنون"]),
+      ]));
+      grid.append(st, ctl);
+
+      // تحلیل بازار هر ارز
+      body.appendChild(E("div", { class:"card-title", style:"margin:18px 4px 8px;" }, "تحلیل بازار"));
+      const list = Object.values(s.analysis || {});
+      if(!list.length) body.appendChild(E("div", { class:"card card-pad" }, UI.empty("هنوز تحلیلی انجام نشده", "موتور باید در حال اجرا باشد یا «تحلیل اکنون» را بزنید.")));
+      list.forEach(a => body.appendChild(analysisCard(a)));
+
+      // رخدادها
+      const evCard = E("div", { class:"card card-pad", style:"margin-top:14px;" }, [E("div", { class:"card-head" }, E("div", { class:"card-title" }, "رخدادهای اخیر (ممیزی)"))]);
+      const evSk = UI.skeletonRows(2); body.appendChild(evCard); evCard.appendChild(evSk);
+      Api.aiGet("/events").then(r => {
+        evSk.remove();
+        const items = r.items.slice(0, 12);
+        if(!items.length) evCard.appendChild(E("div", { class:"text-faint" }, "رخدادی ثبت نشده است."));
+        items.forEach(e => evCard.appendChild(E("div", { class:"ai-kv" }, [E("span", { class:"text-faint num" }, Utils.formatDateTime(e.t)), E("span", {}, `${e.type}: ${e.detail}`)])));
+      }).catch(() => {});
+    }
+    function analysisCard(a){
+      const sigCls = a.signal === "buy" ? "green" : a.signal === "sell" ? "red" : "gray";
+      const c = E("div", { class:"card card-pad", style:"margin-top:10px;" });
+      c.appendChild(E("div", { style:"display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;" }, [
+        E("div", { style:"font-weight:700;" }, a.symbol || a.coinId), E("div", { style:"display:flex;gap:6px;flex-wrap:wrap;" }, [
+          a.trend ? badge("blue", "روند " + AI_TREND[a.trend]) : null, badge(sigCls, "سیگنال: " + AI_SIGNAL[a.signal || "none"]),
+          a.dataQuality ? badge(a.dataQuality.ok ? "green" : "red", a.dataQuality.ok ? "داده معتبر" : "داده نامعتبر") : null])]));
+      if(a.error){ c.appendChild(E("div", { class:"text-red" }, a.error)); return c; }
+      const rows = E("div", { class:"ai-grid2", style:"margin-top:10px;" });
+      const left = E("div"), right = E("div"); rows.append(left, right);
+      left.append(kv("قیمت بازار", a.marketPrice ? irt(a.marketPrice) : "—"), kv("تغییر ۲۴ساعته", pct(a.changePct24h), pnlCls(a.changePct24h)), kv("آخرین تحلیل", a.analyzedAt ? Utils.formatDateTime(a.analyzedAt) : "—"));
+      if(a.indicators) left.append(kv(`EMA کوتاه / بلند`, `${fmt(a.indicators.emaFast, 0)} / ${fmt(a.indicators.emaSlow, 0)}`), kv("RSI", fmt(a.indicators.rsi, 1)), kv("ATR", fmt(a.indicators.atr, 0)), kv("حجم نسبت به میانگین", a.indicators.volRatio === null || a.indicators.volRatio === undefined ? "ارزیابی نشد" : fmt(a.indicators.volRatio, 2) + "×"));
+      if(a.entry && a.stop){ right.append(kv("قیمت ورود پیشنهادی", irt(a.entry)), kv("حد ضرر پیشنهادی", irt(a.stop), "text-red"), kv("حد سود پیشنهادی", irt(a.takeProfit), "text-green"), kv("نسبت سود به زیان", fmt(a.rr, 2)), kv("ریسک هر معامله", pct(a.riskPct)), kv("امتیاز انطباق با قوانین", `${a.score ?? "—"} / 100`)); }
+      c.appendChild(rows);
+      if(a.reasons && a.reasons.length) c.appendChild(E("ul", { class:"ai-reasons" }, a.reasons.map(r => E("li", {}, r))));
+      if(a.scoreNote) c.appendChild(E("div", { class:"text-faint", style:"font-size:11.5px;margin-top:6px;" }, a.scoreNote));
+      if(a.dataQuality && (a.dataQuality.warnings || []).length) c.appendChild(E("div", { class:"text-faint", style:"font-size:11.5px;margin-top:6px;color:var(--amber);" }, a.dataQuality.warnings.join(" ")));
+      if(a.dataQuality && !a.dataQuality.ok) c.appendChild(E("div", { class:"text-red", style:"font-size:12px;margin-top:6px;" }, (a.dataQuality.issues || []).join(" ")));
+      return c;
+    }
+    async function act(path, msg){ const r = await guarded(() => Api.aiCall("POST", path, {}), msg); if(r) await refresh(); }
+    function chooseMode(mode){
+      const s = ui.status; if(!s || s.mode === mode) return;
+      if(mode !== "live"){
+        const doIt = async () => { const r = await guarded(() => Api.aiCall("POST", "/mode", { mode }), `حالت «${AI_MODE[mode]}» فعال شد`); if(r) await refresh(); };
+        if(mode === "paper") modal("فعال‌سازی معامله‌ی آزمایشی", [E("p", {}, "معاملات فرضی روی قیمت واقعی بازار با کارمزد و لغزش فرضی شبیه‌سازی می‌شوند. هیچ سفارش واقعی ارسال نمی‌شود. برای شروع باید «شروع» را بزنید.")],
+          (close) => [E("button", { class:"btn btn-outline", onClick: close }, "انصراف"), E("button", { class:"btn btn-primary", onClick: () => { close(); doIt(); } }, "فعال‌سازی")]);
+        else doIt();
+        return;
+      }
+      if(!s.live.serverUnlocked){ Toast.error("حالت واقعی قفل است", "تنظیمات سرور اجازه‌ی معامله‌ی واقعی خودکار را نداده است: " + s.live.lockReasons.join("، ")); return; }
+      const phrase = s.live.confirmPhrase; const input = E("input", { class:"input", placeholder:phrase, autocomplete:"off", dir:"ltr" });
+      const ack = E("input", { type:"checkbox" });
+      modal("فعال‌سازی معامله‌ی واقعی", [
+        E("p", { class:"text-red" }, "با فعال‌سازی، موتور می‌تواند با پول واقعی حساب والکس شما سفارش بازار ثبت کند."),
+        E("ul", { class:"ai-reasons" }, ["سقف هر سفارش، مجموع موقعیت‌ها، زیان روزانه و افت سرمایه سمت سرور اعمال می‌شود.", "حد سود/ضرر نرم‌افزاری است؛ اگر سرور خاموش یا قطع باشد اجرا نمی‌شود.", "قیمت اجرا و کارمزد در صورت ندادن والکس، تخمینی ثبت می‌شود.", "هیچ سودی تضمین نیست و ممکن است کل مبلغ اختصاص‌یافته را از دست بدهید."].map(t => E("li", {}, t))),
+        field(`برای تأیید این عبارت را دقیقاً تایپ کنید: ${phrase}`, input),
+        E("label", { style:"display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px;" }, [ack, "ریسک‌ها را متوجه شده‌ام و مسئولیت آن با خودم است."]),
+      ], (close) => [E("button", { class:"btn btn-outline", onClick: close }, "انصراف"),
+        E("button", { class:"btn btn-danger-ghost", onClick: async () => {
+          const r = await guarded(() => Api.aiCall("POST", "/mode", { mode:"live", confirm: input.value.trim(), ack: ack.checked }), "حالت واقعی فعال شد؛ برای شروع «شروع» را بزنید");
+          if(r){ close(); await refresh(); } } }, "فعال‌سازی معامله‌ی واقعی")]);
+    }
+
+    // ---------- تب سیگنال‌ها ----------
+    async function paintSignals(){
+      body.innerHTML = ""; const card = E("div", { class:"card card-pad" }); body.appendChild(card); card.appendChild(UI.skeletonRows(5));
+      try{
+        const r = await Api.aiGet("/signals?limit=100"); card.innerHTML = "";
+        card.appendChild(E("div", { class:"card-head" }, E("div", { class:"card-title" }, `${r.items.length} سیگنال اخیر (از ${r.total})`)));
+        card.appendChild(E("div", { class:"text-faint", style:"font-size:12px;margin-bottom:8px;" }, r.note + (Object.keys(r.outcomes).length ? " — نتایج: " + Object.entries(r.outcomes).map(([k, v]) => `${AI_OUTCOME[k] || k}: ${v}`).join("، ") : "")));
+        if(!r.items.length){ card.appendChild(UI.empty("هنوز سیگنالی ثبت نشده", "سیگنال‌ها فقط وقتی شرایط استراتژی برقرار باشد ثبت می‌شوند.")); return; }
+        const wrap = E("div", { class:"table-wrap" }); const tbl = E("table", { class:"tbl" }); wrap.appendChild(tbl); card.appendChild(wrap);
+        tbl.appendChild(E("thead", {}, E("tr", {}, ["زمان","ارز","سیگنال","ورود","حد ضرر","حد سود","RR","امتیاز","وضعیت","نتیجه"].map(h => E("th", {}, h)))));
+        const tb = E("tbody"); tbl.appendChild(tb);
+        r.items.forEach(x => tb.appendChild(E("tr", {}, [
+          E("td", { class:"num text-dim" }, Utils.formatDateTime(x.at)), E("td", { class:"num" }, x.symbol), E("td", {}, badge(x.signal === "buy" ? "green" : "red", AI_SIGNAL[x.signal])),
+          E("td", { class:"num" }, fmt(x.entry)), E("td", { class:"num text-red" }, x.stop ? fmt(x.stop) : "—"), E("td", { class:"num text-green" }, x.takeProfit ? fmt(x.takeProfit) : "—"),
+          E("td", { class:"num" }, x.rr ? fmt(x.rr, 2) : "—"), E("td", { class:"num" }, String(x.score)),
+          E("td", { title: x.statusNote || "" }, AI_SIG_STATUS[x.status] || x.status), E("td", {}, x.outcome ? `${AI_OUTCOME[x.outcome.status] || x.outcome.status}${x.outcome.pct !== undefined ? " (" + pct(x.outcome.pct) + ")" : ""}` : "—")])));
+      }catch(e){ card.innerHTML = ""; card.appendChild(UI.errorState("دریافت سیگنال‌ها ناموفق بود", errMsg(e), paintSignals)); }
+    }
+
+    // ---------- تب معاملات ----------
+    async function paintTrades(){
+      body.innerHTML = ""; const perfCard = E("div", { class:"card card-pad" }); const card = E("div", { class:"card card-pad", style:"margin-top:14px;" }); body.append(perfCard, card);
+      perfCard.appendChild(UI.skeletonRows(2)); card.appendChild(UI.skeletonRows(5));
+      try{
+        const [perf, tr] = await Promise.all([Api.aiGet("/performance"), Api.aiGet("/trades?limit=200")]);
+        perfCard.innerHTML = ""; perfCard.appendChild(E("div", { class:"card-head" }, E("div", { class:"card-title" }, "عملکرد (معاملات بسته‌شده)")));
+        const g = E("div", { class:"ai-grid2" }); perfCard.appendChild(g);
+        [["paper","آزمایشی"],["live","واقعی"]].forEach(([k, label]) => { const p = perf[k]; const col = E("div", {}, [E("div", { style:"font-weight:700;margin-bottom:6px;" }, label)]);
+          col.append(kv("معاملات بسته‌شده", fmt(p.closedTrades)), kv("نرخ برد", p.winRatePct === null ? "—" : pct(p.winRatePct, 0)), kv("سود/زیان خالص", irt(p.netPnlIrt), pnlCls(p.netPnlIrt)), kv("کارمزد", irt(p.feesIrt)), kv("ضریب سود", p.profitFactor === null ? "—" : fmt(p.profitFactor, 2)), kv("بیشینه افت (تومان)", irt(p.maxDrawdownIrt))); g.appendChild(col); });
+        perfCard.appendChild(E("div", { class:"text-faint", style:"font-size:11.5px;margin-top:8px;" }, perf.live.note));
+        card.innerHTML = ""; card.appendChild(E("div", { class:"card-head" }, E("div", { class:"card-title" }, `${tr.items.length} معامله`)));
+        if(!tr.items.length){ card.appendChild(UI.empty("معامله‌ای ثبت نشده", "در حالت آزمایشی یا واقعی، معاملات خودکار اینجا می‌آیند.")); return; }
+        const wrap = E("div", { class:"table-wrap" }); const tbl = E("table", { class:"tbl" }); wrap.appendChild(tbl); card.appendChild(wrap);
+        tbl.appendChild(E("thead", {}, E("tr", {}, ["ورود","ارز","حالت","نوع","وضعیت","قیمت ورود","مقدار","حد ضرر","حد سود","خروج","سود/زیان",""].map(h => E("th", {}, h)))));
+        const tb = E("tbody"); tbl.appendChild(tb);
+        tr.items.forEach(t => {
+          const actions = E("div", { style:"display:flex;gap:6px;" });
+          if(t.status === "open" || t.status === "holding"){
+            if(t.status === "open") actions.appendChild(E("button", { class:"btn btn-ghost btn-sm", onClick:() => editTrade(t) }, "ویرایش"));
+            actions.appendChild(E("button", { class:"btn btn-danger-ghost btn-sm", onClick:() => closeTrade(t) }, "بستن"));
+          }
+          if(t.status === "needs_review") actions.appendChild(E("button", { class:"btn btn-danger-ghost btn-sm", onClick:() => resolveTrade(t) }, "بررسی"));
+          const stCls = t.status === "closed" ? "gray" : t.status === "needs_review" ? "red" : "green";
+          tb.appendChild(E("tr", { title: (t.warnings || []).join(" | ") }, [
+            E("td", { class:"num text-dim" }, Utils.formatDateTime(t.openedAt)), E("td", { class:"num" }, t.symbol), E("td", {}, badge(t.mode === "live" ? "red" : "amber", t.mode === "live" ? "واقعی" : "آزمایشی")), E("td", {}, AI_KIND[t.kind] || t.kind),
+            E("td", {}, badge(stCls, AI_TRADE_STATUS[t.status] || t.status)), E("td", { class:"num" }, t.entry ? fmt(t.entry.price) + (t.entry.priceSource === "exchange" ? "" : " *") : "—"),
+            E("td", { class:"num" }, t.entry ? t.entry.qty : "—"), E("td", { class:"num text-red" }, t.stop ? fmt(t.stop) : "—"), E("td", { class:"num text-green" }, t.takeProfit ? fmt(t.takeProfit) : "—"),
+            E("td", {}, t.exit ? (AI_EXIT[t.exitReason] || t.exitReason) : "—"), E("td", { class:`num ${pnlCls(t.pnlIrt)}` }, t.pnlIrt === null || t.pnlIrt === undefined ? "—" : `${fmt(t.pnlIrt)} (${pct(t.pnlPct)})`), E("td", {}, actions)]));
+        });
+        card.appendChild(E("div", { class:"text-faint", style:"font-size:11.5px;margin-top:8px;" }, "* قیمت تخمینی/شبیه‌سازی‌شده (قیمت واقعی اجرا از صرافی دریافت نشده). نشانگر ماوس را روی ردیف ببرید تا هشدارها را ببینید."));
+      }catch(e){ perfCard.innerHTML = ""; card.innerHTML = ""; card.appendChild(UI.errorState("دریافت معاملات ناموفق بود", errMsg(e), paintTrades)); }
+    }
+    function closeTrade(t){
+      modal("بستن موقعیت؟", [E("p", {}, `موقعیت ${t.symbol} (${t.mode === "live" ? "واقعی" : "آزمایشی"}) با سفارش بازار بسته می‌شود.`)],
+        (close) => [E("button", { class:"btn btn-outline", onClick: close }, "انصراف"), E("button", { class:"btn btn-danger-ghost", onClick: async () => { close(); const r = await guarded(() => Api.aiCall("POST", `/trades/${t.id}/close`, {}), "موقعیت بسته شد"); if(r){ paintTrades(); refresh(); } } }, "بستن")]);
+    }
+    function editTrade(t){
+      const stop = numInput(t.stop ? Math.round(t.stop) : ""), tp = numInput(t.takeProfit ? Math.round(t.takeProfit) : ""), tr = numInput(t.trailingPct || "");
+      modal(`ویرایش حد سود/ضرر — ${t.symbol}`, [field("حد ضرر (تومان)", stop), field("حد سود (تومان)", tp), field("تریلینگ استاپ (درصد، اختیاری)", tr, "حد ضرر با رشد قیمت بالا می‌رود.")],
+        (close) => [E("button", { class:"btn btn-outline", onClick: close }, "انصراف"), E("button", { class:"btn btn-primary", onClick: async () => {
+          const body2 = { stop: stop.value.trim() ? Number(stop.value) : null, takeProfit: tp.value.trim() ? Number(tp.value) : null, trailingPct: tr.value.trim() ? Number(tr.value) : null };
+          const r = await guarded(() => Api.aiCall("POST", `/trades/${t.id}/update`, body2), "ذخیره شد"); if(r){ close(); paintTrades(); } } }, "ذخیره")]);
+    }
+    function resolveTrade(t){
+      const note = E("input", { class:"input", placeholder:"توضیح (اختیاری)", autocomplete:"off" });
+      modal("معامله‌ی نیازمند بررسی", [E("p", {}, "وضعیت واقعی این سفارش نامشخص است. اول در پنل والکس (سفارش‌ها و موجودی) بررسی کنید و سپس وضعیت را اعلام کنید:"),
+        E("ul", { class:"ai-reasons" }, (t.warnings || []).map(w => E("li", {}, w))), field("توضیح", note)],
+        (close) => [E("button", { class:"btn btn-outline", onClick: close }, "انصراف"),
+          E("button", { class:"btn btn-ghost", onClick: async () => { const r = await guarded(() => Api.aiCall("POST", `/trades/${t.id}/resolve`, { action:"reopen", note: note.value }), "موقعیت دوباره باز اعلام شد"); if(r){ close(); paintTrades(); refresh(); } } }, "هنوز باز است"),
+          E("button", { class:"btn btn-primary", onClick: async () => { const r = await guarded(() => Api.aiCall("POST", `/trades/${t.id}/resolve`, { action:"mark_closed", note: note.value }), "بسته‌شده ثبت شد"); if(r){ close(); paintTrades(); refresh(); } } }, "بسته شده است")]);
+    }
+
+    // ---------- تب تنظیمات ----------
+    function paintSettings(){
+      body.innerHTML = ""; const s0 = ui.settings; if(!s0){ body.appendChild(UI.skeletonRows(6)); return; }
+      const draft = structuredClone(s0); const errBox = E("div", { class:"text-red", style:"font-size:12.5px;margin-top:10px;" });
+      const card = E("div", { class:"card card-pad" }); body.appendChild(card);
+      card.appendChild(E("div", { class:"notice-box", style:"margin-bottom:12px;" }, [E("div", { html: ic("shield") }), E("p", {}, `همه‌ی مقادیر سمت سرور هم اعتبارسنجی می‌شوند${ui.serverCap ? ` و سقف هر سفارش هرگز از سقف سرور (${fmt(ui.serverCap)} تومان) بیشتر نمی‌شود` : ""}. مقادیر پیش‌فرض محافظه‌کارانه‌اند.`)]));
+      // ارزها
+      const chips = E("div", { style:"display:flex;flex-wrap:wrap;gap:8px;" });
+      (ui.allowed.length ? ui.allowed : AI_COINS).forEach(c => { const on = () => draft.coins.includes(c);
+        const b = E("button", { class:`tab-btn ${on() ? "active" : ""}`, onClick:() => { draft.coins = on() ? draft.coins.filter(x => x !== c) : [...draft.coins, c]; b.classList.toggle("active", on()); } }, c.toUpperCase()); chips.appendChild(b); });
+      card.appendChild(field("ارزهای مجاز برای معامله/تحلیل", chips));
+      card.appendChild(field("تایم‌فریم تحلیل", E("div", { class:"tabs" }, ["1h","4h"].map(tf => { const b = E("button", { class:`tab-btn ${draft.timeframe === tf ? "active" : ""}`, onClick:() => { draft.timeframe = tf; [...b.parentNode.children].forEach(x => x.classList.toggle("active", x === b)); } }, tf === "1h" ? "۱ ساعته" : "۴ ساعته"); return b; })), "فقط کندل ۱ساعته مستقیماً در مستندات والکس آمده؛ ۴ساعته از روی آن ساخته می‌شود."));
+      const nums = [["analysisIntervalSec","فاصله‌ی اجرای تحلیل (ثانیه)"],["monitorIntervalSec","فاصله‌ی پایش حد سود/ضرر (ثانیه)"],["maxOpenTrades","حداکثر معاملات باز"],["capitalIrt","سرمایه‌ی اختصاص‌یافته (تومان)"],["maxOrderIrt","حداکثر مبلغ هر معامله (تومان)"],
+        ["maxTotalExposureIrt","حداکثر مجموع موقعیت‌ها (تومان)"],["stopAtrMult","حد ضرر (ضریب ATR)"],["takeProfitAtrMult","حد سود (ضریب ATR)"],["trailingAtrMult","تریلینگ (ضریب ATR)"],["maxHoldHours","حداکثر ساعت نگهداری"],
+        ["maxDailyLossIrt","حداکثر زیان روزانه (تومان)"],["maxDrawdownPct","حداکثر افت سرمایه (٪)"],["minRR","حداقل نسبت سود به زیان"],["minScore","حداقل امتیاز پذیرش سیگنال (۰ تا ۱۰۰)"],["feePct","فرض کارمزد هر سمت (٪)"],["slippagePct","فرض لغزش قیمت (٪)"]];
+      const grid = E("div", { class:"ai-grid2" }); card.appendChild(grid);
+      nums.forEach(([k, label]) => { const inp = numInput(draft[k], { onInput:(e) => { draft[k] = e.target.value.trim() === "" ? "" : Number(e.target.value); } }); grid.appendChild(field(label, inp)); });
+      const sw = (label, key, desc) => E("div", { class:"set-row" }, [E("div", {}, [E("div", { class:"label" }, label), desc ? E("div", { class:"desc" }, desc) : null]), switchEl(draft[key], (v) => { draft[key] = v; })]);
+      card.append(sw("خرید خودکار", "autoBuy"), sw("فروش خودکار (سیگنال خروج)", "autoSell"), sw("تریلینگ استاپ", "trailingStop", "حد ضرر با رشد قیمت بالا می‌رود."));
+      card.appendChild(E("div", { class:"set-row" }, [E("div", {}, [E("div", { class:"label" }, "رفتار با موقعیت‌های باز پس از توقف"), E("div", { class:"desc" }, "هیچ‌گاه همه‌ی موقعیت‌ها ناگهانی بسته نمی‌شوند.")]),
+        UI.dropdown({ value: draft.onStop, title:"رفتار پس از توقف", options:[{ value:"manage", label:"ادامه‌ی پایش حد سود/ضرر" }, { value:"freeze", label:"هیچ اقدامی نشود" }], onChange:(v) => { draft.onStop = v; } })]));
+      const P = draft.params; const pgrid = E("div", { class:"ai-grid2" });
+      Object.keys(P).forEach(k => pgrid.appendChild(field(k, numInput(P[k], { onInput:(e) => { P[k] = e.target.value.trim() === "" ? "" : Number(e.target.value); } }))));
+      card.appendChild(E("details", { style:"margin-top:14px;" }, [E("summary", { style:"cursor:pointer;font-weight:700;" }, "پارامترهای استراتژی پایه (EMA / RSI / ATR / حجم) — پیشرفته"), pgrid,
+        E("div", { class:"text-faint", style:"font-size:11.5px;margin-top:6px;" }, "این استراتژی فقط نقطه‌ی شروع فنی است و سودآوری آن اثبات نشده؛ پیش از هر استفاده بک‌تست و Paper انجام دهید.")]));
+      card.appendChild(errBox);
+      card.appendChild(E("div", { style:"display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;" }, [
+        E("button", { class:"btn btn-primary", onClick: async () => {
+          errBox.textContent = ""; const r = await guarded(() => Api.aiCall("PUT", "/settings", draft), "تنظیمات ذخیره شد");
+          if(r){ ui.settings = r.settings; paintSettings(); } else errBox.textContent = ""; } }, "ذخیره‌ی تنظیمات"),
+        E("button", { class:"btn btn-outline", onClick:() => { ui.settings = structuredClone(ui.defaults); paintSettings(); Toast.info("پیش‌فرض‌ها بارگذاری شد", "برای اعمال، ذخیره را بزنید."); } }, "بازگشت به پیش‌فرض"),
+      ]));
+    }
+
+    // ---------- تب سفارش هوشمند و DCA ----------
+    async function paintSmart(){
+      body.innerHTML = ""; const s = ui.status; const st = { coinId:(ui.settings && ui.settings.coins[0]) || "btc" };
+      const coins = (ui.settings && ui.settings.coins) || ["btc"];
+      const card = E("div", { class:"card card-pad" }); body.appendChild(card);
+      card.appendChild(E("div", { class:"card-head" }, E("div", { class:"card-title" }, "سفارش هوشمند (ورود بازار + حد ضرر/سود نرم‌افزاری)")));
+      card.appendChild(E("div", { class:"text-faint", style:"font-size:12.5px;margin-bottom:8px;" }, "ورود با سفارش بازار انجام می‌شود و سرور قیمت را پایش می‌کند؛ با رسیدن به حد ضرر/سود با سفارش بازار می‌فروشد. سفارش شرطی روی صرافی ثبت نمی‌شود، پس سرور باید روشن بماند. از همان دروازه‌ی ریسک می‌گذرد."));
+      if(s && s.mode === "suggest") card.appendChild(E("div", { class:"text-red", style:"font-size:12.5px;margin-bottom:8px;" }, "در حالت «تحلیل و پیشنهاد» سفارشی باز نمی‌شود؛ حالت آزمایشی یا واقعی را فعال کنید."));
+      const amount = numInput(""), stop = numInput(""), tp = numInput(""), trail = numInput("");
+      card.append(field("ارز", UI.dropdown({ value: st.coinId, title:"ارز", options: coins.map(c => ({ value:c, label:c.toUpperCase() })), onChange:(v) => { st.coinId = v; } })),
+        field("مبلغ ورود (تومان)", amount), field("حد ضرر — قیمت (تومان، الزامی)", stop, "باید زیر قیمت فعلی باشد."), field("حد سود — قیمت (تومان، اختیاری)", tp), field("تریلینگ استاپ (درصد، اختیاری)", trail));
+      card.appendChild(E("button", { class:"btn btn-primary", style:"margin-top:14px;", disabled: s && s.mode === "suggest" ? "disabled" : false, onClick: async () => {
+        const r = await guarded(() => Api.aiCall("POST", "/trades", { coinId: st.coinId, amountIrt: Number(amount.value), stop: Number(stop.value), takeProfit: tp.value.trim() ? Number(tp.value) : null, trailingPct: trail.value.trim() ? Number(trail.value) : null, requestId: rid() }), "سفارش هوشمند باز شد");
+        if(r){ amount.value = ""; stop.value = ""; tp.value = ""; trail.value = ""; refresh(); } } }, "ثبت سفارش هوشمند"));
+
+      const dcaCard = E("div", { class:"card card-pad", style:"margin-top:14px;" }); body.appendChild(dcaCard); dcaCard.appendChild(UI.skeletonRows(3));
+      try{
+        const r = await Api.aiGet("/dca"); let plans = r.plans;
+        const draw = () => {
+          dcaCard.innerHTML = ""; dcaCard.appendChild(E("div", { class:"card-head" }, E("div", { class:"card-title" }, "خرید دوره‌ای (DCA)")));
+          dcaCard.appendChild(E("div", { class:"text-faint", style:"font-size:12.5px;margin-bottom:8px;" }, "فقط در حالت آزمایشی/واقعی و وقتی موتور در حال اجراست انجام می‌شود. هر خرید از دروازه‌ی ریسک می‌گذرد و بدون حد سود/ضرر خودکار نگه‌داری می‌شود."));
+          if(!plans.length) dcaCard.appendChild(E("div", { class:"text-faint" }, "برنامه‌ای تعریف نشده است."));
+          plans.forEach((p, i) => dcaCard.appendChild(E("div", { class:"set-row" }, [E("div", {}, [E("div", { class:"label num" }, `${p.coinId.toUpperCase()} — ${fmt(p.amountIrt)} تومان هر ${fmt(p.intervalHours)} ساعت`),
+            E("div", { class:"desc" }, `اجرا: ${p.runs || 0} بار — نوبت بعد: ${p.nextRunAt ? Utils.formatDateTime(p.nextRunAt) : "—"}${p.lastResult && p.lastResult !== "ok" ? " — آخرین نتیجه: " + p.lastResult : ""}`)]),
+            E("div", { style:"display:flex;gap:8px;align-items:center;" }, [switchEl(p.enabled !== false, (v) => { p.enabled = v; }), E("button", { class:"btn btn-danger-ghost btn-sm", onClick:() => { plans.splice(i, 1); draw(); } }, "حذف")])])));
+          const c = E("select", { class:"select" }, coins.map(x => E("option", { value:x }, x.toUpperCase()))); const a = numInput("", { placeholder:"مبلغ (تومان)" }), h = numInput("", { placeholder:"هر چند ساعت؟" });
+          dcaCard.appendChild(E("div", { class:"ai-grid2", style:"margin-top:12px;" }, [field("ارز", c), field("مبلغ هر خرید", a), field("فاصله (ساعت)", h)]));
+          dcaCard.appendChild(E("div", { style:"display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;" }, [
+            E("button", { class:"btn btn-outline btn-sm", onClick:() => { if(!Number(a.value) || !Number(h.value)){ Toast.error("ناقص", "مبلغ و فاصله را وارد کنید."); return; } plans.push({ coinId:c.value, amountIrt:Number(a.value), intervalHours:Number(h.value), enabled:true }); draw(); } }, "افزودن برنامه"),
+            E("button", { class:"btn btn-primary btn-sm", onClick: async () => { const rr = await guarded(() => Api.aiCall("PUT", "/dca", { plans }), "برنامه‌های DCA ذخیره شد"); if(rr){ plans = rr.plans; draw(); } } }, "ذخیره‌ی برنامه‌ها")]));
+        }; draw();
+      }catch(e){ dcaCard.innerHTML = ""; dcaCard.appendChild(UI.errorState("دریافت برنامه‌های DCA ناموفق بود", errMsg(e), paintSmart)); }
+    }
+
+    // ---------- تب بک‌تست ----------
+    function paintBacktest(){
+      body.innerHTML = ""; const st = { coinId:(ui.settings && ui.settings.coins[0]) || "btc", days:30 }; const coins = (ui.settings && ui.settings.coins) || ["btc"];
+      const form = E("div", { class:"card card-pad" }), out = E("div", { style:"margin-top:14px;" }); body.append(form, out);
+      form.appendChild(E("div", { class:"card-head" }, E("div", { class:"card-title" }, "بک‌تست روی داده‌ی تاریخی والکس")));
+      form.appendChild(E("div", { class:"text-faint", style:"font-size:12.5px;margin-bottom:8px;" }, "با تنظیمات فعلی (کارمزد و لغزش لحاظ می‌شوند). نتیجه‌ی تاریخی است و سودآوری آینده را تضمین نمی‌کند؛ داده‌ی کوتاه یا معاملات کم، نتیجه را نامعتبر می‌کند."));
+      form.append(field("ارز", UI.dropdown({ value: st.coinId, title:"ارز", options: coins.map(c => ({ value:c, label:c.toUpperCase() })), onChange:(v) => { st.coinId = v; } })),
+        field("بازه (روز)", E("div", { class:"tabs" }, [7,30,60,90].map(d => { const b = E("button", { class:`tab-btn ${st.days === d ? "active" : ""}`, onClick:() => { st.days = d; [...b.parentNode.children].forEach(x => x.classList.toggle("active", x === b)); } }, `${d} روز`); return b; }))));
+      form.appendChild(E("button", { class:"btn btn-primary", style:"margin-top:14px;", onClick: async () => {
+        out.innerHTML = ""; out.appendChild(UI.skeletonRows(4));
+        try{ const r = await Api.aiCall("POST", "/backtest", { coinId: st.coinId, days: st.days }); out.innerHTML = ""; renderBacktest(out, r); }
+        catch(e){ out.innerHTML = ""; out.appendChild(UI.errorState("بک‌تست ناموفق بود", errMsg(e), null)); } } }, "اجرای بک‌تست"));
+    }
+    function renderBacktest(out, r){
+      const card = E("div", { class:"card card-pad" }); out.appendChild(card);
+      if(!r.ok){ card.appendChild(E("div", { class:"text-red" }, r.error)); return; }
+      card.appendChild(E("div", { class:"card-head" }, E("div", { class:"card-title" }, `${r.coinId.toUpperCase()} — ${r.bars} کندل (${Utils.formatDateTime(r.from)} تا ${Utils.formatDateTime(r.to)})`)));
+      const g = E("div", { class:"ai-grid2" }); card.appendChild(g);
+      [["کل دوره", r.all], ["درون‌نمونه (۷۰٪ اول)", r.inSample], ["برون‌نمونه (۳۰٪ آخر)", r.outOfSample]].forEach(([label, m]) => {
+        const col = E("div", {}, [E("div", { style:"font-weight:700;margin-bottom:6px;" }, label)]);
+        col.append(kv("تعداد معاملات", fmt(m.trades)), kv("نرخ برد", m.winRatePct === null ? "—" : pct(m.winRatePct, 0)), kv("بازده خالص", pct(m.netReturnPct), pnlCls(m.netReturnPct)), kv("میانگین هر معامله", pct(m.avgTradePct)), kv("ضریب سود", m.profitFactor === null ? "—" : fmt(m.profitFactor, 2)), kv("بیشینه افت", pct(m.maxDrawdownPct))); g.appendChild(col); });
+      card.appendChild(E("div", { style:"margin-top:10px;" }, [kv("مبنای مقایسه: نگه‌داری (Buy & Hold) کل دوره", pct(r.buyAndHold.allPct), pnlCls(r.buyAndHold.allPct)), kv("نگه‌داری در بازه‌ی برون‌نمونه", pct(r.buyAndHold.outOfSamplePct), pnlCls(r.buyAndHold.outOfSamplePct))]));
+      if(r.warnings.length) card.appendChild(E("ul", { class:"ai-reasons text-red" }, r.warnings.map(w => E("li", {}, w))));
+      card.appendChild(E("div", { class:"text-faint", style:"font-size:12px;margin-top:8px;" }, "فرض‌ها: " + r.assumptions.join(" • ")));
+      card.appendChild(E("div", { class:"text-faint", style:"font-size:12px;margin-top:4px;" }, r.disclaimer));
+    }
+
+    // ---------- چرخه‌ی به‌روزرسانی ----------
+    function paintBody(){
+      if(ui.tab === "status") paintStatus(); else if(ui.tab === "signals") paintSignals(); else if(ui.tab === "trades") paintTrades();
+      else if(ui.tab === "settings") paintSettings(); else if(ui.tab === "smart") paintSmart(); else paintBacktest();
+    }
+    async function refresh(){
+      try{
+        const [s, set] = await Promise.all([Api.aiGet("/status"), ui.settings ? Promise.resolve(null) : Api.aiGet("/settings")]);
+        if(gone()) return; ui.status = s;
+        if(set){ ui.settings = set.settings; ui.defaults = set.defaults; ui.allowed = set.allowedCoins; ui.serverCap = set.serverCapIrt; }
+        paintBanner(); if(ui.tab === "status") paintStatus();
+      }catch(e){
+        if(gone()) return; banner.innerHTML = ""; banner.appendChild(UI.errorState("اتصال به موتور معاملاتی برقرار نشد", errMsg(e), refresh));
+      }
+    }
+    paintTabs(); paintBanner(); paintBody(); await refresh();
+    PageAI._timer = setInterval(() => { if(gone()){ clearInterval(PageAI._timer); PageAI._timer = null; return; } if(ui.tab === "status") refresh(); }, 15000);
+  }
+};
+// ===================================================================
 // راه‌اندازی برنامه: اسکلت، سایدبار، نوار بالا، مسیریابی
 // ===================================================================
 
 const NAV_ITEMS = [
   { key:"trade",     label:"خرید و فروش",         icon:"market" },
+  { key:"ai",        label:"هوش مصنوعی معاملاتی", icon:"bot" },
   { key:"dashboard", label:"داشبورد",            icon:"dashboard" },
   { key:"market",    label:"بازار ارزها",         icon:"market" },
   { key:"wallet",    label:"کیف پول",             icon:"wallet" },
@@ -3375,7 +3769,7 @@ const NAV_ITEMS = [
 ];
 
 const PAGE_TITLES = {
-  trade:"خرید و فروش", dashboard:"داشبورد", market:"بازار ارزهای دیجیتال", coin:"جزئیات ارز",
+  trade:"خرید و فروش", ai:"هوش مصنوعی معاملاتی", dashboard:"داشبورد", market:"بازار ارزهای دیجیتال", coin:"جزئیات ارز",
   wallet:"کیف پول", history:"تاریخچه تراکنش‌ها", profile:"پروفایل", settings:"تنظیمات",
 };
 
