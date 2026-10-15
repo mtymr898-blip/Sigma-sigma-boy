@@ -17,6 +17,8 @@
 //   (به‌جای نمایش داده‌ی غلط یا ساختگی).
 // ===================================================================
 
+import { createTrading } from "./trading.js";
+
 const WALLEX_BASE = "https://api.wallex.ir";
 const UA = "wallex-personal-dashboard/1.0";
 const SESSION_TTL_SEC = 12 * 3600;
@@ -161,6 +163,9 @@ export class DashboardStore {
         a.push(Date.now()); await s.put("rl:" + body.key, a); return out({ ok: true });
       }
       case "/rl/clear": await s.delete("rl:" + body.key); return out({ ok: true });
+      // ذخیره‌ی عمومی کلید/مقدار برای موتور معاملاتی (تنظیمات، سیگنال‌ها، معاملات، رخدادها)
+      case "/kv/get": return out({ value: (await s.get("kv:" + body.key)) ?? null });
+      case "/kv/put": await s.put("kv:" + body.key, body.value); return out({ ok: true });
       default: return out({ error: "not_found" }, 404);
     }
   }
@@ -382,7 +387,9 @@ function normOrder(o) {
   const price = num(o.price);
   return { id: String(o.clientOrderId || "—"), side: String(o.side || "").toLowerCase(), execution: String(o.type || ""), status: String(o.status || ""),
     active: o.active === true, src: (m ? m[1] : sym).toLowerCase(), dst: m ? m[2].toLowerCase() : "", price: Number.isFinite(price) ? price : null,
-    amount: num(o.origQty), matched: num(o.executedQty), createdAt: toIso(o.created_at) };
+    amount: num(o.origQty), matched: num(o.executedQty), createdAt: toIso(o.created_at),
+    // UNVERIFIED: نام این دو فیلد در مستندات والکس تأیید نشده؛ اگر نبودند NaN می‌مانند و موتور از قیمت تخمینی استفاده می‌کند
+    execPrice: num(o.executedPrice), execSum: num(o.executedSum) };
 }
 function normalizeOrders(json) {
   const list = json && json.result && json.result.orders;
@@ -449,7 +456,7 @@ function parseOrder(o) {
   return { coinId: coin.id, side, execution, amount: decimalStr(amount, 8), price };
 }
 const decimals = (str) => (String(str).split(".")[1] || "").length;
-async function evaluateOrder(env, order) {
+async function evaluateOrder(env, order, { skipCap = false } = {}) {
   const m = (await getMarkets(env))[tmnSymbol(order.coinId)]; const ref = priceOf(m);
   if (!m || !ref) throw new HttpError(502, "NO_PRICE", "قیمت بازار برای این ارز در دسترس نیست.");
   const bad = (msg) => new HttpError(400, "INVALID_ORDER", msg); const warnings = [];
@@ -470,7 +477,7 @@ async function evaluateOrder(env, order) {
   const estimate = Number(order.amount) * unit;
   if (minNotional > 0 && estimate < minNotional) throw bad(`حداقل ارزش سفارش ${minNotional.toLocaleString("en-US")} تومان است.`);
   const { cap } = tradingState(env);
-  if (cap && estimate > cap) throw new HttpError(400, "ORDER_OVER_CAP", `مبلغ سفارش از سقف تنظیم‌شده‌ی سرور (${cap.toLocaleString("en-US")} تومان) بیشتر است.`);
+  if (!skipCap && cap && estimate > cap) throw new HttpError(400, "ORDER_OVER_CAP", `مبلغ سفارش از سقف تنظیم‌شده‌ی سرور (${cap.toLocaleString("en-US")} تومان) بیشتر است.`);
   return { estimateIrt: estimate, marketPriceIrt: ref.price, warnings };
 }
 const canon = (o) => JSON.stringify([o.coinId, o.side, o.execution, o.amount, o.price]);
@@ -495,7 +502,14 @@ async function tradeSubmit(env, body) {
   const id = String(body.clientOrderId || ""); const [exp, sig] = String(body.confirmToken || "").split(".");
   if (!/^[A-Za-z0-9]{8,40}$/.test(id) || !exp || !sig || !(Number(exp) > Date.now() / 1000) || !safeEqual(await confirmSig(env, id, exp, order), sig))
     throw new HttpError(400, "CONFIRM_INVALID", "تأیید سفارش نامعتبر یا منقضی است؛ پیش‌نمایش را دوباره بسازید.");
-  await evaluateOrder(env, order); // سقف مبلغ، دقت و فاصله قیمت یک‌بار دیگر
+  return executeOrder(env, order, id);
+}
+// مسیر مشترک ثبت سفارش واقعی (دستی و خودکار). skipCap فقط برای خروج‌های خودکار (کاهش ریسک) استفاده می‌شود
+// تا حد ضرر به‌دلیل بالا رفتن ارزش موقعیت از سقف مبلغ سفارش مسدود نشود.
+async function executeOrder(env, order, id, { skipCap = false } = {}) {
+  const ts = tradingState(env);
+  if (!ts.enabled) throw new HttpError(403, "TRADING_DISABLED", "ثبت سفارش واقعی در سرور غیرفعال است.", { public: { reasons: ts.reasons } });
+  await evaluateOrder(env, order, { skipCap }); // سقف مبلغ، دقت و فاصله قیمت یک‌بار دیگر
   const claim = await store(env, "/order/claim", { id, order });
   if (!claim.claimed) throw new HttpError(409, "DUPLICATE_ORDER", "این سفارش قبلاً ارسال شده است و دوباره ارسال نمی‌شود. وضعیت را در تاریخچه بررسی کنید.", { public: { record: { state: claim.record.state, orderId: claim.record.orderId || null } } });
   const reqBody = { symbol: tmnSymbol(order.coinId), type: order.execution.toUpperCase(), side: order.side.toUpperCase(), quantity: order.amount, client_id: id };
@@ -516,6 +530,7 @@ async function tradeSubmit(env, body) {
     let verified = false, final = null;
     try { final = await verifyOrder(env, orderId); verified = true; } catch (_) { /* تأیید وضعیت ممکن نشد */ }
     return { accepted: true, orderId, clientOrderId: id, verified, order: final ? orderToRow(final) : null,
+      fill: final ? { status: final.status, active: final.active, matched: final.matched, amount: final.amount, execPrice: final.execPrice, execSum: final.execSum } : null,
       message: verified ? "سفارش ثبت و وضعیت آن از والکس تأیید شد." : "والکس ثبت سفارش را اعلام کرد، اما بررسی وضعیت ممکن نشد؛ سفارش‌های باز را بررسی کنید." };
   }
   await store(env, "/order/update", { id, patch: { state: "unknown", httpStatus: raw.httpStatus } });
@@ -526,6 +541,57 @@ async function verifyOrder(env, clientOrderId) {
   const j = await wallex(env, `/v1/account/orders/${encodeURIComponent(clientOrderId)}`, { auth: true, attempts: 1 });
   if (!j.result || typeof j.result !== "object") throw unexpected("v1/account/orders/{id}");
   return normOrder(j.result);
+}
+
+// ---------- داده‌ی OHLCV برای موتور معاملاتی ----------
+// فقط resolution=60 در مستندات والکس آمده است؛ تایم‌فریم ۴ساعته از روی کندل‌های ۱ساعته ساخته می‌شود.
+// UNVERIFIED: وجود آرایه‌های o/h/l/v در پاسخ udf/history تأیید نشده. اگر نبودند، meta.hasOhlc/hasVolume=false می‌شود و موتور همین را گزارش می‌کند.
+async function fetchOhlc(env, coinId, tf, days) {
+  if (!coinById(coinId)) throw new HttpError(404, "UNKNOWN_COIN", "ارز ناشناخته است.");
+  return memo(`ohlc:${coinId}:${tf}:${days}`, 60000, async () => {
+    const to = Math.floor(Date.now() / 1000), from = to - days * 86400;
+    const j = await wallex(env, "/v1/udf/history", { query: { symbol: tmnSymbol(coinId), resolution: "60", from, to }, plain: true });
+    if (j.s === "no_data") return { candles: [], meta: { hasOhlc: false, hasVolume: false } };
+    if (j.s !== "ok" || !Array.isArray(j.t) || !Array.isArray(j.c) || j.t.length !== j.c.length) throw unexpected("v1/udf/history");
+    const arr = (k) => (Array.isArray(j[k]) && j[k].length === j.t.length ? j[k].map(num) : null);
+    const o = arr("o"), h = arr("h"), l = arr("l"), v = arr("v"), c = j.c.map(num);
+    const hasOhlc = !!(o && h && l && [...o, ...h, ...l].every(Number.isFinite));
+    const hasVolume = !!(v && v.every(Number.isFinite));
+    let candles = j.t.map((t, i) => ({ t: t * 1000, o: hasOhlc ? o[i] : c[i], h: hasOhlc ? h[i] : c[i], l: hasOhlc ? l[i] : c[i], c: c[i], v: hasVolume ? v[i] : NaN }))
+      .filter((k) => Number.isFinite(k.c) && k.c > 0);
+    if (tf === "4h") {
+      const B = 14400000, m = new Map();
+      for (const k of candles) { const b = Math.floor(k.t / B) * B; const g = m.get(b);
+        if (!g) m.set(b, { t: b, o: k.o, h: k.h, l: k.l, c: k.c, v: k.v, n: 1 });
+        else { g.h = Math.max(g.h, k.h); g.l = Math.min(g.l, k.l); g.c = k.c; g.v = g.v + k.v; g.n++; } }
+      candles = [...m.values()].filter((g) => g.n === 4).map(({ n, ...rest }) => rest); // فقط بازه‌های کامل
+    }
+    return { candles, meta: { hasOhlc, hasVolume } };
+  });
+}
+
+// ---------- موتور معاملاتی (تحلیل، Paper، Live، مدیریت ریسک) ----------
+const kvApi = (env) => ({
+  get: async (key) => (await store(env, "/kv/get", { key })).value,
+  put: async (key, value) => { await store(env, "/kv/put", { key, value }); },
+});
+let tradingSingleton = null;
+function getTrading(env) {
+  if (tradingSingleton && tradingSingleton.env === env) return tradingSingleton.api;
+  const api = createTrading({
+    env, HttpError, hasStore: !!env.STORE, kv: kvApi(env), coins: COINS, tmnSymbol, priceOf, num, decimalStr,
+    tradingState: () => tradingState(env), getMarkets: () => getMarketsForDisplay(env),
+    fetchOhlc: (coinId, tf, days) => fetchOhlc(env, coinId, tf, days),
+    getBalances: async () => normalizeBalances(await memo("balances", 5000, () => wallex(env, "/v1/account/balances", { auth: true }))),
+    // سفارش واقعی خودکار (فقط بازار). همه‌ی بررسی‌های مسیر دستی + claim یکتا + استعلام وضعیت اعمال می‌شود.
+    placeLiveOrder: async ({ coinId, side, amount, id, isExit }) => {
+      const order = { coinId, side, execution: "market", amount: decimalStr(Number(amount), 8), price: null };
+      const res = await executeOrder(env, order, id, { skipCap: !!isExit });
+      return res;
+    },
+  });
+  tradingSingleton = { env, api };
+  return api;
 }
 
 // ---------- مسیریابی ----------
@@ -545,8 +611,15 @@ async function route(request, env, ctx, url) {
     return ok(await issueSession(env));
   }
 
+  if (p === "/api/health" && m === "GET") return ok({ status: "ok" }); // عمداً بدون جزئیات و بدون نیاز به نشست
+
   await requireSession(request, env);
 
+  if (p === "/api/trading" || p.startsWith("/api/trading/")) {
+    const sub = p.slice("/api/trading".length) || "/";
+    const body = m === "GET" || m === "DELETE" ? {} : await readJson(request);
+    return ok(await getTrading(env).handle(m, sub, url.searchParams, body));
+  }
   if (p === "/api/session/check" && m === "GET") return ok({ authenticated: true, exchangeKeyConfigured: !!env.WALLEX_API_KEY, tradingEnabled: tradingState(env).enabled });
   if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing, priceSources: r.priceSources, note: r.note, stale: r.stale, staleReason: r.stale ? r.reason : undefined }, r.t); }
   let mt;
@@ -598,5 +671,7 @@ export default {
     catch (e) { return withHeaders(errorResponse(e), cors); }
   },
   async scheduled(event, env, ctx) { ctx.waitUntil(takeSnapshot(env).catch(() => {})); },
+  // تیک موتور معاملاتی؛ server.js هر چند ثانیه صدا می‌زند (خود موتور فواصل را رعایت می‌کند)
+  async engineTick(event, env, ctx) { if (!env.STORE) return; try { await getTrading(env).tick(); } catch (e) { console.error("engine tick:", e && e.message); } },
 };
 
