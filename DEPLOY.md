@@ -1,6 +1,6 @@
 # راه‌اندازی داشبورد روی VPS ایرانی
 
-`src/worker.js` دست‌نخورده می‌ماند. `server.js` همان را روی Node.js اجرا می‌کند
+`src/worker.js` (به‌همراه `src/engine.js` و `src/trading.js` برای موتور معاملاتی) بدون تغییر روی Node اجرا می‌شود. `server.js` همان را روی Node.js اجرا می‌کند
 (ذخیره‌سازی → فایل `data/store.json`، فایل‌های `public/` → سرو مستقیم، cron → هر ۳۰ دقیقه).
 هیچ پکیج npm‌ای لازم نیست؛ فقط Node.js ‏۲۰ یا بالاتر.
 
@@ -103,3 +103,18 @@ GitHub Actions دوباره APK را بسازد. `ALLOWED_ORIGINS=https://localh
 - پشتیبان: `data/store.json` (سوابق سفارش و نمونه‌های نمودار پرتفو). نمونه‌های قدیمی Cloudflare منتقل نمی‌شوند.
 - لاگین ناموفق ۵ بار در ۱۵ دقیقه قفل می‌شود (مثل قبل). رمز دسترسی را قوی بگذار، چون حالا روی اینترنت عمومی است.
 - سرویس Worker قدیمی روی Cloudflare دیگر لازم نیست و می‌توانی پاکش کنی.
+
+
+## آپدیت موتور معاملاتی (نسخه ۱.۲.۰)
+فایل‌های جایگزین‌شونده: `server.js`، `src/worker.js`، `public/index.html`، `package.json`، `.env.example`، `DEPLOY.md`
+فایل‌های جدید: `src/engine.js`، `src/trading.js`، `docs/TRADING.md`، `tests/*`
+
+```bash
+cd /opt/dashboard            # مسیر پروژه‌ات
+cp -r . ../dashboard-backup-$(date +%F)       # بکاپ
+# فایل‌ها را جایگزین کن، سپس:
+npm test                     # باید همه‌ی تست‌ها pass شوند
+sudo systemctl restart dashboard
+```
+پیش‌فرض‌ها امن‌اند: حالت «تحلیل و پیشنهاد»، معامله‌ی واقعی قفل (`AUTO_TRADING_ENABLED=false`).
+راهنمای کامل: `docs/TRADING.md`

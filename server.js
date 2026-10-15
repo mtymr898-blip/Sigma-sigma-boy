@@ -5,7 +5,7 @@
 // • Durable Object  →  فایل JSON روی دیسک (data/store.json) با صف سریالی
 //   (همان رفتار «یک‌نخی» Durable Object؛ جلوی ثبت دوباره‌ی سفارش را می‌گیرد)
 // • env.ASSETS      →  سرو فایل‌های پوشه‌ی public/
-// • cron            →  setInterval هر ۳۰ دقیقه
+// • cron            →  setInterval هر ۳۰ دقیقه (نمونه‌ی پرتفو) + تیک موتور معاملاتی هر ۱۵ ثانیه
 // • CF-Connecting-IP → IP واقعی کلاینت از X-Forwarded-For (پشت Caddy/Nginx)
 // ===================================================================
 import http from "node:http";
@@ -136,6 +136,14 @@ server.listen(PORT, HOST, () => console.log(`dashboard listening on http://${HOS
 const tick = () => worker.scheduled({}, env, ctx);
 setTimeout(tick, 30_000);
 setInterval(tick, 30 * 60_000);
+
+// ---------- موتور معاملاتی: تحلیل، پایش حد سود/ضرر، Paper/Live ----------
+// خود موتور فواصل تحلیل/پایش را از تنظیمات می‌خواند؛ این تایمر فقط «بیدار»ش می‌کند.
+// اگر هیچ چیزی برای انجام نباشد (حالت پیشنهاد متوقف و بدون موقعیت باز) تیک بدون هزینه برمی‌گردد.
+const ENGINE_TICK_MS = Math.max(5, Number(process.env.ENGINE_TICK_SEC || 15)) * 1000;
+const engineTick = () => worker.engineTick({}, env, ctx);
+setTimeout(engineTick, 10_000);
+setInterval(engineTick, ENGINE_TICK_MS);
 
 process.on("unhandledRejection", (e) => console.error("unhandledRejection:", e && e.message));
 for (const sig of ["SIGTERM", "SIGINT"]) process.on(sig, () => server.close(() => process.exit(0)));

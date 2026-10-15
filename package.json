@@ -1,11 +1,12 @@
 {
   "name": "nobitex-dashboard",
-  "version": "1.1.0",
-  "description": "داشبورد شخصی مدیریت و تحلیل ارزهای دیجیتال — فرانت‌اند + Cloudflare Worker",
+  "version": "1.2.0",
+  "description": "داشبورد شخصی مدیریت و تحلیل ارزهای دیجیتال — فرانت‌اند + سرور Node + موتور معاملاتی (تحلیل / Paper / Live)",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.js",
+    "test": "node --test tests/*.test.js",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
     "cap:add-android": "cap add android",
