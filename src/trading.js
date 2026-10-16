@@ -27,6 +27,7 @@ export const hashId = (str) => fnv(str, 2166136261).toString(36).padStart(7, "0"
 export function createTrading(deps) {
   const { env, HttpError, kv, coins, tmnSymbol, priceOf, num, decimalStr, tradingState, getMarkets, fetchOhlc, getBalances, placeLiveOrder } = deps;
   const now = deps.now || (() => Date.now());
+  const hasKey = () => (deps.hasApiKey ? deps.hasApiKey() : !!env.WALLEX_API_KEY);
   const allowedCoins = coins.map((c) => c.id).filter((id) => id !== "usdt");
   const bad = (status, code, msg, extra) => new HttpError(status, code, msg, extra);
 
@@ -124,7 +125,7 @@ export function createTrading(deps) {
       catch (e) { return fail([{ code: "NO_ACCOUNT", message: "دریافت موجودی حساب ممکن نشد: " + errMsg(e) }]); }
     }
     const gate = liveGate(ctl);
-    const risk = evaluateRisk({ kind: "entry", mode, settings: s, coinId: a.coinId, liveUnlocked: gate.serverUnlocked && gate.confirmed, keyConfigured: !!env.WALLEX_API_KEY,
+    const risk = evaluateRisk({ kind: "entry", mode, settings: s, coinId: a.coinId, liveUnlocked: gate.serverUnlocked && gate.confirmed, keyConfigured: hasKey(),
       killed: ctl.killed, running: a.ignoreRunning ? true : ctl.running, price: { value: info.price, stale: info.stale, ageSec: info.ageSec },
       order: { qty: qtyStr, qtyStr, estimateIrt: estimate, step: info.step, minQty: info.minQty, minNotional: info.minNotional }, balance,
       openTrades: rc.openCount, exposureIrt: rc.exposure, dailyLossIrt: rc.dailyLoss, drawdownPct: rc.drawdownPct,
@@ -205,7 +206,7 @@ export function createTrading(deps) {
     const sellQty = floorQty(Math.min(qty, avail), info.step); const qStr = decimalStr(sellQty, dp); const px0 = info.bid * (1 - slip(s));
     const gate = liveGate(ctl);
     // خروج (کاهش ریسک) به تأیید دوباره‌ی کاربر نیاز ندارد؛ مثلاً پس از توقف اضطراری که حالت واقعی را غیرمسلح می‌کند حد ضرر باید کار کند. قفل سرور همچنان لازم است.
-    const risk = evaluateRisk({ kind: "exit", mode: "live", settings: s, coinId: t.coinId, liveUnlocked: gate.serverUnlocked, keyConfigured: !!env.WALLEX_API_KEY,
+    const risk = evaluateRisk({ kind: "exit", mode: "live", settings: s, coinId: t.coinId, liveUnlocked: gate.serverUnlocked, keyConfigured: hasKey(),
       killed: ctl.killed, running: ctl.running, price: { value: info.price, stale: info.stale, ageSec: info.ageSec },
       order: { qty: qStr, qtyStr: qStr, estimateIrt: sellQty * px0, step: info.step, minQty: info.minQty, minNotional: info.minNotional }, balance: { availableCoin: avail }, duplicate: { unknownState: t.status === "needs_review" } });
     if (!risk.ok) return softExitFail(t, ctx, risk.failures);
@@ -281,7 +282,7 @@ export function createTrading(deps) {
     const { settings: s, ctl, trades, state, mk, t } = ctx; const tfMs = TF_MS[s.timeframe];
     const signals = await load(K.signals, []); let changed = false; state.analysis = state.analysis || {};
     let balances = null;
-    if (ctl.mode === "suggest" && env.WALLEX_API_KEY) { try { balances = await getBalances(); } catch (_) { /* پیشنهاد بدون موجودی هم کار می‌کند */ } }
+    if (ctl.mode === "suggest" && hasKey()) { try { balances = await getBalances(); } catch (_) { /* پیشنهاد بدون موجودی هم کار می‌کند */ } }
     for (const coinId of s.coins) {
       const info = marketInfo(mk, coinId); let ohlc;
       try { ohlc = await fetchOhlc(coinId, s.timeframe, s.timeframe === "4h" ? 40 : 14); }
@@ -457,7 +458,7 @@ export function createTrading(deps) {
     const mt = trades.filter((x) => x.mode === ctl.mode);
     return { mode: ctl.mode, running: ctl.running, killed: ctl.killed, killReason: ctl.killReason, killedAt: ctl.killedAt, liveConfirmedAt: ctl.liveConfirmedAt,
       live: { serverUnlocked: gate.serverUnlocked, lockReasons: gate.reasons, confirmed: gate.confirmed, confirmPhrase: LIVE_CONFIRM_PHRASE },
-      exchange: { keyConfigured: !!env.WALLEX_API_KEY, marketOk: !!mk && !mk.stale, marketStale: !!(mk && mk.stale), marketError },
+      exchange: { keyConfigured: hasKey(), marketOk: !!mk && !mk.stale, marketStale: !!(mk && mk.stale), marketError },
       engine: { lastTickAt: lastTickAt ? iso(lastTickAt) : null, lastAnalysisAt: state.lastAnalysisAt ? iso(state.lastAnalysisAt) : null, lastError: state.lastError || null, strategy: s.strategy, timeframe: s.timeframe },
       openPositionsPolicy: s.onStop,
       openPositionsPolicyText: s.onStop === "manage" ? "پس از توقف/توقف اضطراری، حد سود و ضرر موقعیت‌های باز همچنان پایش می‌شود (هیچ موقعیتی ناگهانی بسته نمی‌شود)." : "پس از توقف هیچ اقدامی روی موقعیت‌های باز انجام نمی‌شود (حد سود/ضرر هم پایش نمی‌شود).",

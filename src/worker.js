@@ -18,6 +18,8 @@
 // ===================================================================
 
 import { createTrading } from "./trading.js";
+import { createAuth } from "./auth.js";
+import { seal, open as openSealed, fromB64u } from "./vault.js";
 
 const WALLEX_BASE = "https://api.wallex.ir";
 const UA = "wallex-personal-dashboard/1.0";
@@ -179,8 +181,8 @@ async function store(env, path, body) {
 
 // ---------- احراز هویت نشست ----------
 function requireConfig(env) {
-  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32 || !env.DASHBOARD_PASSCODE)
-    throw new HttpError(503, "NOT_CONFIGURED", "Secretهای SESSION_SECRET (حداقل ۳۲ کاراکتر) و DASHBOARD_PASSCODE تنظیم نشده‌اند.");
+  if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32)
+    throw new HttpError(503, "NOT_CONFIGURED", "Secret با نام SESSION_SECRET (حداقل ۳۲ کاراکتر) تنظیم نشده است.");
 }
 async function issueSession(env) {
   const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_SEC;
@@ -199,6 +201,27 @@ async function requireSession(request, env) {
   throw new HttpError(401, "SESSION_INVALID", "نشست معتبر نیست یا منقضی شده؛ دوباره وارد شوید.");
 }
 
+// ---------- کلید API والکس: ذخیره‌ی رمزنگاری‌شده روی سرور (یا WALLEX_API_KEY در .env) ----------
+// کلیدی که کاربر در صفحه‌ی «اتصال» وارد می‌کند فقط یک‌بار به سرور می‌رسد؛ سرور آن را با والکس آزمایش و AES-GCM رمز می‌کند.
+// هرگز به مرورگر برنمی‌گردد (فقط ۴ رقم آخر برای نمایش). کلید UI بر WALLEX_API_KEY ترجیح دارد.
+const vaults = new WeakMap();
+const vaultOf = (env) => { let v = vaults.get(env); if (!v) { v = { loaded: false, key: null, source: null, savedAt: null, hint: null, corrupt: false, loading: null }; vaults.set(env, v); } return v; };
+const vaultSecret = (env) => env.VAULT_SECRET || env.SESSION_SECRET;
+async function ensureKey(env) {
+  const v = vaultOf(env); if (v.loaded) return v;
+  if (!v.loading) v.loading = (async () => {
+    let storeOk = true, rec = null;
+    if (env.STORE) { try { rec = (await store(env, "/kv/get", { key: "secret:wallex" })).value; } catch (_) { storeOk = false; } }
+    v.key = null; v.source = null; v.corrupt = false;
+    if (rec && rec.sealed && vaultSecret(env)) { try { v.key = await openSealed(vaultSecret(env), rec.sealed); v.source = "ui"; v.savedAt = rec.savedAt; v.hint = rec.hint; } catch (_) { v.corrupt = true; } }
+    const envKey = String(env.WALLEX_API_KEY || "").trim();
+    if (!v.key && envKey) { v.key = envKey; v.source = "env"; v.hint = envKey.slice(-4); v.savedAt = null; }
+    v.loaded = storeOk; v.loading = null; // اگر خواندن از store شکست خورد، دفعه‌ی بعد دوباره تلاش می‌شود
+  })();
+  await v.loading; return v;
+}
+const currentKey = (env) => { const v = vaults.get(env); return v && v.loaded ? v.key : String(env.WALLEX_API_KEY || "").trim() || null; };
+
 // ---------- ارتباط با والکس ----------
 // فاصله‌ی حداقلی بین درخواست‌های ارسالی به والکس (جلوگیری از موج درخواست که ممکن است قاعده‌ی مسدودسازی را فعال کند)
 let nextSlot = 0;
@@ -208,13 +231,14 @@ async function throttle(env) {
   const now = Date.now(); const at = Math.max(now, nextSlot); nextSlot = at + gap;
   if (at > now) await sleep(at - now);
 }
-async function wallexRaw(env, path, { method = "GET", query, body, auth = false, timeoutMs = 8000, attempts } = {}) {
+async function wallexRaw(env, path, { method = "GET", query, body, auth = false, timeoutMs = 8000, attempts, apiKey } = {}) {
   const url = new URL(WALLEX_BASE + path);
   for (const [k, v] of Object.entries(query || {})) if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
   const headers = { Accept: "application/json", "User-Agent": UA };
   if (auth) {
-    if (!env.WALLEX_API_KEY || !String(env.WALLEX_API_KEY).trim()) throw new HttpError(503, "TOKEN_NOT_CONFIGURED", "کلید API والکس (WALLEX_API_KEY) در Secrets تنظیم نشده است.");
-    headers["X-API-Key"] = String(env.WALLEX_API_KEY).trim(); // فاصله/خط جدید اضافی هنگام paste رایج است
+    const k = String(apiKey !== undefined ? apiKey : (await ensureKey(env)).key || "").trim(); // فاصله/خط جدید اضافی هنگام paste رایج است
+    if (!k) throw new HttpError(503, "TOKEN_NOT_CONFIGURED", "کلید API والکس تنظیم نشده است؛ از صفحه‌ی «اتصال» وارد کنید یا WALLEX_API_KEY را در .env بگذارید.");
+    headers["X-API-Key"] = k;
   }
   if (body !== undefined) headers["Content-Type"] = "application/json";
   const maxAttempts = attempts || (method === "GET" ? 2 : 1); // POST/DELETE هرگز خودکار تکرار نمی‌شوند
@@ -431,14 +455,14 @@ async function buildPortfolio(env, { snapshot } = {}) {
   return { summary: { totalValueIrt: total, availableValueIrt: available, assetCount: assets.length, openOrders, change24hPercent: openSum > 0 ? ((nowSum - openSum) / openSum) * 100 : null },
     meta: { unpricedAssets: unpriced, ordersError, changeNote: "تغییر ۲۴ساعته بر اساس موجودی فعلی و قیمت‌های امروز محاسبه می‌شود، نه تاریخچه واقعی ارزش پرتفو." } };
 }
-async function takeSnapshot(env) { if (env.WALLEX_API_KEY && env.STORE) await buildPortfolio(env, { snapshot: true }); }
+async function takeSnapshot(env) { await ensureKey(env); if (currentKey(env) && env.STORE) await buildPortfolio(env, { snapshot: true }); }
 
 // ---------- سفارش‌گذاری ----------
 function tradingState(env) {
   const reasons = [];
   if (env.TRADING_ENABLED !== "true") reasons.push("TRADING_DISABLED");
   if (!env.STORE) reasons.push("NO_STORE");
-  if (!env.WALLEX_API_KEY) reasons.push("NO_TOKEN");
+  if (!currentKey(env)) reasons.push("NO_TOKEN");
   const cap = Number(env.MAX_ORDER_VALUE_IRT); if (!(cap > 0)) reasons.push("NO_CAP");
   return { enabled: reasons.length === 0, reasons, cap: cap > 0 ? cap : null };
 }
@@ -579,7 +603,7 @@ let tradingSingleton = null;
 function getTrading(env) {
   if (tradingSingleton && tradingSingleton.env === env) return tradingSingleton.api;
   const api = createTrading({
-    env, HttpError, hasStore: !!env.STORE, kv: kvApi(env), coins: COINS, tmnSymbol, priceOf, num, decimalStr,
+    env, HttpError, hasStore: !!env.STORE, hasApiKey: () => !!currentKey(env), kv: kvApi(env), coins: COINS, tmnSymbol, priceOf, num, decimalStr,
     tradingState: () => tradingState(env), getMarkets: () => getMarketsForDisplay(env),
     fetchOhlc: (coinId, tf, days) => fetchOhlc(env, coinId, tf, days),
     getBalances: async () => normalizeBalances(await memo("balances", 5000, () => wallex(env, "/v1/account/balances", { auth: true }))),
@@ -594,14 +618,38 @@ function getTrading(env) {
   return api;
 }
 
+// ---------- احراز هویت حساب (شماره موبایل) ----------
+const authSingles = new WeakMap();
+function getAuth(env) {
+  let a = authSingles.get(env); if (a) return a;
+  a = createAuth({ env, HttpError, kv: kvApi(env), hmac: hmacB64u, b64u, fromB64u, safeEqual, sleep, issueSession,
+    rl: { check: (key, max, windowMs) => store(env, "/rl/check", { key, max, windowMs }), hit: (key, windowMs) => store(env, "/rl/fail", { key, windowMs }), clear: (key) => store(env, "/rl/clear", { key }) } });
+  authSingles.set(env, a); return a;
+}
+
 // ---------- مسیریابی ----------
 async function readJson(request) { try { return await request.json(); } catch (_) { throw new HttpError(400, "BAD_JSON", "بدنه‌ی درخواست JSON معتبر نیست."); } }
 
 async function route(request, env, ctx, url) {
   const p = url.pathname.replace(/\/+$/, ""); const m = request.method;
 
+  // ---- ورود و ثبت‌نام واقعی (شماره موبایل → پیامک → رمز) ----
+  if (p.startsWith("/api/auth/")) {
+    if (m !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", "روش درخواست مجاز نیست.");
+    requireConfig(env);
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown"; const b = await readJson(request); const a = getAuth(env);
+    if (p === "/api/auth/otp/send") return ok(await a.otpSend(b.phone, ip));
+    if (p === "/api/auth/otp/verify") return ok(await a.otpVerify(b.phone, b.code, ip));
+    if (p === "/api/auth/register") return ok(await a.register(b.phone, b.otpToken, b.password, ip));
+    if (p === "/api/auth/login") return ok(await a.login(b.phone, b.otpToken, b.password, ip));
+    if (p === "/api/auth/reset") return ok(await a.reset(b.phone, b.otpToken, b.password, ip));
+    throw new HttpError(404, "NOT_FOUND", "مسیر یافت نشد.");
+  }
+
+  // ورود قدیمی با رمز ثابت (DASHBOARD_PASSCODE): فقط برای مواقع اضطراری و به‌صورت پیش‌فرض خاموش
   if (p === "/api/session" && m === "POST") {
     requireConfig(env);
+    if (env.ALLOW_PASSCODE_LOGIN !== "true" || !env.DASHBOARD_PASSCODE) throw new HttpError(403, "PASSCODE_LOGIN_DISABLED", "ورود با رمز دسترسی غیرفعال است؛ با شماره موبایل وارد شوید.");
     const ip = request.headers.get("CF-Connecting-IP") || "unknown"; const rl = { key: "login:" + ip, max: 5, windowMs: 15 * 60000 };
     if (env.STORE) { const c = await store(env, "/rl/check", rl); if (c.blocked) throw new HttpError(429, "TOO_MANY_ATTEMPTS", "تعداد تلاش‌های ناموفق زیاد است؛ بعداً دوباره امتحان کنید.", { retryAfter: c.retryAfterSec }); }
     const body = await readJson(request);
@@ -614,13 +662,39 @@ async function route(request, env, ctx, url) {
   if (p === "/api/health" && m === "GET") return ok({ status: "ok" }); // عمداً بدون جزئیات و بدون نیاز به نشست
 
   await requireSession(request, env);
+  await ensureKey(env);
+
+  if (p === "/api/connect" && m === "POST") {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown"; const rl = { key: "connect:" + ip, max: 10, windowMs: 15 * 60000 };
+    const c = await store(env, "/rl/check", rl); if (c.blocked) throw new HttpError(429, "TOO_MANY_ATTEMPTS", "تعداد تلاش‌های اتصال زیاد است؛ بعداً دوباره امتحان کنید.", { retryAfter: c.retryAfterSec });
+    await store(env, "/rl/fail", rl);
+    const key = String((await readJson(request)).apiKey || "").trim();
+    if (key.length < 8 || key.length > 400 || /\s/.test(key)) throw new HttpError(400, "INVALID_KEY", "قالب کلید API معتبر نیست (بدون فاصله، حداقل ۸ و حداکثر ۴۰۰ کاراکتر).");
+    let balances;
+    try { balances = normalizeBalances(await wallex(env, "/v1/account/balances", { auth: true, apiKey: key })); } // درخواست واقعی به والکس با همین کلید
+    catch (e) {
+      if (e && e.code === "UPSTREAM_AUTH") throw new HttpError(400, "BAD_API_KEY", "والکس این کلید را نپذیرفت. " + e.message);
+      throw e;
+    }
+    const savedAt = new Date().toISOString(); const hint = key.slice(-4);
+    await store(env, "/kv/put", { key: "secret:wallex", value: { sealed: await seal(vaultSecret(env), key), savedAt, hint } });
+    Object.assign(vaultOf(env), { loaded: true, key, source: "ui", savedAt, hint, corrupt: false }); memoClear("");
+    return ok({ connected: true, source: "ui", hint, assets: balances.filter((b) => b.total > 0).length });
+  }
+  if (p === "/api/disconnect" && m === "POST") {
+    const live = (await store(env, "/kv/get", { key: "eng:trades" })).value || [];
+    if (live.some((t) => t.mode === "live" && ["open", "holding", "closing", "pending_entry", "needs_review"].includes(t.status)))
+      throw new HttpError(409, "OPEN_LIVE_POSITIONS", "موقعیت واقعی باز یا نامشخص وجود دارد؛ با حذف کلید، حد سود/ضرر آن‌ها پایش نمی‌شود. ابتدا آن‌ها را ببندید.");
+    await store(env, "/kv/put", { key: "secret:wallex", value: null }); vaults.delete(env); memoClear(""); await ensureKey(env);
+    const v = vaultOf(env); return ok({ connected: !!v.key, source: v.source });
+  }
 
   if (p === "/api/trading" || p.startsWith("/api/trading/")) {
     const sub = p.slice("/api/trading".length) || "/";
     const body = m === "GET" || m === "DELETE" ? {} : await readJson(request);
     return ok(await getTrading(env).handle(m, sub, url.searchParams, body));
   }
-  if (p === "/api/session/check" && m === "GET") return ok({ authenticated: true, exchangeKeyConfigured: !!env.WALLEX_API_KEY, tradingEnabled: tradingState(env).enabled });
+  if (p === "/api/session/check" && m === "GET") { const v = vaultOf(env); return ok({ authenticated: true, exchangeKeyConfigured: !!v.key, keySource: v.source, keyHint: v.key ? v.hint : null, keyConnectedAt: v.savedAt, keyUnreadable: v.corrupt && !v.key, tradingEnabled: tradingState(env).enabled }); }
   if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing, priceSources: r.priceSources, note: r.note, stale: r.stale, staleReason: r.stale ? r.reason : undefined }, r.t); }
   let mt;
   if ((mt = p.match(/^\/api\/history\/([a-z0-9]+)$/)) && m === "GET") {
@@ -672,6 +746,6 @@ export default {
   },
   async scheduled(event, env, ctx) { ctx.waitUntil(takeSnapshot(env).catch(() => {})); },
   // تیک موتور معاملاتی؛ server.js هر چند ثانیه صدا می‌زند (خود موتور فواصل را رعایت می‌کند)
-  async engineTick(event, env, ctx) { if (!env.STORE) return; try { await getTrading(env).tick(); } catch (e) { console.error("engine tick:", e && e.message); } },
+  async engineTick(event, env, ctx) { if (!env.STORE) return; try { await ensureKey(env); await getTrading(env).tick(); } catch (e) { console.error("engine tick:", e && e.message); } },
 };
 
