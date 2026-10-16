@@ -47,7 +47,7 @@ globalThis.fetch = async (url, init = {}) => {
 class MemStorage { constructor() { this.m = new Map(); } async get(k) { const v = this.m.get(k); return v === undefined ? undefined : structuredClone(v); } async put(k, v) { this.m.set(k, structuredClone(v)); } async delete(k) { return this.m.delete(k); } }
 const durable = new DashboardStore({ storage: new MemStorage() }); let chain = Promise.resolve();
 const STORE = { idFromName: (n) => n, get: () => ({ fetch: (url, init) => { const p = chain.then(() => durable.fetch(new Request(url, init))); chain = p.catch(() => {}); return p; } }) };
-const env = { STORE, SESSION_SECRET: "x".repeat(40), DASHBOARD_PASSCODE: "pass-123", WALLEX_API_KEY: "test-key", TRADING_ENABLED: "true", AUTO_TRADING_ENABLED: "true", MAX_ORDER_VALUE_IRT: "1000000", UPSTREAM_GAP_MS: "0" };
+const env = { STORE, SESSION_SECRET: "x".repeat(40), DASHBOARD_PASSCODE: "pass-123", ALLOW_PASSCODE_LOGIN: "true", WALLEX_API_KEY: "test-key", TRADING_ENABLED: "true", AUTO_TRADING_ENABLED: "true", MAX_ORDER_VALUE_IRT: "1000000", UPSTREAM_GAP_MS: "0" };
 const ctx = { waitUntil() {} };
 let token = null;
 async function call(method, path, body, { auth = true } = {}) {
