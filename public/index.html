@@ -1255,7 +1255,16 @@ const State = (() => {
 const API_BASE = String(window.__API_BASE__ || "").replace(/\/$/, "");
 
 const Api = (() => {
-  let sessionToken = null; // فقط در حافظه؛ هرگز در storage ذخیره نمی‌شود
+  // توکن نشست (کوتاه‌مدت، ۱۲ ساعت) در sessionStorage می‌ماند تا با رفرش صفحه دوباره پیامک نخواهید؛ با بستن تب پاک می‌شود.
+  // کلید والکس، رمز عبور و کد پیامکی هرگز در هیچ storage ذخیره نمی‌شوند.
+  const SESS_KEY = "nx_session_v1";
+  let sessionToken = null;
+  function clearSession(){ sessionToken = null; try{ sessionStorage.removeItem(SESS_KEY); }catch(e){ /* ignore */ } }
+  function setSession(s){
+    sessionToken = s.token;
+    try{ sessionStorage.setItem(SESS_KEY, JSON.stringify({ token:s.token, expiresAt:s.expiresAt, phone:s.phone || null })); }catch(e){ /* ignore */ }
+    State.set({ account: { loggedIn:true, phone:s.phone || null } });
+  }
 
   async function request(path, { method = "GET", body, auth = true } = {}){
     const headers = { Accept: "application/json" };
@@ -1277,8 +1286,8 @@ const Api = (() => {
       const err = new Error(e.message || `خطای سرور (HTTP ${res.status})`);
       err.code = e.code || ("HTTP_" + res.status); err.status = res.status; err.detail = e;
       if(res.status === 401 && err.code === "SESSION_INVALID"){
-        sessionToken = null;
-        State.set({ connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null } });
+        clearSession();
+        State.set({ account: { loggedIn:false, phone:null }, connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null } });
         window.dispatchEvent(new Event("hashchange")); // مسیریاب را به صفحه ورود برمی‌گرداند
       }
       throw err;
@@ -1288,26 +1297,43 @@ const Api = (() => {
   const wrap = (json) => ({ data: json.data, meta: json.meta || null, fetchedAt: json.fetchedAt, isMock: false });
   const get = async (path) => wrap(await request(path));
 
-  async function connect(passcode){
-    const json = await request("/api/session", { method:"POST", body:{ passcode }, auth:false });
-    sessionToken = json.data.token;
-    State.set({ connection: { status:"connected", exchangeName:"والکس", connectedAt:new Date().toISOString(), lastChecked:new Date().toISOString() } });
-    return { ok:true };
-  }
+  const authPost = (path, body) => request(path, { method:"POST", body, auth:false }).then(j => j.data);
 
+  // اتصال واقعی به والکس: کلید فقط یک‌بار به سرور می‌رود؛ سرور با یک درخواست واقعی به والکس آن را آزمایش و رمزنگاری‌شده ذخیره می‌کند
+  async function connect(apiKey){
+    const json = await request("/api/connect", { method:"POST", body:{ apiKey } });
+    State.set({ connection: { status:"connected", exchangeName:"والکس", connectedAt:new Date().toISOString(), lastChecked:new Date().toISOString() } });
+    return json.data;
+  }
+  async function disconnectExchange(){
+    await request("/api/disconnect", { method:"POST", body:{} });
+    return checkConnection();
+  }
+  // خروج از حساب برنامه (پایان نشست)
   async function disconnect(){
-    sessionToken = null;
+    clearSession();
     State.set({ connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null } });
     return { ok:true };
   }
-
   async function checkConnection(){
     if(!sessionToken) return State.get().connection;
     try{
-      await request("/api/session/check");
-      State.set({ connection: { status:"connected", lastChecked:new Date().toISOString() } });
+      const j = await request("/api/session/check");
+      const now = new Date().toISOString();
+      State.set({ connection: j.data.exchangeKeyConfigured
+        ? { status:"connected", exchangeName:"والکس", connectedAt:j.data.keyConnectedAt || State.get().connection.connectedAt || now, lastChecked:now }
+        : { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:now } });
     }catch(e){ /* در قطعی شبکه، زمان آخرین بررسی موفق تغییر نمی‌کند */ }
     return State.get().connection;
+  }
+  async function restore(){
+    try{
+      const raw = sessionStorage.getItem(SESS_KEY); if(!raw) return false;
+      const sv = JSON.parse(raw);
+      if(!sv.token || !(sv.expiresAt > Date.now())){ clearSession(); return false; }
+      sessionToken = sv.token; State.set({ account: { loggedIn:true, phone:sv.phone || null } });
+      await checkConnection(); return State.get().account.loggedIn;
+    }catch(e){ clearSession(); return false; }
   }
 
   async function getMarketList(){
@@ -1352,7 +1378,7 @@ const Api = (() => {
   const aiGet  = (path) => request("/api/trading" + path).then(j => j.data);
   const aiCall = (method, path, body) => request("/api/trading" + path, { method, body: body === undefined ? {} : body }).then(j => j.data);
 
-  const api = { aiGet, aiCall, connect, disconnect, checkConnection, getMarketList, getCoin, getCoinHistory, getSparklines, getOrderbook,
+  const api = { aiGet, aiCall, authPost, setSession, restore, connect, disconnect, disconnectExchange, checkConnection, getMarketList, getCoin, getCoinHistory, getSparklines, getOrderbook,
     getPortfolioSummary, getPortfolioHistory, getWalletAssets, getOpenOrders, getProfile, getTransactions,
     getTradeConfig, previewOrder, submitOrder, getOrderStatus };
   return api;
@@ -1369,58 +1395,62 @@ const Api = (() => {
 const AuthFlow = {
   phone: null,
   otpVerified: false,
+  otpToken: null,       // اثبات موقت تأیید شماره (فقط در حافظه)
+  hasAccount: null,     // آیا برای این شماره قبلاً حساب ساخته شده؟
+  resetAllowed: false,
+  resendAfterSec: 60,
+  otpLength: 6,
 };
 
+// ورود و ثبت‌نام واقعی: همه‌ی کارها (ارسال پیامک، بررسی کد، رمز) سمت سرور انجام می‌شود.
 const AppAuth = (() => {
-  const LATENCY = 700;
-  function delay(ms = LATENCY){ return new Promise(res => setTimeout(res, ms)); }
-
   function isValidIranianPhone(phone){
     return /^09\d{9}$/.test((phone || "").trim());
   }
+  const toEn = (v) => String(v || "").replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 0x06F0)).replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660)).trim();
+  const fail = (code, message) => { const err = new Error(message); err.code = code; return err; };
 
   async function sendOtp(phone){
-    if(!isValidIranianPhone(phone)){
-      const err = new Error("شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.");
-      err.code = "INVALID_PHONE";
-      throw err;
-    }
-    await delay(900);
-    AuthFlow.phone = phone.trim();
-    AuthFlow.otpVerified = false;
-    // --- در نسخه واقعی: درخواست ارسال پیامک به سرویس احراز هویت ---
+    phone = toEn(phone);
+    if(!isValidIranianPhone(phone)) throw fail("INVALID_PHONE", "شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.");
+    const r = await Api.authPost("/api/auth/otp/send", { phone });
+    AuthFlow.phone = phone; AuthFlow.otpVerified = false; AuthFlow.otpToken = null; AuthFlow.hasAccount = null; AuthFlow.resetAllowed = false;
+    AuthFlow.resendAfterSec = r.resendAfterSec || 60; AuthFlow.otpLength = r.length || 6;
     return { ok:true };
   }
 
   async function verifyOtp(code){
-    if(!/^\d{4,6}$/.test((code || "").trim())){
-      const err = new Error("کد تایید را به‌درستی وارد کنید.");
-      err.code = "INVALID_OTP";
-      throw err;
-    }
-    await delay(700);
-    AuthFlow.otpVerified = true;
+    code = toEn(code);
+    if(!new RegExp("^\\d{" + AuthFlow.otpLength + "}$").test(code)) throw fail("INVALID_OTP", `کد تایید ${AuthFlow.otpLength} رقمی را به‌درستی وارد کنید.`);
+    const r = await Api.authPost("/api/auth/otp/verify", { phone: AuthFlow.phone, code });
+    AuthFlow.otpToken = r.otpToken; AuthFlow.hasAccount = !!r.hasAccount; AuthFlow.resetAllowed = !!r.resetAllowed; AuthFlow.otpVerified = true;
     return { ok:true };
   }
 
-  async function createAccount(password){
-    if(!password || password.length < 8){
-      const err = new Error("رمز عبور باید حداقل ۸ کاراکتر باشد.");
-      err.code = "WEAK_PASSWORD";
-      throw err;
-    }
-    await delay(900);
-    State.set({ account: { loggedIn:true, phone: AuthFlow.phone } });
+  function finish(session){
+    Api.setSession(session);
+    AuthFlow.otpToken = null; AuthFlow.otpVerified = false; // توکن یک‌بار مصرف بود
     return { ok:true };
+  }
+  async function createAccount(password){
+    if(!password || password.length < 8) throw fail("WEAK_PASSWORD", "رمز عبور باید حداقل ۸ کاراکتر باشد.");
+    return finish(await Api.authPost("/api/auth/register", { phone: AuthFlow.phone, otpToken: AuthFlow.otpToken, password }));
+  }
+  async function login(password){
+    if(!password) throw fail("BAD_PASSWORD", "رمز عبور را وارد کنید.");
+    return finish(await Api.authPost("/api/auth/login", { phone: AuthFlow.phone, otpToken: AuthFlow.otpToken, password }));
+  }
+  async function resetPassword(password){
+    if(!password || password.length < 8) throw fail("WEAK_PASSWORD", "رمز عبور باید حداقل ۸ کاراکتر باشد.");
+    return finish(await Api.authPost("/api/auth/reset", { phone: AuthFlow.phone, otpToken: AuthFlow.otpToken, password }));
   }
 
   function logout(){
-    AuthFlow.phone = null;
-    AuthFlow.otpVerified = false;
+    AuthFlow.phone = null; AuthFlow.otpVerified = false; AuthFlow.otpToken = null; AuthFlow.hasAccount = null;
     State.set({ account: { loggedIn:false, phone:null } });
   }
 
-  return { isValidIranianPhone, sendOtp, verifyOtp, createAccount, logout };
+  return { isValidIranianPhone, sendOtp, verifyOtp, createAccount, login, resetPassword, logout };
 })();
 // ===================================================================
 // اعلان‌های کوتاه (Toast)
@@ -1891,13 +1921,13 @@ const PageAuthOtp = {
   mount(container){
     let status = "idle";
     let errorMsg = "";
-    let countdown = 60;
+    let countdown = AuthFlow.resendAfterSec || 60;
     let timer = null;
     const card = authShellStart(container);
 
     function startCountdown(){
       clearInterval(timer);
-      countdown = 60;
+      countdown = AuthFlow.resendAfterSec || 60;
       timer = setInterval(() => {
         countdown -= 1;
         const el = card.querySelector("#resendBtn");
@@ -1911,7 +1941,7 @@ const PageAuthOtp = {
 
       card.appendChild(Utils.el("h1", { class:"connect-title" }, "کد تایید را وارد کنید"));
       card.appendChild(Utils.el("p", { class:"connect-desc" },
-        `کد ۵ رقمی ارسال‌شده به شماره ${AuthFlow.phone || ""} را وارد کنید.`
+        `کد ${AuthFlow.otpLength || 6} رقمی ارسال‌شده به شماره ${AuthFlow.phone || ""} را وارد کنید. کد تا ۲ دقیقه معتبر است.`
       ));
 
       const field = Utils.el("div", { class:"field" }, [
@@ -1919,7 +1949,7 @@ const PageAuthOtp = {
         Utils.el("div", { class:"input-wrap" }, [
           Utils.el("input", {
             id:"otpInput", class:"input", type:"text", inputmode:"numeric",
-            placeholder:"— — — — —", maxlength:"6", autocomplete:"one-time-code",
+            placeholder:"— — — — — —", maxlength:"6", autocomplete:"one-time-code",
             style:"direction:ltr;text-align:center;letter-spacing:8px;font-size:18px;font-weight:700;",
           }),
         ]),
@@ -1966,7 +1996,7 @@ const PageAuthOtp = {
         await AppAuth.sendOtp(AuthFlow.phone);
         Toast.info("کد دوباره ارسال شد", "");
         startCountdown();
-      }catch(e){ /* نادیده گرفته می‌شود */ }
+      }catch(e){ Toast.error("ارسال مجدد انجام نشد", e && e.message ? e.message : ""); }
     }
 
     paint();
@@ -1978,63 +2008,67 @@ const PageAuthPassword = {
     let status = "idle";
     let errorMsg = "";
     let showPw = false;
+    // register: شماره حساب ندارد | login: ورود با رمز | reset: انتخاب رمز جدید (فقط اگر سرور اجازه داده باشد)
+    let mode = AuthFlow.hasAccount ? "login" : "register";
     const card = authShellStart(container);
 
     function paint(){
       while(card.children.length > 1) card.removeChild(card.lastChild);
-
-      card.appendChild(Utils.el("h1", { class:"connect-title" }, "انتخاب رمز عبور"));
+      const needConfirm = mode !== "login";
+      card.appendChild(Utils.el("h1", { class:"connect-title" }, mode === "register" ? "انتخاب رمز عبور" : mode === "login" ? "ورود با رمز عبور" : "رمز عبور جدید"));
       card.appendChild(Utils.el("p", { class:"connect-desc" },
-        "یک رمز عبور برای ورودهای بعدی به حساب خود انتخاب کنید."
-      ));
+        mode === "register" ? "شماره شما تأیید شد. یک رمز عبور برای ورودهای بعدی انتخاب کنید (حداقل ۸ کاراکتر)."
+        : mode === "login" ? `شماره ${AuthFlow.phone || ""} تأیید شد. رمز عبور حساب خود را وارد کنید.`
+        : "یک رمز عبور جدید برای حساب خود انتخاب کنید."));
 
       const pwField = Utils.el("div", { class:"field" }, [
         Utils.el("label", { for:"pwInput" }, "رمز عبور"),
         Utils.el("div", { class:"input-wrap" }, [
-          Utils.el("input", { id:"pwInput", class:"input", type: showPw ? "text" : "password", placeholder:"حداقل ۸ کاراکتر", autocomplete:"new-password" }),
+          Utils.el("input", { id:"pwInput", class:"input", type: showPw ? "text" : "password", placeholder: needConfirm ? "حداقل ۸ کاراکتر" : "رمز عبور", autocomplete: needConfirm ? "new-password" : "current-password" }),
           Utils.el("div", { class:"input-actions" }, [
-            Utils.el("button", {
-              class:"input-icon-btn", type:"button", html: ic(showPw ? "eyeOff" : "eye"),
-              onClick: () => { showPw = !showPw; paint(); },
-            }),
+            Utils.el("button", { class:"input-icon-btn", type:"button", html: ic(showPw ? "eyeOff" : "eye"), onClick: () => { showPw = !showPw; const v = card.querySelector("#pwInput").value; paint(); card.querySelector("#pwInput").value = v; } }),
           ]),
         ]),
-      ]);
-      const pwConfirmField = Utils.el("div", { class:"field", style:"margin-top:14px;" }, [
-        Utils.el("label", { for:"pwConfirmInput" }, "تکرار رمز عبور"),
-        Utils.el("div", { class:"input-wrap" }, [
-          Utils.el("input", { id:"pwConfirmInput", class:"input", type: showPw ? "text" : "password", placeholder:"رمز عبور را دوباره وارد کنید", autocomplete:"new-password" }),
-        ]),
-        status === "error" ? Utils.el("span", { class:"field-error" }, [Utils.el("span",{html:ic("alert")}), errorMsg]) : null,
+        needConfirm ? null : (status === "error" ? Utils.el("span", { class:"field-error" }, [Utils.el("span",{html:ic("alert")}), errorMsg]) : null),
       ]);
       card.appendChild(pwField);
-      card.appendChild(pwConfirmField);
-
-      const btn = Utils.el("button", {
+      if(needConfirm){
+        card.appendChild(Utils.el("div", { class:"field", style:"margin-top:14px;" }, [
+          Utils.el("label", { for:"pwConfirmInput" }, "تکرار رمز عبور"),
+          Utils.el("div", { class:"input-wrap" }, [Utils.el("input", { id:"pwConfirmInput", class:"input", type: showPw ? "text" : "password", placeholder:"رمز عبور را دوباره وارد کنید", autocomplete:"new-password" })]),
+          status === "error" ? Utils.el("span", { class:"field-error" }, [Utils.el("span",{html:ic("alert")}), errorMsg]) : null,
+        ]));
+      }
+      card.appendChild(Utils.el("button", {
         class:"btn btn-primary btn-block", style:"margin-top:16px;height:44px;",
-        disabled: status === "loading" ? "true" : false,
-        onClick: handleSubmit,
-      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال ساخت حساب…"] : "ثبت‌نام و ورود");
-      card.appendChild(btn);
+        disabled: status === "loading" ? "true" : false, onClick: handleSubmit,
+      }, status === "loading" ? [Utils.el("span",{class:"spin"}), mode === "login" ? "در حال ورود…" : "در حال ذخیره…"] : (mode === "register" ? "ثبت‌نام و ورود" : mode === "login" ? "ورود" : "تغییر رمز و ورود")));
+      if(mode === "login" && AuthFlow.resetAllowed){
+        card.appendChild(Utils.el("div", { style:"text-align:center;margin-top:12px;" }, [
+          Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: () => { mode = "reset"; status = "idle"; errorMsg = ""; paint(); } }, "رمز عبور را فراموش کرده‌ام"),
+        ]));
+      }
+      card.appendChild(Utils.el("div", { style:"text-align:center;margin-top:8px;" }, [
+        Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: () => Router.go("auth-phone") }, "تغییر شماره"),
+      ]));
     }
 
     async function handleSubmit(){
       const pw = card.querySelector("#pwInput").value;
-      const pwConfirm = card.querySelector("#pwConfirmInput").value;
-
-      if(pw !== pwConfirm){
-        status = "error"; errorMsg = "رمز عبور و تکرار آن یکسان نیستند."; paint();
-        return;
-      }
-
+      const confirmEl = card.querySelector("#pwConfirmInput");
+      if(confirmEl && pw !== confirmEl.value){ status = "error"; errorMsg = "رمز عبور و تکرار آن یکسان نیستند."; paint(); return; }
       status = "loading"; errorMsg = ""; paint();
       try{
-        await AppAuth.createAccount(pw);
-        Toast.success("خوش آمدید", "حساب شما با موفقیت ساخته شد.");
-        Router.go("connect");
+        if(mode === "register") await AppAuth.createAccount(pw);
+        else if(mode === "login") await AppAuth.login(pw);
+        else await AppAuth.resetPassword(pw);
+        await Api.checkConnection(); // اگر کلید والکس قبلاً روی سرور ذخیره/تنظیم شده باشد، مستقیم به داشبورد می‌رویم
+        Toast.success(mode === "register" ? "خوش آمدید" : "ورود موفق", mode === "register" ? "حساب شما ساخته شد." : "با موفقیت وارد شدید.");
+        Router.go("dashboard");
       }catch(e){
         status = "error";
-        errorMsg = e && e.message ? e.message : "ساخت حساب با خطا مواجه شد.";
+        errorMsg = e && e.message ? e.message : "عملیات با خطا مواجه شد.";
+        if(e && (e.code === "OTP_TOKEN_INVALID")){ AuthFlow.otpVerified = false; }
         paint();
       }
     }
@@ -2049,10 +2083,10 @@ const PageAuthPassword = {
 // مراحل راهنما از اینجا قابل ویرایش هستند — در صورت تغییر فرایند
 // رسمی والکس، فقط کافیست متن همین آرایه به‌روز شود.
 const CONNECT_GUIDE_STEPS = [
-  "در پنل رسمی والکس (wallex.ir) بخش مدیریت API را باز کنید و «ساخت API» بزنید. دسترسی «برداشت» را فعال نکنید و در صورت امکان فقط دسترسی خواندن (و برای سفارش‌گذاری، معامله) بدهید. کلید حداکثر ۹۰ روز اعتبار دارد.",
-  "کلید را هرگز در این برنامه یا چت وارد نکنید؛ آن را فقط با دستور «wrangler secret put WALLEX_API_KEY» در Cloudflare ذخیره کنید.",
-  "رمز دسترسی داشبورد (DASHBOARD_PASSCODE) و SESSION_SECRET را هم به همین روش به‌صورت Secret تنظیم کنید.",
-  "رمز دسترسی همان رمزی است که در فیلد زیر وارد می‌کنید؛ کلید والکس هیچ‌وقت به مرورگر نمی‌رسد.",
+  "در پنل رسمی والکس (wallex.ir) بخش مدیریت API را باز کنید و «ساخت API» بزنید. دسترسی «برداشت» را فعال نکنید. برای فقط دیدن اطلاعات «خواندن» کافی است؛ برای سفارش‌گذاری و معامله خودکار، «معامله» را هم فعال کنید.",
+  "در بخش «IPهای مجاز» آدرس IP همین سرور (VPS) را وارد کنید تا کلید فقط از همین سرور کار کند.",
+  "کلید ساخته‌شده را در فیلد زیر وارد کنید. سرور همان لحظه با یک درخواست واقعی به والکس آن را آزمایش می‌کند؛ اگر پذیرفته شد، رمزنگاری‌شده روی سرور ذخیره می‌شود و دیگر به مرورگر برنمی‌گردد.",
+  "کلید حداکثر ۹۰ روز از تاریخ ساخت اعتبار دارد؛ بعد از انقضا کلید جدید بسازید و دوباره اینجا وارد کنید.",
 ];
 
 const NOBITEX_API_GUIDE_URL = "https://developers.wallex.ir";
@@ -2094,10 +2128,10 @@ const PageConnect = {
         Utils.el("div", {}, [
           Utils.el("p", {}, "نکات مهم امنیتی پیش از اتصال:"),
           Utils.el("ul", {}, [
-            Utils.el("li", {}, "کلید API را فقط از وب‌سایت رسمی والکس دریافت کنید و فقط در Secrets سرور نگه دارید."),
+            Utils.el("li", {}, "کلید API را فقط از وب‌سایت رسمی والکس دریافت کنید."),
             Utils.el("li", {}, "سطح دسترسی کلید را متناسب با نیاز برنامه انتخاب کنید."),
             Utils.el("li", {}, "در صورت امکان، دسترسی برداشت وجه را غیرفعال بگذارید."),
-            Utils.el("li", {}, "رمز دسترسی و کلید API اطلاعات حساس‌اند و نباید در اختیار دیگران قرار گیرند."),
+            Utils.el("li", {}, "کلید API اطلاعات حساس است و نباید در اختیار دیگران قرار گیرد؛ آن را در چت یا شبکه‌های اجتماعی نفرستید."),
           ]),
         ]),
       ]);
@@ -2107,13 +2141,13 @@ const PageConnect = {
       if(status === "loading"){
         return Utils.el("div", { class:"connect-status loading" }, [
           Utils.el("span", { class:"spin", style:"width:14px;height:14px;border-width:2px;" }),
-          "در حال برقراری اتصال با سرور داشبورد…",
+          "سرور در حال آزمایش کلید با والکس است…",
         ]);
       }
       if(status === "success"){
         return Utils.el("div", { class:"connect-status success" }, [
           Utils.el("span", { html: ic("check") }),
-          "ورود انجام شد. در حال انتقال به داشبورد…",
+          "اتصال به والکس برقرار شد. در حال انتقال به داشبورد…",
         ]);
       }
       if(status === "error"){
@@ -2131,7 +2165,7 @@ const PageConnect = {
 
       if(value.length < 1){
         status = "error";
-        errorMsg = "رمز دسترسی را وارد کنید.";
+        errorMsg = "کلید API والکس را وارد کنید.";
         paint();
         return;
       }
@@ -2141,12 +2175,12 @@ const PageConnect = {
       paint();
 
       try{
-        await Api.connect(value);
+        const r = await Api.connect(value);
         // کلید فقط برای همین فراخوانی استفاده شد و اینجا از حافظه پاک می‌شود
         input.value = "";
         status = "success";
         paint();
-        Toast.success("ورود انجام شد", "اتصال به سرور داشبورد برقرار است.");
+        Toast.success("به والکس متصل شدید", `کلید پذیرفته شد (کلید …${r.hint})؛ ${r.assets} دارایی در حساب دیده شد.`);
         setTimeout(() => Router.go("dashboard"), 700);
       }catch(e){
         status = "error";
@@ -2164,20 +2198,20 @@ const PageConnect = {
           Utils.el("span", {}, "داشبورد شخصی مدیریت دارایی"),
         ]),
       ]));
-      card.appendChild(Utils.el("h1", { class:"connect-title" }, "ورود به سرور داشبورد"));
+      card.appendChild(Utils.el("h1", { class:"connect-title" }, "اتصال به حساب والکس"));
       card.appendChild(Utils.el("p", { class:"connect-desc" },
-        "با رمز دسترسی داشبورد وارد شوید تا داده‌های واقعی والکس از طریق سرور امن نمایش داده شود. این برنامه امکان برداشت وجه ندارد."
+        "کلید API والکس خود را وارد کنید تا سرور با آن به حساب شما وصل شود و داده‌های واقعی نمایش داده شود. این برنامه امکان برداشت وجه ندارد."
       ));
 
       card.appendChild(renderGuide());
       card.appendChild(renderNotice());
 
       const field = Utils.el("div", { class:"field" }, [
-        Utils.el("label", { for:"apiKeyInput" }, "رمز دسترسی داشبورد"),
+        Utils.el("label", { for:"apiKeyInput" }, "کلید API والکس"),
         Utils.el("div", { class:"input-wrap api-field" }, [
           Utils.el("input", {
             id:"apiKeyInput", class:"input", type: showKey ? "text" : "password",
-            placeholder:"رمز دسترسی را وارد کنید", autocomplete:"off", spellcheck:"false",
+            placeholder:"کلید API را اینجا paste کنید", autocomplete:"off", spellcheck:"false", style:"direction:ltr;text-align:left;",
           }),
           Utils.el("div", { class:"input-actions" }, [
             Utils.el("button", {
@@ -2187,7 +2221,7 @@ const PageConnect = {
             }),
           ]),
         ]),
-        Utils.el("span", { class:"field-hint" }, "این مقدار در مرورگر ذخیره نمی‌شود؛ پس از ورود فقط یک توکن نشست کوتاه‌مدت در حافظه می‌ماند."),
+        Utils.el("span", { class:"field-hint" }, "این مقدار در مرورگر ذخیره نمی‌شود. سرور آن را با والکس آزمایش می‌کند و رمزنگاری‌شده نگه می‌دارد."),
       ]);
       card.appendChild(field);
 
@@ -2195,12 +2229,15 @@ const PageConnect = {
         class:"btn btn-primary btn-block", style:"margin-top:16px;height:44px;",
         disabled: status === "loading" ? "true" : false,
         onClick: handleConnect,
-      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال ورود…"] : "ورود");
+      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال آزمایش با والکس…"] : "اتصال به والکس");
       card.appendChild(btn);
 
       const st = renderStatus();
       if(st) card.appendChild(st);
 
+      card.appendChild(Utils.el("div", { style:"text-align:center;margin-top:10px;" }, [
+        Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: async () => { await Api.disconnect(); AppAuth.logout(); Router.go("auth-phone"); } }, "خروج از حساب برنامه"),
+      ]));
       card.appendChild(Utils.el("div", { class:"connect-foot" }, [
         "برای ساخت کلید API، ",
         Utils.el("a", { href: NOBITEX_API_GUIDE_URL, target:"_blank", rel:"noopener" }, "راهنمای رسمی والکس"),
@@ -3316,14 +3353,17 @@ const PageProfile = {
       const backdrop = Utils.el("div", { class:"modal-backdrop", onClick:(e) => { if(e.target===backdrop) backdrop.remove(); } });
       backdrop.appendChild(Utils.el("div", { class:"modal" }, [
         Utils.el("h3", {}, "قطع اتصال حساب صرافی؟"),
-        Utils.el("p", {}, "پس از قطع اتصال، برای مشاهده دوباره اطلاعات باید رمز دسترسی را مجدداً وارد کنید."),
+        Utils.el("p", {}, "کلید API والکس از سرور حذف می‌شود و برای دیدن اطلاعات باید دوباره آن را وارد کنید. اگر موقعیت واقعی باز داشته باشید، حذف کلید ممکن نیست."),
         Utils.el("div", { class:"modal-actions" }, [
           Utils.el("button", { class:"btn btn-outline", onClick: () => backdrop.remove() }, "انصراف"),
           Utils.el("button", { class:"btn btn-danger-ghost", onClick: async () => {
-            await Api.disconnect();
-            backdrop.remove();
-            Toast.info("اتصال قطع شد", "حساب صرافی شما از برنامه جدا شد.");
-            Router.go("connect");
+            try{
+              const st = await Api.disconnectExchange();
+              backdrop.remove();
+              if(st.status === "connected") Toast.info("کلید برنامه حذف شد", "کلید ثابت سرور (WALLEX_API_KEY در .env) همچنان فعال است.");
+              else Toast.info("اتصال قطع شد", "کلید والکس از سرور حذف شد.");
+              Router.go("connect");
+            }catch(e){ backdrop.remove(); Toast.error("قطع اتصال انجام نشد", e && e.message ? e.message : ""); }
           }}, "قطع اتصال"),
         ]),
       ]));
@@ -4110,8 +4150,9 @@ const App = (() => {
     playPageEnter(content);
   }
 
-  function init(){
+  async function init(){
     ThemeManager.apply();
+    await Api.restore(); // اگر نشست معتبر (۱۲ ساعته) در همین تب باشد، بدون پیامک دوباره وارد می‌شویم
     Router.start(onRouteChange);
     startAutoRefresh();
     State.subscribe((s) => {
