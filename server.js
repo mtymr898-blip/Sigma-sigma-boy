@@ -91,8 +91,10 @@ const env = { ...process.env, STORE, ASSETS: { fetch: serveStatic } };
 const ctx = { waitUntil: (p) => Promise.resolve(p).catch(() => {}) };
 
 if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) console.warn("⚠ SESSION_SECRET تنظیم نشده یا کوتاه‌تر از ۳۲ کاراکتر است.");
-if (!env.DASHBOARD_PASSCODE) console.warn("⚠ DASHBOARD_PASSCODE تنظیم نشده است.");
-if (!env.WALLEX_API_KEY) console.warn("⚠ WALLEX_API_KEY تنظیم نشده؛ فقط بخش‌های عمومی بازار کار می‌کنند.");
+if (!env.ALLOWED_PHONES) console.warn("⚠ ALLOWED_PHONES (شماره‌ی مجاز برای ورود/ثبت‌نام) تنظیم نشده؛ هیچ‌کس نمی‌تواند وارد شود.");
+if (!env.SMS_PROVIDER) console.warn("⚠ SMS_PROVIDER تنظیم نشده (kavenegar | smsir | console)؛ کد ورود ارسال نمی‌شود.");
+if (String(env.SMS_PROVIDER || "").toLowerCase() === "console") console.warn("⚠ SMS_PROVIDER=console: کد ورود فقط در لاگ سرور چاپ می‌شود، پیامکی ارسال نمی‌شود. فقط برای راه‌اندازی/آزمایش.");
+if (!env.WALLEX_API_KEY) console.log("ℹ WALLEX_API_KEY در .env نیست؛ کلید والکس را بعد از ورود در صفحه‌ی «اتصال» وارد کنید (رمزنگاری‌شده روی سرور ذخیره می‌شود).");
 
 // ---------- پل Node ⇄ Fetch API ----------
 const server = http.createServer(async (req, res) => {
