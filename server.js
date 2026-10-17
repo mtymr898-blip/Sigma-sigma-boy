@@ -87,14 +87,17 @@ async function serveStatic(request) {
 }
 
 // ---------- محیط (جایگزین env در Worker) ----------
-const env = { ...process.env, STORE, ASSETS: { fetch: serveStatic } };
+const { WALLEX_API_KEY: _ignoredKey, ...safeEnv } = process.env; // کلید والکس هرگز از محیط خوانده نمی‌شود
+const env = { ...safeEnv, WALLEX_API_KEY: undefined, STORE, ASSETS: { fetch: serveStatic } };
 const ctx = { waitUntil: (p) => Promise.resolve(p).catch(() => {}) };
 
 if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) console.warn("⚠ SESSION_SECRET تنظیم نشده یا کوتاه‌تر از ۳۲ کاراکتر است.");
-if (!env.ALLOWED_PHONES) console.warn("⚠ ALLOWED_PHONES (شماره‌ی مجاز برای ورود/ثبت‌نام) تنظیم نشده؛ هیچ‌کس نمی‌تواند وارد شود.");
+if (!env.VAULT_SECRET || env.VAULT_SECRET.length < 32) console.warn("⚠ VAULT_SECRET (جدا از SESSION_SECRET، حداقل ۳۲ کاراکتر) تنظیم نشده؛ کلیدهای والکس کاربران با SESSION_SECRET رمز می‌شوند. توصیه می‌شود حتماً یک راز جدا بگذارید.");
+if (env.ALLOWED_PHONES) console.log("ℹ ALLOWED_PHONES پر است: ثبت‌نام فقط دعوت‌نامه‌ای است. برای ثبت‌نام عمومی آن را خالی بگذارید.");
+if (!env.PUBLIC_SERVER_IP) console.warn("⚠ PUBLIC_SERVER_IP تنظیم نشده؛ در راهنمای اتصال، IP سرور برای ثبت در «IPهای مجاز» والکس نمایش داده نمی‌شود.");
 if (!env.SMS_PROVIDER) console.warn("⚠ SMS_PROVIDER تنظیم نشده (kavenegar | smsir | console)؛ کد ورود ارسال نمی‌شود.");
 if (String(env.SMS_PROVIDER || "").toLowerCase() === "console") console.warn("⚠ SMS_PROVIDER=console: کد ورود فقط در لاگ سرور چاپ می‌شود، پیامکی ارسال نمی‌شود. فقط برای راه‌اندازی/آزمایش.");
-if (!env.WALLEX_API_KEY) console.log("ℹ WALLEX_API_KEY در .env نیست؛ کلید والکس را بعد از ورود در صفحه‌ی «اتصال» وارد کنید (رمزنگاری‌شده روی سرور ذخیره می‌شود).");
+if (process.env.WALLEX_API_KEY) console.warn("⚠ WALLEX_API_KEY در .env تعریف شده اما دیگر استفاده نمی‌شود؛ آن را از .env حذف کنید (و کلید را از پنل والکس باطل کنید). کلید فقط از راهنمای اتصال داخل برنامه گرفته می‌شود.");
 
 // ---------- پل Node ⇄ Fetch API ----------
 const server = http.createServer(async (req, res) => {
