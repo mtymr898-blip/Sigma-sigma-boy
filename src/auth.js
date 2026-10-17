@@ -2,9 +2,10 @@
 // src/auth.js — ورود و ثبت‌نام واقعی با شماره موبایل
 // -------------------------------------------------------------------
 // جریان: شماره → کد پیامکی (OTP) → رمز عبور (ساخت حساب یا ورود)
-// • این داشبورد «تک‌کاربره» است (یک کلید والکس روی سرور). پس فقط شماره‌های ALLOWED_PHONES
-//   می‌توانند کد بگیرند و حساب بسازند؛ هر ثبت‌نام عمومی کنترل سفارش‌های صاحب را به غریبه می‌داد.
-// • برای شماره‌ی غیرمجاز هم پاسخ «کد ارسال شد» می‌دهیم (بدون پیامک) تا مجاز بودن شماره لو نرود.
+// • برنامه چندکاربره است: هر شماره‌ی معتبر می‌تواند ثبت‌نام کند و کلید والکس خودش را وصل کند.
+//   (اختیاری: اگر ALLOWED_PHONES پر باشد، فقط همان شماره‌ها می‌توانند وارد شوند — حالت دعوت‌نامه‌ای.)
+// • در حالت دعوت‌نامه‌ای، برای شماره‌ی غیرمجاز هم پاسخ «کد ارسال شد» می‌دهیم (بدون پیامک) تا لو نرود.
+// • سقف سراسری ارسال پیامک در ساعت (OTP_GLOBAL_PER_HOUR) جلوی سوءاستفاده/هزینه‌ی پیامک را می‌گیرد.
 // • کد OTP فقط به‌صورت HMAC ذخیره می‌شود؛ رمز عبور با PBKDF2-SHA256 (تکرار بالا + salt).
 // • محدودیت نرخ: هر شماره و هر IP؛ حداکثر ۵ تلاش برای هر کد؛ انقضای کد ۲ دقیقه.
 // ===================================================================
@@ -32,10 +33,12 @@ export function createAuth(d) {
   const bad = (status, code, msg, extra) => new HttpError(status, code, msg, extra);
   const secret = () => env.SESSION_SECRET;
   const cfg = () => ({
-    allowed: parseAllowed(env.ALLOWED_PHONES), provider: String(env.SMS_PROVIDER || "").toLowerCase(),
+    allowed: parseAllowed(env.ALLOWED_PHONES), globalOtpPerHour: clampInt(env.OTP_GLOBAL_PER_HOUR, 10, 100000, 500), provider: String(env.SMS_PROVIDER || "").toLowerCase(),
     otpTtl: clampInt(env.OTP_TTL_SEC, 60, 600, 120), resend: clampInt(env.OTP_RESEND_SEC, 30, 600, 60), maxAttempts: 5,
     iter: Math.max(1000, Number(env.PBKDF2_ITER) || 600000), resetOk: env.ALLOW_PASSWORD_RESET === "true",
   });
+
+  const permitted = (c, phone) => !c.allowed.size || c.allowed.has(phone); // لیست خالی = ثبت‌نام عمومی
 
   async function limit(key, max, windowMs) {
     const r = await rl.check(key, max, windowMs);
@@ -84,13 +87,12 @@ export function createAuth(d) {
   async function otpSend(phoneRaw, ip) {
     const c = cfg(); const phone = normalizePhone(phoneRaw);
     if (!phone) throw bad(400, "INVALID_PHONE", "شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.");
-    if (!c.allowed.size) throw bad(503, "NOT_CONFIGURED", "ALLOWED_PHONES (شماره‌های مجاز) در تنظیمات سرور خالی است؛ ثبت‌نام/ورود غیرفعال است.");
     if (!c.provider) throw bad(503, "SMS_NOT_CONFIGURED", "ارسال پیامک تنظیم نشده است (SMS_PROVIDER).");
-    await limit(`otp-ip:${ip}`, 20, 3600000); await limit(`otp:${phone}`, 5, 15 * 60000);
+    await limit("otp-global", c.globalOtpPerHour, 3600000); await limit(`otp-ip:${ip}`, 20, 3600000); await limit(`otp:${phone}`, 5, 15 * 60000);
     const key = `auth:otp:${phone}`; const prev = await kv.get(key); const t = now();
     if (prev && t - prev.sentAt < c.resend * 1000) throw bad(429, "OTP_COOLDOWN", "کد قبلی هنوز معتبر است؛ کمی صبر کنید و دوباره درخواست دهید.", { retryAfter: Math.ceil((prev.sentAt + c.resend * 1000 - t) / 1000) });
     const out = { sent: true, expiresInSec: c.otpTtl, resendAfterSec: c.resend, length: OTP_LENGTH };
-    if (!c.allowed.has(phone)) { // بدون پیامک؛ ولی دقیقاً مثل شماره‌ی مجاز رفتار می‌کند (کولداون و پاسخ یکسان)
+    if (!permitted(c, phone)) { // بدون پیامک؛ ولی دقیقاً مثل شماره‌ی مجاز رفتار می‌کند (کولداون و پاسخ یکسان)
       log.warn("[auth] درخواست کد برای شماره‌ای که در ALLOWED_PHONES نیست نادیده گرفته شد.");
       await kv.put(key, { fake: true, sentAt: t, exp: t + c.otpTtl * 1000, attempts: 0, h: "", salt: "" }); return out;
     }
@@ -137,10 +139,10 @@ export function createAuth(d) {
   async function makeHash(pw, iter) { const salt = crypto.getRandomValues(new Uint8Array(16)); return { alg: "pbkdf2-sha256", iter, salt: b64u(salt), hash: b64u(await pbkdf2(pw, salt, iter)) }; }
   async function verifyHash(pw, rec) { const got = b64u(await pbkdf2(pw, fromB64u(rec.salt), rec.iter)); return safeEqual(got, rec.hash); }
 
-  async function session(phone) { const s = await issueSession(env); return { ...s, phone }; }
+  async function session(phone) { const s = await issueSession(env, phone); return { ...s, phone }; }
 
   async function register(phoneRaw, otpToken, password, ip) {
-    const c = cfg(); const phone = normalizePhone(phoneRaw); if (!phone || !c.allowed.has(phone)) throw bad(401, "OTP_TOKEN_INVALID", "اعتبار تأیید شماره تمام شده؛ دوباره کد بگیرید.");
+    const c = cfg(); const phone = normalizePhone(phoneRaw); if (!phone || !permitted(c, phone)) throw bad(401, "OTP_TOKEN_INVALID", "اعتبار تأیید شماره تمام شده؛ دوباره کد بگیرید.");
     await limit(`reg-ip:${ip}`, 10, 3600000); await checkOtpToken(phone, otpToken);
     if (await kv.get(`auth:user:${phone}`)) throw bad(409, "ACCOUNT_EXISTS", "برای این شماره قبلاً حساب ساخته شده؛ با رمز عبور وارد شوید.");
     checkPasswordPolicy(password, phone);
@@ -148,7 +150,7 @@ export function createAuth(d) {
     await kv.put(`auth:ot:${phone}`, null); return session(phone);
   }
   async function login(phoneRaw, otpToken, password, ip) {
-    const c = cfg(); const phone = normalizePhone(phoneRaw); if (!phone || !c.allowed.has(phone)) throw bad(401, "OTP_TOKEN_INVALID", "اعتبار تأیید شماره تمام شده؛ دوباره کد بگیرید.");
+    const c = cfg(); const phone = normalizePhone(phoneRaw); if (!phone || !permitted(c, phone)) throw bad(401, "OTP_TOKEN_INVALID", "اعتبار تأیید شماره تمام شده؛ دوباره کد بگیرید.");
     await blockedOnly(`pw:${phone}`, 5, 15 * 60000); await blockedOnly(`pwip:${ip}`, 20, 15 * 60000); await checkOtpToken(phone, otpToken);
     const user = await kv.get(`auth:user:${phone}`); if (!user) throw bad(404, "NO_ACCOUNT", "حسابی برای این شماره وجود ندارد؛ ثبت‌نام کنید.");
     if (!(await verifyHash(String(password || ""), user.pw))) { await rl.hit(`pw:${phone}`, 15 * 60000); await rl.hit(`pwip:${ip}`, 15 * 60000); await d.sleep(400); throw bad(401, "BAD_PASSWORD", "رمز عبور نادرست است."); }
@@ -158,7 +160,7 @@ export function createAuth(d) {
   }
   async function reset(phoneRaw, otpToken, password, ip) {
     const c = cfg(); if (!c.resetOk) throw bad(403, "RESET_DISABLED", "بازنشانی رمز در سرور غیرفعال است (ALLOW_PASSWORD_RESET).");
-    const phone = normalizePhone(phoneRaw); if (!phone || !c.allowed.has(phone)) throw bad(401, "OTP_TOKEN_INVALID", "اعتبار تأیید شماره تمام شده؛ دوباره کد بگیرید.");
+    const phone = normalizePhone(phoneRaw); if (!phone || !permitted(c, phone)) throw bad(401, "OTP_TOKEN_INVALID", "اعتبار تأیید شماره تمام شده؛ دوباره کد بگیرید.");
     await limit(`reset-ip:${ip}`, 5, 3600000); await checkOtpToken(phone, otpToken);
     const user = await kv.get(`auth:user:${phone}`); if (!user) throw bad(404, "NO_ACCOUNT", "حسابی برای این شماره وجود ندارد.");
     checkPasswordPolicy(password, phone); user.pw = await makeHash(password, c.iter); user.passwordChangedAt = new Date(now()).toISOString(); user.lastLoginAt = user.passwordChangedAt;

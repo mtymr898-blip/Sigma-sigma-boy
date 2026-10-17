@@ -1,7 +1,10 @@
 // ===================================================================
 // Cloudflare Worker — واسط امن بین داشبورد و API والکس (Wallex)
 // -------------------------------------------------------------------
-// • کلید API والکس (WALLEX_API_KEY) فقط اینجا و فقط از Secrets خوانده می‌شود
+// • چندکاربره: هر کاربر (با شماره‌ی موبایل) فقط به حساب والکس خودش وصل می‌شود.
+//   کلید API هر کاربر جداگانه با AES-GCM (کلید مشتق‌شده‌ی مخصوص همان کاربر) رمزنگاری و ذخیره می‌شود،
+//   هرگز به مرورگر برنمی‌گردد و هیچ کلیدی در کد یا .env نیست.
+//   توکن نشست شناسه‌ی کاربر را در خود دارد؛ سفارش‌ها، تنظیمات، موتور معاملاتی و کش هر کاربر جداست.
 //   و هرگز در پاسخ، لاگ یا مرورگر ظاهر نمی‌شود.
 // • مرورگر فقط با «توکن نشست» کوتاه‌مدت (امضاشده با SESSION_SECRET) کار می‌کند
 //   که پس از وارد کردن رمز دسترسی (DASHBOARD_PASSCODE) صادر می‌شود.
@@ -134,26 +137,27 @@ export class DashboardStore {
   async fetch(req) {
     const url = new URL(req.url); const s = this.state.storage;
     const body = req.method === "POST" ? await req.json() : {};
+    const ns = body.uid ? `u:${body.uid}:` : ""; // هر کاربر فضای ذخیره‌ی جداگانه دارد
     const out = (o, status = 200) => new Response(JSON.stringify(o), { status, headers: { "Content-Type": "application/json" } });
     switch (url.pathname) {
       case "/order/claim": {
-        const k = "order:" + body.id; const ex = await s.get(k);
+        const k = "order:" + ns + body.id; const ex = await s.get(k);
         if (ex) return out({ claimed: false, record: ex });
         const rec = { state: "sending", at: Date.now(), order: body.order };
         await s.put(k, rec); return out({ claimed: true, record: rec });
       }
       case "/order/update": {
-        const k = "order:" + body.id; const ex = await s.get(k);
+        const k = "order:" + ns + body.id; const ex = await s.get(k);
         if (!ex) return out({ ok: false }, 404);
         const rec = { ...ex, ...body.patch, updatedAt: Date.now() }; await s.put(k, rec); return out({ ok: true, record: rec });
       }
       case "/snap/add": {
-        let arr = (await s.get("snaps")) || []; const last = arr[arr.length - 1];
+        let arr = (await s.get("snaps:" + ns)) || []; const last = arr[arr.length - 1];
         if (last && body.t - last.t < body.minGapMs) return out({ added: false });
         arr.push({ t: body.t, v: body.v }); if (arr.length > 2500) arr = arr.slice(-2500);
-        await s.put("snaps", arr); return out({ added: true });
+        await s.put("snaps:" + ns, arr); return out({ added: true });
       }
-      case "/snap/list": return out({ snaps: (await s.get("snaps")) || [] });
+      case "/snap/list": return out({ snaps: (await s.get("snaps:" + ns)) || [] });
       case "/rl/check": {
         const a = (await s.get("rl:" + body.key)) || []; const now = Date.now();
         const recent = a.filter((t) => now - t < body.windowMs);
@@ -166,8 +170,12 @@ export class DashboardStore {
       }
       case "/rl/clear": await s.delete("rl:" + body.key); return out({ ok: true });
       // ذخیره‌ی عمومی کلید/مقدار برای موتور معاملاتی (تنظیمات، سیگنال‌ها، معاملات، رخدادها)
-      case "/kv/get": return out({ value: (await s.get("kv:" + body.key)) ?? null });
-      case "/kv/put": await s.put("kv:" + body.key, body.value); return out({ ok: true });
+      case "/kv/get": return out({ value: (await s.get("kv:" + ns + body.key)) ?? null });
+      case "/kv/put": await s.put("kv:" + ns + body.key, body.value); return out({ ok: true });
+      // فهرست اتمیک کاربرانی که کلید والکس دارند (برای موتور پس‌زمینه و نمونه‌برداری)
+      case "/idx/add": { const k = "idx:" + body.name; const a = (await s.get(k)) || []; if (!a.includes(body.id)) { a.push(body.id); await s.put(k, a); } return out({ ok: true }); }
+      case "/idx/remove": { const k = "idx:" + body.name; const a = ((await s.get(k)) || []).filter((x) => x !== body.id); await s.put(k, a); return out({ ok: true }); }
+      case "/idx/list": return out({ ids: (await s.get("idx:" + body.name)) || [] });
       default: return out({ error: "not_found" }, 404);
     }
   }
@@ -175,7 +183,8 @@ export class DashboardStore {
 async function store(env, path, body) {
   if (!env.STORE) throw new HttpError(503, "NO_STORE", "فضای ذخیره‌سازی (Durable Object) تنظیم نشده است.");
   const stub = env.STORE.get(env.STORE.idFromName("main"));
-  const res = await stub.fetch("https://store.internal" + path, { method: body ? "POST" : "GET", body: body ? JSON.stringify(body) : undefined });
+  const b = env.__uid ? { ...(body || {}), uid: env.__uid } : body; // env کاربر → همه‌ی داده‌ها در فضای همان کاربر
+  const res = await stub.fetch("https://store.internal" + path, { method: b ? "POST" : "GET", body: b ? JSON.stringify(b) : undefined });
   return res.json();
 }
 
@@ -184,43 +193,56 @@ function requireConfig(env) {
   if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32)
     throw new HttpError(503, "NOT_CONFIGURED", "Secret با نام SESSION_SECRET (حداقل ۳۲ کاراکتر) تنظیم نشده است.");
 }
-async function issueSession(env) {
+const uidOf = async (env, phone) => (await hmacB64u(env.SESSION_SECRET, "uid:" + phone)).slice(0, 24); // شناسه‌ی ناشناس و پایدار (شماره‌ی موبایل در داده‌ها نمی‌آید)
+async function issueSession(env, phone) {
   const exp = Math.floor(Date.now() / 1000) + SESSION_TTL_SEC;
   const nonce = b64u(crypto.getRandomValues(new Uint8Array(12)));
-  const sig = await hmacB64u(env.SESSION_SECRET, `s.${exp}.${nonce}`);
-  return { token: `${exp}.${nonce}.${sig}`, expiresAt: exp * 1000 };
+  const uid = await uidOf(env, phone);
+  const sig = await hmacB64u(env.SESSION_SECRET, `s.${exp}.${nonce}.${uid}`);
+  return { token: `${exp}.${nonce}.${uid}.${sig}`, expiresAt: exp * 1000 };
 }
+// نشست معتبر → شناسه‌ی کاربر؛ از اینجا به بعد هر چیزی فقط در محدوده‌ی همین کاربر خوانده/نوشته می‌شود
 async function requireSession(request, env) {
   requireConfig(env);
   const m = (request.headers.get("Authorization") || "").match(/^Bearer\s+(.+)$/);
   const parts = m ? m[1].split(".") : [];
-  if (parts.length === 3 && Number(parts[0]) > Date.now() / 1000) {
-    const want = await hmacB64u(env.SESSION_SECRET, `s.${parts[0]}.${parts[1]}`);
-    if (safeEqual(want, parts[2])) return;
+  if (parts.length === 4 && /^[A-Za-z0-9_-]{16,40}$/.test(parts[2]) && Number(parts[0]) > Date.now() / 1000) {
+    const want = await hmacB64u(env.SESSION_SECRET, `s.${parts[0]}.${parts[1]}.${parts[2]}`);
+    if (safeEqual(want, parts[3])) return parts[2];
   }
   throw new HttpError(401, "SESSION_INVALID", "نشست معتبر نیست یا منقضی شده؛ دوباره وارد شوید.");
 }
+// محیط اختصاصی هر کاربر: همه‌ی حالت‌های درون‌حافظه (کلید، موتور، کش) بر اساس این شیء جدا نگه داشته می‌شوند
+const userEnvs = new WeakMap();
+function userEnv(env, uid) {
+  let m = userEnvs.get(env); if (!m) { m = new Map(); userEnvs.set(env, m); }
+  let u = m.get(uid); if (!u) { u = Object.create(env); Object.defineProperty(u, "__uid", { value: uid }); m.set(uid, u); }
+  return u;
+}
+const um = (env, k) => `${env.__uid || ""}|${k}`; // کلید کش مخصوص کاربر
 
-// ---------- کلید API والکس: ذخیره‌ی رمزنگاری‌شده روی سرور (یا WALLEX_API_KEY در .env) ----------
+// ---------- کلید API والکس: ذخیره‌ی رمزنگاری‌شده روی سرور ----------
 // کلیدی که کاربر در صفحه‌ی «اتصال» وارد می‌کند فقط یک‌بار به سرور می‌رسد؛ سرور آن را با والکس آزمایش و AES-GCM رمز می‌کند.
-// هرگز به مرورگر برنمی‌گردد (فقط ۴ رقم آخر برای نمایش). کلید UI بر WALLEX_API_KEY ترجیح دارد.
+// هرگز به مرورگر برنمی‌گردد (فقط ۴ رقم آخر برای نمایش).
 const vaults = new WeakMap();
 const vaultOf = (env) => { let v = vaults.get(env); if (!v) { v = { loaded: false, key: null, source: null, savedAt: null, hint: null, corrupt: false, loading: null }; vaults.set(env, v); } return v; };
 const vaultSecret = (env) => env.VAULT_SECRET || env.SESSION_SECRET;
+// کلید رمزنگاری هر کاربر جداست (مشتق‌شده از راز سرور + شناسه‌ی کاربر) و رکورد با شناسه‌ی کاربر «قفل» می‌شود (AAD)
+const userVaultSecret = (env) => hmacB64u(vaultSecret(env), "wallex-key:" + env.__uid);
+const vaultAad = (env) => "wallex-key:" + env.__uid;
 async function ensureKey(env) {
   const v = vaultOf(env); if (v.loaded) return v;
   if (!v.loading) v.loading = (async () => {
     let storeOk = true, rec = null;
     if (env.STORE) { try { rec = (await store(env, "/kv/get", { key: "secret:wallex" })).value; } catch (_) { storeOk = false; } }
     v.key = null; v.source = null; v.corrupt = false;
-    if (rec && rec.sealed && vaultSecret(env)) { try { v.key = await openSealed(vaultSecret(env), rec.sealed); v.source = "ui"; v.savedAt = rec.savedAt; v.hint = rec.hint; } catch (_) { v.corrupt = true; } }
-    const envKey = String(env.WALLEX_API_KEY || "").trim();
-    if (!v.key && envKey) { v.key = envKey; v.source = "env"; v.hint = envKey.slice(-4); v.savedAt = null; }
+    if (rec && rec.sealed && vaultSecret(env) && env.__uid) { try { v.key = await openSealed(await userVaultSecret(env), rec.sealed, vaultAad(env)); v.source = "ui"; v.savedAt = rec.savedAt; v.hint = rec.hint; } catch (_) { v.corrupt = true; } }
+    // عمداً هیچ کلیدی از .env یا کد خوانده نمی‌شود؛ فقط کلیدی که کاربر در برنامه وارد کرده (رمزنگاری‌شده در store)
     v.loaded = storeOk; v.loading = null; // اگر خواندن از store شکست خورد، دفعه‌ی بعد دوباره تلاش می‌شود
   })();
   await v.loading; return v;
 }
-const currentKey = (env) => { const v = vaults.get(env); return v && v.loaded ? v.key : String(env.WALLEX_API_KEY || "").trim() || null; };
+const currentKey = (env) => { const v = vaults.get(env); return v && v.loaded ? v.key : null; };
 
 // ---------- ارتباط با والکس ----------
 // فاصله‌ی حداقلی بین درخواست‌های ارسالی به والکس (جلوگیری از موج درخواست که ممکن است قاعده‌ی مسدودسازی را فعال کند)
@@ -237,7 +259,7 @@ async function wallexRaw(env, path, { method = "GET", query, body, auth = false,
   const headers = { Accept: "application/json", "User-Agent": UA };
   if (auth) {
     const k = String(apiKey !== undefined ? apiKey : (await ensureKey(env)).key || "").trim(); // فاصله/خط جدید اضافی هنگام paste رایج است
-    if (!k) throw new HttpError(503, "TOKEN_NOT_CONFIGURED", "کلید API والکس تنظیم نشده است؛ از صفحه‌ی «اتصال» وارد کنید یا WALLEX_API_KEY را در .env بگذارید.");
+    if (!k) throw new HttpError(503, "TOKEN_NOT_CONFIGURED", "کلید API والکس تنظیم نشده است؛ ابتدا از راهنمای اتصال، کلید خود را وارد کنید.");
     headers["X-API-Key"] = k;
   }
   if (body !== undefined) headers["Content-Type"] = "application/json";
@@ -392,7 +414,7 @@ async function getPrices(env, curs) {
   return out;
 }
 async function buildAssets(env) {
-  const bal = normalizeBalances(await memo("balances", 5000, () => wallex(env, "/v1/account/balances", { auth: true })));
+  const bal = normalizeBalances(await memo(um(env, "balances"), 5000, () => wallex(env, "/v1/account/balances", { auth: true })));
   const held = bal.filter((w) => w.total > 0 || w.locked > 0);
   const curs = held.map((w) => w.cur).filter((c) => c !== "tmn");
   const prices = curs.length ? await getPrices(env, curs) : {};
@@ -421,7 +443,7 @@ function normalizeOrders(json) {
   return list.map(normOrder);
 }
 // UNVERIFIED: page/per_page در مستندات مقدار نمونه‌ی 0 دارند و پیش‌فرض‌هایشان نامشخص است؛ بنابراین ارسال نمی‌شوند.
-const fetchOpenOrders = (env) => memo("orders:open", 5000, async () => normalizeOrders(await wallex(env, "/v1/account/openOrders", { auth: true })));
+const fetchOpenOrders = (env) => memo(um(env, "orders:open"), 5000, async () => normalizeOrders(await wallex(env, "/v1/account/openOrders", { auth: true })));
 function orderToRow(o, forceOpen) {
   const st = o.status.toUpperCase(); const open = forceOpen || o.active;
   const status = open ? "در انتظار" : st.includes("CANCEL") ? "لغو شده" : st.includes("FILL") ? "موفق" : o.status || "—";
@@ -455,7 +477,14 @@ async function buildPortfolio(env, { snapshot } = {}) {
   return { summary: { totalValueIrt: total, availableValueIrt: available, assetCount: assets.length, openOrders, change24hPercent: openSum > 0 ? ((nowSum - openSum) / openSum) * 100 : null },
     meta: { unpricedAssets: unpriced, ordersError, changeNote: "تغییر ۲۴ساعته بر اساس موجودی فعلی و قیمت‌های امروز محاسبه می‌شود، نه تاریخچه واقعی ارزش پرتفو." } };
 }
-async function takeSnapshot(env) { await ensureKey(env); if (currentKey(env) && env.STORE) await buildPortfolio(env, { snapshot: true }); }
+// اجرای کار پس‌زمینه برای تک‌تک کاربرانی که کلید دارند؛ خطای یک کاربر بقیه را متوقف نمی‌کند
+async function forEachKeyedUser(env, fn) {
+  if (!env.STORE) return;
+  let ids = []; try { ids = (await store(env, "/idx/list", { name: "keyed" })).ids || []; } catch (_) { return; }
+  for (const uid of ids) { try { await fn(userEnv(env, uid)); } catch (e) { console.error("user task:", e && e.code ? e.code : "error"); } }
+}
+async function takeSnapshot(env) { await forEachKeyedUser(env, async (u) => { await ensureKey(u); if (currentKey(u)) await buildPortfolio(u, { snapshot: true }); }); }
+let engineLoopBusy = false;
 
 // ---------- سفارش‌گذاری ----------
 function tradingState(env) {
@@ -505,7 +534,7 @@ async function evaluateOrder(env, order, { skipCap = false } = {}) {
   return { estimateIrt: estimate, marketPriceIrt: ref.price, warnings };
 }
 const canon = (o) => JSON.stringify([o.coinId, o.side, o.execution, o.amount, o.price]);
-async function confirmSig(env, clientOrderId, exp, order) { return hmacB64u(env.SESSION_SECRET, `c.${clientOrderId}.${exp}.${canon(order)}`); }
+async function confirmSig(env, clientOrderId, exp, order) { return hmacB64u(env.SESSION_SECRET, `c.${env.__uid}.${clientOrderId}.${exp}.${canon(order)}`); }
 
 async function tradePreview(env, body) {
   const order = parseOrder(body.order);
@@ -544,7 +573,7 @@ async function executeOrder(env, order, id, { skipCap = false } = {}) {
     await store(env, "/order/update", { id, patch: { state: "unknown" } });
     throw new HttpError(504, "UNKNOWN_OUTCOME", "نتیجه‌ی ارسال سفارش نامشخص است (زمان پاسخ تمام شد یا شبکه قطع شد). سفارش را دوباره ارسال نکنید؛ ابتدا سفارش‌های باز را در داشبورد یا پنل والکس بررسی کنید.", { public: { clientOrderId: id } });
   }
-  memoClear("balances"); memoClear("orders:");
+  memoClear(um(env, "balances")); memoClear(um(env, "orders:"));
   const j = raw.json;
   if (raw.httpStatus === 429) { await store(env, "/order/update", { id, patch: { state: "rate_limited" } }); throw new HttpError(429, "RATE_LIMITED", "والکس محدودیت نرخ اعمال کرد؛ برای اطمینان سفارش‌های باز را ببینید. برای تلاش دوباره پیش‌نمایش جدید بسازید."); }
   if (j && j.success === false) { await store(env, "/order/update", { id, patch: { state: "rejected" } }); throw new HttpError(422, "ORDER_REJECTED", String(j.message || "سفارش توسط والکس رد شد.").slice(0, 200)); }
@@ -599,14 +628,14 @@ const kvApi = (env) => ({
   get: async (key) => (await store(env, "/kv/get", { key })).value,
   put: async (key, value) => { await store(env, "/kv/put", { key, value }); },
 });
-let tradingSingleton = null;
+const tradingByEnv = new WeakMap(); // یک موتور مستقل برای هر کاربر
 function getTrading(env) {
-  if (tradingSingleton && tradingSingleton.env === env) return tradingSingleton.api;
+  const cached = tradingByEnv.get(env); if (cached) return cached;
   const api = createTrading({
     env, HttpError, hasStore: !!env.STORE, hasApiKey: () => !!currentKey(env), kv: kvApi(env), coins: COINS, tmnSymbol, priceOf, num, decimalStr,
     tradingState: () => tradingState(env), getMarkets: () => getMarketsForDisplay(env),
     fetchOhlc: (coinId, tf, days) => fetchOhlc(env, coinId, tf, days),
-    getBalances: async () => normalizeBalances(await memo("balances", 5000, () => wallex(env, "/v1/account/balances", { auth: true }))),
+    getBalances: async () => normalizeBalances(await memo(um(env, "balances"), 5000, () => wallex(env, "/v1/account/balances", { auth: true }))),
     // سفارش واقعی خودکار (فقط بازار). همه‌ی بررسی‌های مسیر دستی + claim یکتا + استعلام وضعیت اعمال می‌شود.
     placeLiveOrder: async ({ coinId, side, amount, id, isExit }) => {
       const order = { coinId, side, execution: "market", amount: decimalStr(Number(amount), 8), price: null };
@@ -614,7 +643,7 @@ function getTrading(env) {
       return res;
     },
   });
-  tradingSingleton = { env, api };
+  tradingByEnv.set(env, api);
   return api;
 }
 
@@ -646,28 +675,16 @@ async function route(request, env, ctx, url) {
     throw new HttpError(404, "NOT_FOUND", "مسیر یافت نشد.");
   }
 
-  // ورود قدیمی با رمز ثابت (DASHBOARD_PASSCODE): فقط برای مواقع اضطراری و به‌صورت پیش‌فرض خاموش
-  if (p === "/api/session" && m === "POST") {
-    requireConfig(env);
-    if (env.ALLOW_PASSCODE_LOGIN !== "true" || !env.DASHBOARD_PASSCODE) throw new HttpError(403, "PASSCODE_LOGIN_DISABLED", "ورود با رمز دسترسی غیرفعال است؛ با شماره موبایل وارد شوید.");
-    const ip = request.headers.get("CF-Connecting-IP") || "unknown"; const rl = { key: "login:" + ip, max: 5, windowMs: 15 * 60000 };
-    if (env.STORE) { const c = await store(env, "/rl/check", rl); if (c.blocked) throw new HttpError(429, "TOO_MANY_ATTEMPTS", "تعداد تلاش‌های ناموفق زیاد است؛ بعداً دوباره امتحان کنید.", { retryAfter: c.retryAfterSec }); }
-    const body = await readJson(request);
-    const a = await hmacB64u(env.SESSION_SECRET, "pc:" + String(body.passcode || "")); const b = await hmacB64u(env.SESSION_SECRET, "pc:" + env.DASHBOARD_PASSCODE);
-    if (!safeEqual(a, b)) { if (env.STORE) await store(env, "/rl/fail", rl); await sleep(400); throw new HttpError(401, "BAD_PASSCODE", "رمز دسترسی نادرست است."); }
-    if (env.STORE) await store(env, "/rl/clear", { key: rl.key });
-    return ok(await issueSession(env));
-  }
-
   if (p === "/api/health" && m === "GET") return ok({ status: "ok" }); // عمداً بدون جزئیات و بدون نیاز به نشست
 
-  await requireSession(request, env);
+  const uid = await requireSession(request, env);
+  env = userEnv(env, uid); // از اینجا به بعد، env فقط متعلق به همین کاربر است
   await ensureKey(env);
 
   if (p === "/api/connect" && m === "POST") {
     const ip = request.headers.get("CF-Connecting-IP") || "unknown"; const rl = { key: "connect:" + ip, max: 10, windowMs: 15 * 60000 };
-    const c = await store(env, "/rl/check", rl); if (c.blocked) throw new HttpError(429, "TOO_MANY_ATTEMPTS", "تعداد تلاش‌های اتصال زیاد است؛ بعداً دوباره امتحان کنید.", { retryAfter: c.retryAfterSec });
-    await store(env, "/rl/fail", rl);
+    const rlu = { key: "connect-u:" + env.__uid, max: 10, windowMs: 15 * 60000 };
+    for (const r of [rl, rlu]) { const c = await store(env, "/rl/check", r); if (c.blocked) throw new HttpError(429, "TOO_MANY_ATTEMPTS", "تعداد تلاش‌های اتصال زیاد است؛ بعداً دوباره امتحان کنید.", { retryAfter: c.retryAfterSec }); await store(env, "/rl/fail", r); }
     const key = String((await readJson(request)).apiKey || "").trim();
     if (key.length < 8 || key.length > 400 || /\s/.test(key)) throw new HttpError(400, "INVALID_KEY", "قالب کلید API معتبر نیست (بدون فاصله، حداقل ۸ و حداکثر ۴۰۰ کاراکتر).");
     let balances;
@@ -677,7 +694,8 @@ async function route(request, env, ctx, url) {
       throw e;
     }
     const savedAt = new Date().toISOString(); const hint = key.slice(-4);
-    await store(env, "/kv/put", { key: "secret:wallex", value: { sealed: await seal(vaultSecret(env), key), savedAt, hint } });
+    await store(env, "/kv/put", { key: "secret:wallex", value: { sealed: await seal(await userVaultSecret(env), key, vaultAad(env)), savedAt, hint } });
+    await store(env, "/idx/add", { name: "keyed", id: env.__uid });
     Object.assign(vaultOf(env), { loaded: true, key, source: "ui", savedAt, hint, corrupt: false }); memoClear("");
     return ok({ connected: true, source: "ui", hint, assets: balances.filter((b) => b.total > 0).length });
   }
@@ -685,7 +703,7 @@ async function route(request, env, ctx, url) {
     const live = (await store(env, "/kv/get", { key: "eng:trades" })).value || [];
     if (live.some((t) => t.mode === "live" && ["open", "holding", "closing", "pending_entry", "needs_review"].includes(t.status)))
       throw new HttpError(409, "OPEN_LIVE_POSITIONS", "موقعیت واقعی باز یا نامشخص وجود دارد؛ با حذف کلید، حد سود/ضرر آن‌ها پایش نمی‌شود. ابتدا آن‌ها را ببندید.");
-    await store(env, "/kv/put", { key: "secret:wallex", value: null }); vaults.delete(env); memoClear(""); await ensureKey(env);
+    await store(env, "/kv/put", { key: "secret:wallex", value: null }); await store(env, "/idx/remove", { name: "keyed", id: env.__uid }); vaults.delete(env); memoClear(""); await ensureKey(env);
     const v = vaultOf(env); return ok({ connected: !!v.key, source: v.source });
   }
 
@@ -694,7 +712,7 @@ async function route(request, env, ctx, url) {
     const body = m === "GET" || m === "DELETE" ? {} : await readJson(request);
     return ok(await getTrading(env).handle(m, sub, url.searchParams, body));
   }
-  if (p === "/api/session/check" && m === "GET") { const v = vaultOf(env); return ok({ authenticated: true, exchangeKeyConfigured: !!v.key, keySource: v.source, keyHint: v.key ? v.hint : null, keyConnectedAt: v.savedAt, keyUnreadable: v.corrupt && !v.key, tradingEnabled: tradingState(env).enabled }); }
+  if (p === "/api/session/check" && m === "GET") { const v = vaultOf(env); return ok({ authenticated: true, exchangeKeyConfigured: !!v.key, serverIp: env.PUBLIC_SERVER_IP || null, keySource: v.source, keyHint: v.key ? v.hint : null, keyConnectedAt: v.savedAt, keyUnreadable: v.corrupt && !v.key, tradingEnabled: tradingState(env).enabled }); }
   if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing, priceSources: r.priceSources, note: r.note, stale: r.stale, staleReason: r.stale ? r.reason : undefined }, r.t); }
   let mt;
   if ((mt = p.match(/^\/api\/history\/([a-z0-9]+)$/)) && m === "GET") {
@@ -724,7 +742,7 @@ async function route(request, env, ctx, url) {
   }
   if (p === "/api/orders/open" && m === "GET") return ok((await fetchOpenOrders(env)).map((o) => orderToRow(o, true)));
   if (p === "/api/orders/history" && m === "GET") return ok((await fetchOpenOrders(env)).map((o) => orderToRow(o, true)), { note: "مستندات والکس endpoint تاریخچه‌ی سفارش‌ها را مشخص نکرده؛ فقط سفارش‌های باز نمایش داده می‌شوند." });
-  if (p === "/api/profile" && m === "GET") return ok(normalizeProfile(await memo("profile", 60000, () => wallex(env, "/v1/account/profile", { auth: true }))));
+  if (p === "/api/profile" && m === "GET") return ok(normalizeProfile(await memo(um(env, "profile"), 60000, () => wallex(env, "/v1/account/profile", { auth: true }))));
   if (p === "/api/trade/config" && m === "GET") { const ts = tradingState(env); return ok({ tradingEnabled: ts.enabled, reasons: ts.reasons, maxOrderValueIrt: ts.cap, markets: COINS.map((c) => ({ id: c.id, name: c.name })) }); }
   if (p === "/api/trade/preview" && m === "POST") return ok(await tradePreview(env, await readJson(request)));
   if (p === "/api/trade/submit" && m === "POST") return ok(await tradeSubmit(env, await readJson(request)));
@@ -746,6 +764,10 @@ export default {
   },
   async scheduled(event, env, ctx) { ctx.waitUntil(takeSnapshot(env).catch(() => {})); },
   // تیک موتور معاملاتی؛ server.js هر چند ثانیه صدا می‌زند (خود موتور فواصل را رعایت می‌کند)
-  async engineTick(event, env, ctx) { if (!env.STORE) return; try { await ensureKey(env); await getTrading(env).tick(); } catch (e) { console.error("engine tick:", e && e.message); } },
+  async engineTick(event, env, ctx) {
+    if (!env.STORE || engineLoopBusy) return; engineLoopBusy = true;
+    try { await forEachKeyedUser(env, async (u) => { await ensureKey(u); if (currentKey(u)) await getTrading(u).tick(); }); }
+    catch (e) { console.error("engine tick:", e && e.message); } finally { engineLoopBusy = false; }
+  },
 };
 
