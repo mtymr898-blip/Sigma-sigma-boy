@@ -979,6 +979,153 @@ details > summary{ list-style:none; }
   .ai-fab{ bottom:24px; left:auto; right:24px; } /* در دسکتاپ سایدبار سمت چپ است؛ دکمه سمت دیگر */
   .ai-chat{ inset-inline:auto; left:auto; right:24px; bottom:90px; width:410px; height:min(640px,calc(100vh - 120px)); border-radius:18px; }
 }
+
+/* ===================================================================
+   ظاهر جدید (الهام‌گرفته از طرح NEXTRA): عمق، درخشش، تایپوگرافی و حرکت
+   فقط ظاهر است؛ هیچ داده یا منطقی ندارد. رنگ‌های تیره فقط برای تم تیره
+   اعمال می‌شوند تا تم روشن خراب نشود.
+   =================================================================== */
+:root[data-theme="dark"]{
+  --bg:#050a19; --bg-soft:#07112a; --surface:#111c31; --surface-raised:#172641; --surface-hover:#213653;
+  --border:#344665; --border-soft:#293954; --border-strong:#2677d966;
+  --accent:#35f0d0; --accent-strong:#18d9bc; --accent-dim:#14b99f; --accent-soft:#19e2d01a; --accent-soft-strong:#19e2d033;
+  --blue:#78aaff; --blue-soft:#367cff20; --green:#48e6a1; --red:#ff7185; --amber:#ffd166;
+  --text:#f5f8ff; --text-dim:#c0cce2; --text-faint:#91a1bf;
+  --radius-sm:11px; --radius-md:16px; --radius-lg:21px;
+  --shadow-card:0 1px 0 #ffffff0a inset,0 12px 32px -18px #000c,0 0 0 1px #164b8a12;
+  --shadow-raised:0 1px 0 #ffffff12 inset,0 18px 44px -18px #000d,0 0 28px #176bff12;
+}
+:root[data-theme="light"]{
+  --accent:#008f83; --accent-strong:#007b72; --accent-dim:#006b64; --blue:#285edb; --green:#087d4c; --red:#c52f49; --amber:#8c5b00;
+  --text:#101a2d; --text-dim:#394966; --text-faint:#596a87; --border:#c7d2e4; --border-soft:#dbe3ef;
+  --surface:#ffffff; --surface-raised:#f8fbff; --surface-hover:#eaf1fb;
+}
+:root{ --ease-pop:cubic-bezier(.16,1,.3,1); --motion-ui:260ms; }
+body{ font-size:15.5px; line-height:1.8; letter-spacing:0; text-rendering:optimizeLegibility; }
+button,.btn,.nav-item,.tab-btn{ font-weight:600; }
+:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; }
+::selection{ background:#35f0d055; color:var(--text); }
+@media (prefers-contrast:more){ :root[data-theme="dark"]{ --text-dim:#d9e3f5; --text-faint:#b9c8e3; --border:#627392; } :root[data-theme="light"]{ --text-dim:#24334d; --text-faint:#394966; --border:#9eacc2; } }
+
+/* --- پس‌زمینه و قاب‌ها (تم تیره) --- */
+[data-theme="dark"] body{
+  background:
+    radial-gradient(ellipse 720px 480px at 100% 0%,#0754a52b,transparent 70%),
+    radial-gradient(ellipse 650px 480px at 0% 30%,#04d9d014,transparent 68%),
+    radial-gradient(ellipse 800px 520px at 50% 100%,#163d8b16,transparent 70%),var(--bg);
+}
+[data-theme="dark"] body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.15;
+  background-image:linear-gradient(#4f91ff08 1px,transparent 1px),linear-gradient(90deg,#4f91ff08 1px,transparent 1px);
+  background-size:38px 38px;mask-image:linear-gradient(to bottom,#000,transparent 85%);
+}
+[data-theme="dark"] .sidebar{ background:linear-gradient(180deg,#08142dF5,#060c1df7); box-shadow:inset -1px 0 #ffffff04,12px 0 50px -38px #147aff55; backdrop-filter:blur(18px); }
+[data-theme="dark"] .topbar{ background:#071128d9; border-bottom-color:#1c3c6b99; backdrop-filter:blur(20px) saturate(140%); box-shadow:0 8px 28px -22px #267aff99; }
+[data-theme="dark"] .bottom-nav{ background:#06112beF; border-top-color:#1c3c6b99; backdrop-filter:blur(22px) saturate(150%); box-shadow:0 -12px 32px -24px #167bff99; }
+[data-theme="dark"] .bottom-nav .bn-item.active{ background:linear-gradient(145deg,#0fd9d01c,#367cff24); box-shadow:0 0 18px #167bff0c; }
+[data-theme="dark"] .brand-mark{ background:linear-gradient(135deg,#3b7cff 0%,#1679ff 42%,#14e0d0 100%); color:#fff; box-shadow:0 0 0 1px #ffffff24 inset,0 0 24px #187bff70,0 8px 20px #00d7ce20; animation:brand-breathe 5s ease-in-out infinite; }
+@keyframes brand-breathe{0%,100%{box-shadow:0 0 0 1px #ffffff24 inset,0 0 20px #187bff55}50%{box-shadow:0 0 0 1px #ffffff40 inset,0 0 30px #18d9df66}}
+[data-theme="dark"] .nav-item.active{ background:linear-gradient(100deg,#0fd9d01b,#286cff25 70%,#286cff08); border-color:#1a9cc32a; box-shadow:inset 0 1px #ffffff08,0 5px 18px #006bff0c; }
+[data-theme="dark"] .nav-item.active::before{ background:linear-gradient(180deg,#24e7d7,#377cff); box-shadow:0 0 14px #17dcd7a8,0 0 26px #247aff45; }
+[data-theme="dark"] .nav-item:hover{ border-color:#2c6cb52b; box-shadow:0 5px 20px #0002; }
+[data-theme="dark"] .card{ background:linear-gradient(145deg,#102044f2 0%,#0b1731f5 56%,#091329f8 100%); border-color:#23457799; box-shadow:var(--shadow-card); }
+[data-theme="dark"] .card:hover{ border-color:#2875c5a8; box-shadow:0 1px 0 #ffffff0c inset,0 20px 48px -24px #000d,0 0 26px #1678ff13; }
+[data-theme="dark"] .btn-primary{ background:linear-gradient(115deg,#18cfc4,#168fff); color:#04152c; box-shadow:0 1px 0 #ffffff55 inset,0 8px 24px -12px #13d8d9aa,0 0 18px #147cff15; }
+[data-theme="dark"] .btn-primary:hover{ filter:saturate(1.12) brightness(1.08); box-shadow:0 1px 0 #ffffff66 inset,0 12px 28px -12px #13d8d9bb,0 0 24px #147cff2b; }
+[data-theme="dark"] input:focus,[data-theme="dark"] select:focus,[data-theme="dark"] textarea:focus{ border-color:#268bdb!important; box-shadow:0 0 0 3px #258bdb20,0 0 18px #18c9d90c; }
+[data-theme="dark"] .tbl tbody tr:hover{ background:#1a3d6b33; }
+[data-theme="dark"] canvas{ filter:drop-shadow(0 0 5px rgba(45,212,191,.08)); }
+[data-theme="dark"] .toast,[data-theme="dark"] .modal,[data-theme="dark"] .sheet,[data-theme="dark"] .dropdown-menu{ backdrop-filter:blur(20px) saturate(130%); }
+.page-head h1{ letter-spacing:-.03em; }
+.card{ position:relative; transition:border-color .3s var(--ease),box-shadow .35s var(--ease),transform .35s var(--ease); }
+.card::before{ content:""; position:absolute; inset:0 14px auto; height:1px; pointer-events:none; background:linear-gradient(90deg,transparent,#5c9dff66,#20e4d455,transparent); opacity:.6; }
+[data-theme="light"] .card::before{ display:none; }
+@media (hover:hover) and (pointer:fine){ .card:hover{ transform:translateY(-2px); } }
+.nav-item{ border:1px solid transparent; transition:background .24s var(--ease),color .24s var(--ease),transform .24s var(--ease),border-color .24s var(--ease),box-shadow .24s var(--ease); }
+.btn{ position:relative; overflow:hidden; isolation:isolate; transition:transform .22s var(--ease-pop),background .25s var(--ease),border-color .25s var(--ease),box-shadow .25s var(--ease),filter .25s var(--ease); }
+.btn::after{ content:""; position:absolute; inset:-80% -30%; z-index:-1; pointer-events:none; background:linear-gradient(110deg,transparent 38%,#ffffff22 50%,transparent 62%); transform:translateX(-130%); transition:transform .7s var(--ease); }
+.btn:hover::after{ transform:translateX(130%); }
+.btn-primary:hover{ transform:translateY(-1px); }
+.btn:active,.tab-btn:active{ transform:scale(.97); }
+input,select,textarea,.input{ transition:border-color .25s var(--ease),box-shadow .25s var(--ease),background .25s var(--ease); }
+.tbl tbody tr{ transition:background .22s var(--ease),transform .22s var(--ease); }
+.bottom-nav .bn-item{ transition:color .22s var(--ease),background .22s var(--ease),transform .22s var(--ease); }
+html{ scroll-behavior:smooth; }
+@media (max-width:520px){ .card{ border-radius:17px; } .card-pad{ padding:17px; } .page-head h1{ font-size:21px; } }
+@media (max-width:860px){ .content{ padding-inline:14px; } .page-head{ align-items:flex-start; } .nav-item:hover{ transform:none; } }
+
+/* --- کارت‌های داشبورد --- */
+.kpi-grid{ gap:18px; margin-bottom:22px; }
+.kpi-card{ position:relative; overflow:hidden; isolation:isolate; padding:21px 22px; }
+.kpi-card:after{ content:""; position:absolute; z-index:-1; width:130px; height:130px; border-radius:50%; inset-inline-end:-58px; bottom:-72px; background:var(--kpi-glow,#18cbbd); opacity:.13; filter:blur(24px); pointer-events:none; }
+[data-theme="dark"] .kpi-card{ border:1px solid #4b80b944; background:linear-gradient(145deg,var(--surface) 0%,color-mix(in srgb,var(--surface) 82%,#12347d) 100%); }
+[data-theme="dark"] .kpi-card:first-child{ background:radial-gradient(240px 150px at 100% 0%,#19d8d31e,transparent 72%),linear-gradient(135deg,#0c2447,var(--surface)); border-color:#1dd8d34a; }
+[data-theme="dark"] .kpi-card:first-child .kpi-value{ text-shadow:0 0 22px #27d9d522; }
+[data-theme="dark"] .kpi-card:hover{ border-color:#20b9d688; box-shadow:0 18px 40px -20px #000e,0 0 28px #13c9d91b; }
+.kpi-card:first-child .kpi-value{ font-size:clamp(22px,2vw,29px); }
+.kpi-card:hover{ transform:translateY(-4px) scale(1.008); }
+.kpi-ic{ width:42px; height:42px; border-radius:14px; box-shadow:inset 0 0 0 1px #ffffff0d,0 5px 16px #0002; }
+.kpi-label{ font-size:12.5px; color:var(--text-dim); letter-spacing:.01em; }
+.kpi-value{ line-height:1.35; font-variant-numeric:tabular-nums; }
+.kpi-change{ gap:6px; flex-wrap:wrap; }
+.dash-grid{ grid-template-columns:minmax(0,1.75fr) minmax(280px,1fr); gap:18px; }
+[data-theme="dark"] .dash-grid>.card{ border:1px solid #5488c52b; box-shadow:0 14px 34px #02081722,inset 0 1px #ffffff08; }
+.chart-head{ padding-bottom:12px; border-bottom:1px solid var(--border-soft); }
+.chart-value{ font-size:clamp(24px,2vw,31px); font-variant-numeric:tabular-nums; }
+.chart-canvas-wrap{ height:290px; margin-top:20px; }
+.mini-row{ padding:13px 10px; transition:background .2s ease,transform .2s ease,border-color .2s ease; }
+.mini-row:hover{ transform:translateX(-3px); background:linear-gradient(90deg,transparent,#23c9d20b); }
+.mini-price{ font-variant-numeric:tabular-nums; }
+@media(max-width:1100px){ .dash-grid{ grid-template-columns:minmax(0,1.4fr) minmax(260px,1fr); } .chart-canvas-wrap{ height:260px; } }
+@media(max-width:860px){ .dash-grid{ grid-template-columns:1fr; } .kpi-grid{ gap:12px; } .kpi-card{ padding:17px; } }
+
+/* --- کارت وضعیت واقعی هوش مصنوعی در داشبورد (داده از موتور خوانده می‌شود) --- */
+.ai-status-panel{ position:relative; overflow:hidden; margin:2px 0 15px; padding:15px; border-radius:15px; border:1px solid #1dd8b93b; cursor:pointer; background:radial-gradient(180px 90px at 100% 0%,#13d8b71a,transparent 70%),var(--surface-raised); transition:border-color .25s var(--ease),transform .25s var(--ease); }
+.ai-status-panel:hover{ border-color:#1dd8b97a; transform:translateY(-1px); }
+.ai-status-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.ai-status-title{ display:flex; align-items:center; gap:9px; font-size:13px; font-weight:800; }
+.ai-pulse{ width:9px; height:9px; border-radius:50%; background:#2ce6b6; box-shadow:0 0 0 4px #2ce6b61c,0 0 14px #2ce6b6; animation:aiPulse 2s ease-in-out infinite; }
+.ai-pulse.is-off{ background:#8493b2; box-shadow:0 0 0 4px #8493b21a; animation:none; }
+.ai-pulse.is-kill{ background:#ff5c70; box-shadow:0 0 0 4px #ff5c7022,0 0 14px #ff5c70; }
+.ai-live-badge{ font-size:10px; font-weight:800; color:#49eac2; background:#1dd8b91c; border:1px solid #1dd8b938; border-radius:999px; padding:4px 8px; }
+.ai-status-desc{ font-size:11.5px; line-height:1.8; color:var(--text-dim); }
+.ai-status-foot{ display:flex; gap:7px; flex-wrap:wrap; margin-top:12px; }
+.ai-stat-pill{ font-size:10.5px; padding:5px 8px; border-radius:8px; background:#ffffff08; color:var(--text-dim); border:1px solid #ffffff0b; }
+[data-theme="light"] .ai-stat-pill{ background:#0000000a; border-color:#0000000f; }
+@keyframes aiPulse{0%,100%{opacity:1;box-shadow:0 0 0 4px #2ce6b61c,0 0 14px #2ce6b6}50%{opacity:.65;box-shadow:0 0 0 7px #2ce6b60b,0 0 7px #2ce6b6}}
+
+/* --- حرکت: ورود پوسته، منو و صفحه (یک سامانه‌ی واحد) --- */
+@keyframes nx-assemble-in{0%{opacity:0;transform:translate3d(0,24px,0) scale(.985)}100%{opacity:1;transform:translate3d(0,0,0) scale(1)}}
+@keyframes nx-shell-in{0%{opacity:0;transform:translateY(12px)}100%{opacity:1;transform:none}}
+@keyframes nxNavReveal{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+@keyframes nxRowReveal{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:translateY(0)}}
+@keyframes nxPageEnter{from{opacity:0;transform:translateY(12px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes nxPageExit{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-7px) scale(.997)}}
+@keyframes nx-nav-stagger{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes nx-chart-arrive{from{opacity:.25;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+#pageContent{ min-height:55vh; transform-origin:top center; }
+#pageContent.nx-assembling > .nx-piece{ animation:nx-assemble-in var(--nx-duration,680ms) var(--ease-pop) both; animation-delay:var(--nx-delay,0ms); }
+#pageContent.nx-assembling .nx-child{ animation:nx-assemble-in 560ms var(--ease-pop) both; animation-delay:var(--nx-child-delay,80ms); }
+.shell.nx-shell-enter .sidebar-layer{ animation:nx-shell-in 650ms var(--ease-pop) both; }
+.shell.nx-shell-enter .main{ animation:nx-shell-in 650ms var(--ease-pop) 90ms both; }
+.shell.nx-shell-enter .topbar{ animation:nx-assemble-in 700ms var(--ease-pop) 180ms both; }
+.bottom-nav.nx-shell-enter{ animation:nx-shell-in 600ms var(--ease-pop) 260ms both; }
+.nx-nav-reveal{ animation:nxNavReveal .48s cubic-bezier(.2,.75,.25,1) both; animation-delay:var(--nx-nav-delay,0ms); }
+.sidebar .nav-item.nx-nav-stagger{ animation:nx-nav-stagger .42s cubic-bezier(.2,.75,.25,1) both; animation-delay:var(--nx-nav-delay,0ms); }
+.nx-row-reveal{ animation:nxRowReveal .42s cubic-bezier(.2,.75,.25,1) both; animation-delay:var(--nx-row-delay,0ms); }
+.nx-page-enter{ animation:nxPageEnter .62s cubic-bezier(.2,.75,.25,1) both; }
+.nx-page-exit{ animation:nxPageExit .18s ease-in both; pointer-events:none; }
+#pageContent .chart-canvas-wrap,#pageContent .chart-container,#pageContent .chart-wrap,#pageContent .portfolio-chart-wrap{ animation:nx-chart-arrive .7s cubic-bezier(.16,1,.3,1) both; animation-delay:var(--nx-chart-delay,120ms); }
+.nx-interactive{ transition:transform .18s ease,box-shadow .22s ease,background-color .22s ease,border-color .22s ease,filter .22s ease; transform-origin:center; }
+.nx-interactive:active{ transform:scale(.975); }
+button,.btn,[role=button]{ -webkit-tap-highlight-color:transparent; }
+@media (prefers-reduced-motion:reduce){
+  html{ scroll-behavior:auto; }
+  .brand-mark{ animation:none!important; } .card:hover,.kpi-card:hover{ transform:none; } .ai-pulse{ animation:none!important; }
+  #pageContent.nx-assembling>.nx-piece,#pageContent.nx-assembling .nx-child,.shell.nx-shell-enter .sidebar-layer,.shell.nx-shell-enter .main,.shell.nx-shell-enter .topbar,.bottom-nav.nx-shell-enter,
+  .nx-nav-reveal,.nx-row-reveal,.nx-page-enter,.nx-page-exit,.sidebar .nav-item.nx-nav-stagger,#pageContent .chart-canvas-wrap,#pageContent .chart-container,#pageContent .chart-wrap,#pageContent .portfolio-chart-wrap{ animation:none!important; }
+  .nx-interactive{ transition:none!important; }
+}
 </style>
 </head>
 <body>
@@ -1511,8 +1658,16 @@ const Charts = (() => {
   }
 
   function lineChart(key, canvas, points, { color, currency = "تومان", fill = true } = {}){
+    if(!canvas || typeof Chart === "undefined"){ destroy(key); return null; }
+    // اگر نمودار با همین کلید روی همین بوم هست، فقط داده‌ها را نرم به‌روز کن
+    const existing = instances.get(key);
+    if(existing && existing.canvas === canvas){
+      existing.data.labels = points.map(p => p.t);
+      existing.data.datasets[0].data = points.map(p => p.v);
+      existing.update();
+      return existing;
+    }
     destroy(key);
-    if(!canvas || typeof Chart === "undefined") return null;
     const accent = color || cssVar("--accent") || "#17c3b2";
     const grid = cssVar("--border-soft") || "#1b2436";
     const textFaint = cssVar("--text-faint") || "#5c6680";
@@ -1531,7 +1686,8 @@ const Charts = (() => {
           data: points.map(p => p.v),
           borderColor: accent,
           backgroundColor: fill ? gradient : "transparent",
-          borderWidth: 2,
+          borderWidth: 2.5,
+          borderCapStyle: "round",
           pointRadius: (ctx) => ctx.dataIndex === points.length - 1 ? 4 : 0,
           pointBackgroundColor: accent,
           pointBorderColor: "#fff",
@@ -1546,16 +1702,21 @@ const Charts = (() => {
       options: {
         responsive:true,
         maintainAspectRatio:false,
-        interaction:{ mode:"index", intersect:false },
+        interaction:{ mode:"index", intersect:false, axis:"x" },
+        animation:{ duration:1050, easing:"easeOutQuart", delay:(context) => context.type === "data" ? Math.min(context.dataIndex * 42, 720) : 0 },
+        transitions:{ active:{ animation:{ duration:180 } }, resize:{ animation:{ duration:250 } } },
         plugins:{
           legend:{ display:false },
           tooltip:{
             rtl:true,
             backgroundColor: cssVar("--surface") || "#121a2b",
-            borderColor: grid,
+            borderColor: accent,
             borderWidth:1,
             titleColor: textFaint,
-            bodyColor: "#e9eef6",
+            bodyColor: cssVar("--text") || "#e9eef6",
+            caretPadding:8,
+            cornerRadius:12,
+            boxPadding:4,
             titleFont:{ family:"Vazirmatn", size:11 },
             bodyFont:{ family:"Vazirmatn", size:12, weight:"700" },
             padding:10,
@@ -2377,6 +2538,29 @@ const PageDashboard = {
       });
     }
 
+    // کارت وضعیت هوش مصنوعی: همه‌ی مقدارها از موتور واقعی روی سرور خوانده می‌شوند (هیچ عدد ثابت یا نمایشی نیست)
+    function aiStatusCard(){
+      const MODE_FA = { suggest:"تحلیل و پیشنهاد", paper:"معامله‌ی آزمایشی", live:"معامله‌ی واقعی" };
+      const pulse = Utils.el("span", { class:"ai-pulse is-off" });
+      const badge = Utils.el("span", { class:"ai-live-badge" }, "در حال بررسی…");
+      const desc = Utils.el("div", { class:"ai-status-desc" }, "در حال دریافت وضعیت موتور…");
+      const foot = Utils.el("div", { class:"ai-status-foot" });
+      const card = Utils.el("div", { class:"ai-status-panel", role:"button", tabindex:"0", title:"باز کردن صفحه‌ی هوش مصنوعی معاملاتی", onClick: () => Router.go("ai") }, [
+        Utils.el("div", { class:"ai-status-top" }, [Utils.el("div", { class:"ai-status-title" }, [pulse, "هوش مصنوعی معاملاتی"]), badge]), desc, foot]);
+      Api.aiGet("/status").then(st => {
+        const buys = Object.values(st.analysis || {}).filter(a => a.signal === "buy").length;
+        pulse.className = "ai-pulse" + (st.killed ? " is-kill" : st.running ? "" : " is-off");
+        badge.textContent = st.killed ? "توقف اضطراری" : st.running ? "در حال اجرا" : "متوقف";
+        desc.textContent = st.mode === "suggest"
+          ? (buys ? `الان ${buys} پیشنهاد خرید فعال دارم؛ جزئیات و دلیل هر کدام در گزارش هوش مصنوعی است.` : "فعلاً پیشنهاد خریدی ندارم؛ بازار را طبق قوانین استراتژی زیر نظر دارم.")
+          : `حالت «${MODE_FA[st.mode]}»؛ ${st.counts.open} موقعیت باز.`;
+        foot.innerHTML = "";
+        [`حالت: ${MODE_FA[st.mode]}`, st.engine.lastAnalysisAt ? `آخرین تحلیل: ${Utils.timeAgo(st.engine.lastAnalysisAt)}` : "هنوز تحلیلی انجام نشده",
+          st.mode === "suggest" ? `پیشنهاد خرید: ${buys}` : `سود/زیان امروز: ${Utils.formatNumber(st.pnl.realizedTodayIrt)} تومان`].forEach(t => foot.appendChild(Utils.el("span", { class:"ai-stat-pill" }, t)));
+      }).catch(() => { badge.textContent = "نامشخص"; desc.textContent = "وضعیت موتور هوش مصنوعی در دسترس نیست."; });
+      return card;
+    }
+
     function renderSideMarket(marketRes){
       sideCard.innerHTML = "";
       sideCard.appendChild(Utils.el("div", { class:"card-head" }, [
@@ -2387,6 +2571,7 @@ const PageDashboard = {
         sideCard.appendChild(UI.empty("بازاری یافت نشد", ""));
         return;
       }
+      sideCard.appendChild(aiStatusCard());
       const list = Utils.el("div", { class:"mini-list" });
       top.forEach(c => {
         const row = Utils.el("div", { class:"mini-row", onClick: () => Router.go(`coin/${c.id}`) }, [
@@ -4000,9 +4185,10 @@ const App = (() => {
     ]));
 
     const navGroup = Utils.el("div", { class:"nav-group" });
-    NAV_ITEMS.forEach(item => {
+    NAV_ITEMS.forEach((item, index) => {
       navGroup.appendChild(Utils.el("div", {
-        class:"nav-item", "data-key":item.key,
+        class:"nav-item nx-nav-reveal", "data-key":item.key,
+        style:`--nx-nav-delay:${120 + index * 75}ms`,
         html: ic(item.icon) + `<span>${item.label}</span>`,
         onClick: () => { Router.go(item.key); closeSidebar(); },
       }));
@@ -4044,6 +4230,8 @@ const App = (() => {
 
     const shell = Utils.el("div", { class:"shell" }, [main, sidebarLayer]);
     root.append(shell, scrim, bottomNav);
+    shell.classList.add("nx-shell-enter"); bottomNav.classList.add("nx-shell-enter");
+    window.setTimeout(() => { shell.classList.remove("nx-shell-enter"); bottomNav.classList.remove("nx-shell-enter"); }, 1100);
     AIChat.mount(root); // دکمه‌ی شناور گزارش هوش مصنوعی
 
     updateConnBadge();
@@ -4066,8 +4254,17 @@ const App = (() => {
   }
 
   function setActiveNav(name){
-    document.querySelectorAll(".nav-item[data-key]").forEach(n => n.classList.toggle("active", n.dataset.key === name));
-    document.querySelectorAll(".bn-item[data-key]").forEach(n => n.classList.toggle("active", n.dataset.key === name));
+    const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    document.querySelectorAll(".nav-item[data-key]").forEach((n, i) => {
+      const active = n.dataset.key === name; n.classList.toggle("active", active);
+      if(active) n.setAttribute("aria-current", "page"); else n.removeAttribute("aria-current");
+      n.classList.remove("nx-nav-stagger"); n.style.setProperty("--nx-nav-delay", `${Math.min(i * 32, 320)}ms`);
+      if(!reducedMotion){ void n.offsetWidth; n.classList.add("nx-nav-stagger"); }
+    });
+    document.querySelectorAll(".bn-item[data-key]").forEach(n => {
+      const active = n.dataset.key === name; n.classList.toggle("active", active);
+      if(active) n.setAttribute("aria-current", "page"); else n.removeAttribute("aria-current");
+    });
     const title = document.getElementById("pageTitle");
     if(title) title.textContent = PAGE_TITLES[name] || "";
   }
@@ -4091,11 +4288,36 @@ const App = (() => {
     Router.go("auth-phone");
   }
 
+  let pageTransitionToken = 0;
+
   function playPageEnter(el){
     if(!el) return;
-    el.classList.remove("page-enter");
-    void el.offsetWidth; // اجبار به reflow تا انیمیشن دوباره اجرا شود
-    el.classList.add("page-enter");
+    el.classList.remove("page-enter", "nx-assembling");
+    const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const pieces = Array.from(el.children);
+    el.querySelectorAll("tbody tr").forEach((row, i) => {
+      row.classList.remove("nx-row-reveal");
+      row.style.setProperty("--nx-row-delay", `${Math.min(i * 42, 720)}ms`);
+      if(!reduced){ void row.offsetWidth; row.classList.add("nx-row-reveal"); }
+    });
+    el.querySelectorAll(".chart-canvas-wrap, .chart-container, .chart-wrap, .portfolio-chart-wrap").forEach((chart, i) => {
+      chart.style.setProperty("--nx-chart-delay", `${120 + Math.min(i * 70, 280)}ms`);
+    });
+    el.querySelectorAll("button, .btn, [role=button]").forEach(btn => btn.classList.add("nx-interactive"));
+    pieces.forEach((piece, i) => {
+      piece.classList.add("nx-piece");
+      piece.style.setProperty("--nx-delay", `${Math.min(i * 85, 680)}ms`);
+      piece.style.setProperty("--nx-duration", `${680 + Math.min(i * 25, 180)}ms`);
+      Array.from(piece.children).forEach((child, j) => { // اجزای داخلی هر بخش، کوتاه و پشت‌سرهم ظاهر می‌شوند
+        if(child.nodeType === 1 && !child.matches("script,style")){
+          child.classList.add("nx-child");
+          child.style.setProperty("--nx-child-delay", `${90 + j * 65}ms`);
+        }
+      });
+    });
+    void el.offsetWidth;
+    if(!reduced) el.classList.add("nx-assembling");
+    if(!reduced) window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function startAutoRefresh(){
@@ -4142,12 +4364,27 @@ const App = (() => {
     }
 
     if(!root.querySelector(".shell")) buildShell();
+    const previousRoute = currentRoute;
     currentRoute = route;
     setActiveNav(route.name);
     updateConnBadge();
     const content = document.getElementById("pageContent");
-    route.page.mount(content, route.params);
-    playPageEnter(content);
+    const routeToken = ++pageTransitionToken;
+    const mountNext = () => {
+      if(routeToken !== pageTransitionToken) return; // مسیر جدیدتری آمده؛ این یکی را رها کن
+      route.page.mount(content, route.params);
+      playPageEnter(content);
+      content.classList.remove("nx-page-exit");
+      content.classList.add("nx-page-enter");
+      window.setTimeout(() => content.classList.remove("nx-page-enter"), 760);
+    };
+    const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if(!reduced && content.childElementCount && previousRoute && previousRoute.name !== route.name){
+      content.classList.remove("nx-page-enter"); content.classList.add("nx-page-exit");
+      window.setTimeout(mountNext, 190);
+    } else {
+      mountNext();
+    }
   }
 
   async function init(){
