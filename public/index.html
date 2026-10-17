@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>صرافی من — داشبورد شخصی ارز دیجیتال</title>
+<title>QAIRO — هوش مصنوعی معاملات ارز دیجیتال</title>
 <meta name="description" content="داشبورد شخصی مدیریت و تحلیل دارایی‌های ارز دیجیتال">
-<meta name="theme-color" content="#080b13">
+<meta name="theme-color" content="#040818">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;800&display=swap" rel="stylesheet">
 <style>
 /* ===================================================================
    توکن‌های طراحی
@@ -1126,15 +1127,423 @@ button,.btn,[role=button]{ -webkit-tap-highlight-color:transparent; }
   .nx-nav-reveal,.nx-row-reveal,.nx-page-enter,.nx-page-exit,.sidebar .nav-item.nx-nav-stagger,#pageContent .chart-canvas-wrap,#pageContent .chart-container,#pageContent .chart-wrap,#pageContent .portfolio-chart-wrap{ animation:none!important; }
   .nx-interactive{ transition:none!important; }
 }
+/* ===================================================================
+   QAIRO — سیستم طراحی جدید (چیدمان موبایل‌محور، شیشه‌ای، درخشان)
+   این لایه آخرین لایه‌ی CSS است و ظاهر کل برنامه را بازتعریف می‌کند.
+   =================================================================== */
+:root, :root[data-theme="dark"]{
+  --q-bg:#040818; --q-bg2:#070d29; --q-card:#0c1636; --q-card2:#101d47;
+  --q-line:#22377a66; --q-line2:#3a5bd433;
+  --q-blue:#2f6bff; --q-blue2:#4d8bff; --q-violet:#7a4dff; --q-cyan:#27d6ee;
+  --q-up:#1fe08f; --q-down:#ff4d6d; --q-amber:#ffc24d;
+  --q-grad:linear-gradient(115deg,#2f6bff 0%,#5a5cff 55%,#7a4dff 100%);
+  --q-grad-up:linear-gradient(115deg,#12c77a,#2be39a);
+  --q-grad-down:linear-gradient(115deg,#ff3b64,#ff6a85);
+  --q-glow:0 0 0 1px #4d8bff22,0 10px 34px -14px #2f6bffaa;
+  --q-col:520px;
+
+  --bg:var(--q-bg); --bg-soft:var(--q-bg2); --surface:var(--q-card); --surface-raised:var(--q-card2);
+  --surface-hover:#16265a; --border:#2a3f86; --border-soft:#1b2c66; --border-strong:#3a5bd455;
+  --accent:#4d8bff; --accent-strong:#2f6bff; --accent-dim:#2a55c9; --accent-soft:#2f6bff1f; --accent-soft-strong:#2f6bff3a;
+  --blue:#6ea0ff; --blue-soft:#2f6bff22; --green:#1fe08f; --green-soft:#1fe08f1c; --red:#ff5d7a; --red-soft:#ff4d6d1c;
+  --amber:#ffc24d; --amber-soft:#ffc24d1c;
+  --text:#f4f7ff; --text-dim:#b4c1e6; --text-faint:#7f90c0;
+  --radius-sm:12px; --radius-md:16px; --radius-lg:22px;
+  --shadow-card:0 1px 0 #ffffff0d inset,0 14px 36px -20px #000d;
+  --ease-pop:cubic-bezier(.16,1,.3,1);
+}
+:root[data-theme="light"]{
+  --q-bg:#eef2fb; --q-bg2:#e6ecf9; --q-card:#ffffff; --q-card2:#f5f8ff; --q-line:#c9d5f0; --q-line2:#d9e2f6;
+  --bg:#eef2fb; --bg-soft:#e6ecf9; --surface:#fff; --surface-raised:#f7f9ff; --surface-hover:#eaf0ff;
+  --border:#c9d5f0; --border-soft:#dbe4f7; --accent:#2f6bff; --accent-strong:#2557d6; --accent-soft:#2f6bff18; --accent-soft-strong:#2f6bff2e;
+  --text:#0e1838; --text-dim:#3b4a75; --text-faint:#6a789f; --green:#0a9d63; --red:#d6304f; --amber:#a76a00;
+  --shadow-card:0 1px 0 #fff inset,0 10px 28px -18px #1a2a6a40;
+}
+
+/* ---------- پایه ---------- */
+html{ background:var(--q-bg); }
+body{
+  font-size:14.5px; line-height:1.75; overflow-x:hidden;
+  background:
+    radial-gradient(520px 380px at 85% -4%,#2f6bff30,transparent 70%),
+    radial-gradient(460px 360px at 0% 28%,#7a4dff24,transparent 70%),
+    radial-gradient(600px 420px at 50% 108%,#27d6ee14,transparent 70%),var(--q-bg);
+  background-attachment:fixed;
+}
+[data-theme="light"] body{ background:radial-gradient(520px 380px at 85% -4%,#2f6bff1c,transparent 70%),var(--q-bg); background-attachment:fixed; }
+[data-theme="dark"] body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:-1; opacity:.5;
+  background-image:
+    radial-gradient(1.2px 1.2px at 20% 30%,#ffffff55,transparent),
+    radial-gradient(1px 1px at 70% 12%,#9db8ff66,transparent),
+    radial-gradient(1px 1px at 40% 78%,#ffffff40,transparent),
+    radial-gradient(1.4px 1.4px at 88% 64%,#7aa6ff66,transparent),
+    radial-gradient(1px 1px at 10% 90%,#ffffff40,transparent);
+  background-size:380px 380px; animation:q-stars 60s linear infinite; mask-image:none;
+}
+@keyframes q-stars{ to{ background-position:380px 380px; } }
+.num{ font-feature-settings:"tnum"; }
+
+/* ---------- پوسته: ستون موبایل، منو کشویی ---------- */
+.shell{ display:block; min-height:100vh; }
+.main{ max-width:var(--q-col); margin:0 auto; position:relative; }
+.content{ max-width:var(--q-col); padding:6px 16px 128px; }
+.sidebar-layer{ position:fixed; inset:0; z-index:60; overflow:hidden; pointer-events:none; grid-column:auto; }
+.sidebar{
+  position:absolute; inset-inline-end:0; top:0; height:100%; width:min(300px,84vw); pointer-events:auto;
+  transform:translateX(-104%); transition:transform .45s var(--ease-pop);
+  background:linear-gradient(180deg,#0a1436f5,#050a20fa); border:0; border-inline-start:1px solid var(--q-line);
+  backdrop-filter:blur(22px); padding:22px 16px; box-shadow:-30px 0 70px -30px #000;
+}
+[dir="rtl"] .sidebar{ inset-inline-end:auto; inset-inline-start:0; right:0; left:auto; transform:translateX(104%); }
+.sidebar.open{ transform:translateX(0)!important; }
+.sidebar-scrim{ background:#02050fb3; backdrop-filter:blur(4px); z-index:55; display:block; opacity:0; pointer-events:none; transition:opacity .35s ease; }
+.sidebar-scrim.open{ opacity:1; pointer-events:auto; }
+.menu-btn{ display:inline-flex!important; }
+[data-theme="light"] .sidebar{ background:#fff; }
+
+.brand{ padding:6px 6px 22px; gap:12px; }
+.brand-mark{ width:42px; height:42px; border-radius:14px; background:var(--q-grad)!important; color:#fff!important; box-shadow:0 0 0 1px #ffffff26 inset,0 0 26px #4d6bffaa; animation:q-breathe 4.5s ease-in-out infinite; }
+.brand-mark svg{ width:24px; height:24px; }
+.brand-name{ font-size:17px; font-weight:800; letter-spacing:.14em; font-family:"Inter","Vazirmatn",sans-serif; }
+.brand-sub{ font-size:10.5px; color:var(--text-faint); }
+@keyframes q-breathe{ 0%,100%{ box-shadow:0 0 0 1px #ffffff26 inset,0 0 18px #4d6bff88; } 50%{ box-shadow:0 0 0 1px #ffffff40 inset,0 0 34px #7a4dffcc; } }
+.nav-item{ border-radius:14px; padding:12px 14px; font-size:13.5px; border:1px solid transparent; }
+.nav-item .ic{ width:20px; height:20px; }
+.nav-item.active{ background:linear-gradient(100deg,#2f6bff30,#7a4dff1f); border-color:#4d6bff55; color:#fff; box-shadow:0 0 22px -8px #2f6bffaa; }
+.nav-item.active::before{ background:var(--q-grad); box-shadow:0 0 14px #4d6bffcc; }
+
+/* ---------- نوار بالا ---------- */
+.topbar{
+  height:auto; min-height:64px; padding:14px 16px 8px; background:transparent!important; border:0!important; box-shadow:none!important; backdrop-filter:none!important;
+  max-width:var(--q-col); margin:0 auto; position:sticky; top:0; z-index:20;
+}
+.topbar::before{ content:""; position:absolute; inset:0 0 -8px; background:linear-gradient(180deg,var(--q-bg) 40%,transparent); z-index:-1; pointer-events:none; opacity:.92; }
+.topbar-title{ font-size:19px; font-weight:800; letter-spacing:-.01em; }
+.topbar-left{ gap:12px; }
+.icon-btn,.menu-btn{
+  width:40px; height:40px; border-radius:13px; display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+  background:linear-gradient(145deg,#14214f,#0b1534); border:1px solid var(--q-line); color:var(--text);
+  transition:transform .25s var(--ease-pop),box-shadow .3s,border-color .3s;
+}
+[data-theme="light"] .icon-btn,[data-theme="light"] .menu-btn{ background:#fff; }
+.icon-btn:hover,.menu-btn:hover{ transform:translateY(-2px); border-color:#4d8bff88; box-shadow:0 8px 20px -10px #2f6bffcc; }
+.icon-btn:active,.menu-btn:active{ transform:scale(.92); }
+.icon-btn .ic,.menu-btn .ic{ width:19px; height:19px; }
+#lastUpdate{ display:none; }
+#connBadge .badge{ padding:6px 9px; }
+#connBadge .badge-label{ display:none; }
+
+/* ---------- نوار پایین شناور ---------- */
+.bottom-nav{
+  display:flex!important; inset-inline:auto; left:50%; right:auto; transform:translateX(-50%); width:min(calc(100% - 22px),calc(var(--q-col) - 12px));
+  bottom:calc(10px + env(safe-area-inset-bottom)); border-radius:26px; padding:8px 8px; gap:2px; justify-content:space-between; align-items:flex-end;
+  background:linear-gradient(180deg,#0f1b45ee,#08112fF2)!important; border:1px solid var(--q-line)!important; border-top:1px solid #4d8bff44!important;
+  backdrop-filter:blur(22px) saturate(150%); box-shadow:0 20px 50px -14px #000,0 0 40px -16px #2f6bffaa; z-index:40;
+}
+[data-theme="light"] .bottom-nav{ background:#ffffffee!important; }
+.bottom-nav .bn-item{ flex:1; min-width:0; position:relative; font-size:10.5px; padding:8px 4px; border-radius:18px; color:var(--text-faint); background:transparent; transition:color .3s,transform .35s var(--ease-pop); }
+.bottom-nav .bn-item .ic{ width:22px; height:22px; transition:transform .4s var(--ease-pop),filter .3s; }
+.bottom-nav .bn-item.active{ background:transparent!important; color:#fff; box-shadow:none!important; }
+.bottom-nav .bn-item.active .ic{ transform:translateY(-3px) scale(1.12); color:var(--q-blue2); filter:drop-shadow(0 0 8px #4d8bffcc); }
+.bottom-nav .bn-item.active::after{ content:""; position:absolute; bottom:1px; left:50%; width:18px; height:3px; margin-left:-9px; border-radius:3px; background:var(--q-grad); box-shadow:0 0 10px #4d8bff; animation:q-pop .5s var(--ease-pop); }
+@keyframes q-pop{ from{ transform:scaleX(0); opacity:0; } to{ transform:scaleX(1); opacity:1; } }
+.bottom-nav .bn-item.bn-center{ flex:none; width:62px; margin-top:-26px; padding:0; }
+.bn-center .bn-orb{ width:56px; height:56px; border-radius:50%; margin:0 auto; display:flex; align-items:center; justify-content:center; color:#fff; background:var(--q-grad); box-shadow:0 0 0 4px #070d29,0 0 0 5px #4d8bff55,0 10px 28px -4px #4d6bff; animation:q-orb 3.4s ease-in-out infinite; }
+.bn-center .bn-orb .ic{ width:25px; height:25px; transform:none!important; filter:none!important; color:#fff!important; }
+.bn-center span.bn-lbl{ display:block; text-align:center; margin-top:4px; }
+.bn-center.active .bn-orb{ filter:brightness(1.15); }
+.bottom-nav .bn-center.active::after{ display:none; }
+@keyframes q-orb{ 0%,100%{ box-shadow:0 0 0 4px #070d29,0 0 0 5px #4d8bff55,0 10px 24px -6px #4d6bff; } 50%{ box-shadow:0 0 0 4px #070d29,0 0 0 8px #7a4dff33,0 12px 34px -4px #7a4dff; } }
+
+/* ---------- کارت‌ها ---------- */
+.card{
+  background:linear-gradient(150deg,#101d4acc 0%,#0a1536e6 60%,#081029f2 100%); border:1px solid var(--q-line); border-radius:22px; box-shadow:var(--shadow-card);
+  backdrop-filter:blur(10px); transition:border-color .35s,box-shadow .4s,transform .4s var(--ease-pop);
+}
+[data-theme="light"] .card{ background:#fff; backdrop-filter:none; }
+.card::before{ content:""; position:absolute; inset:0 20px auto; height:1px; background:linear-gradient(90deg,transparent,#6ea0ff77,#7a4dff66,transparent); opacity:.8; }
+@media (hover:hover){ .card:hover{ border-color:#4d8bff66; box-shadow:0 18px 44px -22px #000,0 0 30px -12px #2f6bffaa; transform:translateY(-2px); } }
+.card-pad{ padding:18px; }
+.card-head{ margin-bottom:12px; }
+.card-title{ font-size:14.5px; font-weight:800; }
+.page-head{ margin:4px 0 16px; }
+.page-head h1{ font-size:21px; }
+.page-head .sub{ font-size:12px; line-height:1.7; }
+
+/* دکمه‌ها */
+.btn{ border-radius:15px; font-weight:700; letter-spacing:0; transition:transform .3s var(--ease-pop),box-shadow .3s,filter .3s,background .3s,border-color .3s; }
+.btn-primary,[data-theme="dark"] .btn-primary{ background:var(--q-grad); color:#fff; border:0; box-shadow:0 1px 0 #ffffff40 inset,0 12px 26px -12px #4d6bffcc; }
+.btn-primary:hover{ filter:brightness(1.12); transform:translateY(-2px); }
+.btn-outline,.btn-ghost{ background:#ffffff08; border:1px solid var(--q-line); color:var(--text); }
+.btn-outline:hover,.btn-ghost:hover{ background:#2f6bff22; border-color:#4d8bff88; }
+.btn-danger-ghost{ border-color:#ff4d6d55; color:#ff7d93; background:#ff4d6d12; }
+.btn-block{ width:100%; }
+.btn-sm{ border-radius:12px; }
+
+.chip,.tab-btn{
+  border-radius:999px; border:1px solid var(--q-line); background:#ffffff06; color:var(--text-dim); padding:7px 15px; font-size:12.5px; font-weight:700; cursor:pointer;
+  transition:all .3s var(--ease-pop); white-space:nowrap;
+}
+.chip:hover,.tab-btn:hover{ border-color:#4d8bff88; color:var(--text); transform:translateY(-1px); }
+.chip.active,.tab-btn.active{ background:var(--q-grad); border-color:transparent; color:#fff; box-shadow:0 8px 20px -10px #4d6bffcc; }
+.tabs{ display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; padding:2px; }
+.tabs::-webkit-scrollbar{ display:none; }
+.range-tabs{ display:flex; gap:6px; flex-wrap:wrap; }
+
+.badge{ border-radius:999px; font-weight:800; }
+.badge-green{ background:var(--green-soft); color:var(--green); }
+.badge-red{ background:var(--red-soft); color:var(--red); }
+.badge-amber{ background:var(--amber-soft); color:var(--amber); }
+.badge-blue{ background:var(--blue-soft); color:var(--blue); }
+
+input,select,textarea,.input{
+  background:#08122d; border:1px solid var(--q-line); border-radius:15px; color:var(--text); transition:border-color .3s,box-shadow .3s;
+}
+[data-theme="light"] input,[data-theme="light"] .input{ background:#f5f8ff; }
+input:focus,.input:focus{ outline:none; border-color:#4d8bff!important; box-shadow:0 0 0 3px #2f6bff30,0 0 22px -8px #2f6bff!important; }
+.field label{ font-size:12.5px; color:var(--text-dim); font-weight:700; }
+
+.switch .track{ background:#1b2a5e; border:1px solid var(--q-line); transition:background .35s; }
+.switch input:checked + .track{ background:var(--q-grad); border-color:transparent; box-shadow:0 0 16px -2px #4d6bffcc; }
+
+.modal,.dropdown-sheet{ background:linear-gradient(160deg,#101d4a,#0a1233); border:1px solid var(--q-line); border-radius:24px; }
+[data-theme="light"] .modal,[data-theme="light"] .dropdown-sheet{ background:#fff; }
+.modal-backdrop,.dropdown-sheet-backdrop{ background:#02050fb8; backdrop-filter:blur(6px); }
+.toast{ border-radius:16px; background:#0e1a42ee; border:1px solid var(--q-line); }
+
+.skel{ background:linear-gradient(90deg,#14214f 0%,#1d2f6b 50%,#14214f 100%); background-size:200% 100%; animation:q-shimmer 1.4s linear infinite; border-radius:10px; }
+@keyframes q-shimmer{ to{ background-position:-200% 0; } }
+
+.coin-ic{ border-radius:50%; font-weight:800; display:flex; align-items:center; justify-content:center; flex:none; }
+.mock-flag{ border-radius:999px; }
+
+/* ---------- جدول‌ها → لیست کارتی ---------- */
+.table-wrap{ overflow:visible; }
+.tbl{ width:100%; border-collapse:separate; border-spacing:0 8px; }
+.tbl thead{ display:none; }
+.tbl tbody tr{ background:linear-gradient(150deg,#0f1c47aa,#0a1535cc); border:1px solid var(--q-line2); cursor:pointer; transition:transform .3s var(--ease-pop),border-color .3s,background .3s; }
+.tbl tbody td{ padding:12px 10px; border:0; }
+.tbl tbody td:first-child{ border-radius:0 16px 16px 0; }
+.tbl tbody td:last-child{ border-radius:16px 0 0 16px; }
+.tbl tbody tr:hover{ transform:translateX(-3px); background:#16265acc; }
+.col-opt{ display:none; }
+[data-theme="light"] .tbl tbody tr{ background:#f5f8ff; }
+
+.cell-asset{ display:flex; align-items:center; gap:10px; font-weight:700; }
+
+/* ---------- گفت‌وگو/نمای AI شناور ---------- */
+.ai-fab{ display:none!important; }
+.ai-chat{ border-radius:24px; background:linear-gradient(170deg,#101d4aF5,#070d29fa); border:1px solid var(--q-line); backdrop-filter:blur(20px); }
+
+/* ===================================================================
+   اجزای اختصاصی QAIRO
+   =================================================================== */
+.q-hello{ display:flex; align-items:center; justify-content:space-between; margin:2px 2px 14px; }
+.q-hello h2{ font-size:20px; font-weight:800; }
+.q-hello p{ font-size:12px; color:var(--text-faint); margin-top:2px; }
+
+/* Orb (هسته‌ی هوش مصنوعی) */
+.q-orb{ position:relative; width:84px; height:84px; flex:none; }
+.q-orb i{ position:absolute; inset:0; border-radius:50%; }
+.q-orb .o1{ background:radial-gradient(circle at 35% 30%,#b9a4ff,#5a5cff 45%,#1a2f9a 78%,#0a1236); box-shadow:0 0 36px #6a5cffaa,inset 0 0 20px #ffffff30; animation:q-float 5s ease-in-out infinite; }
+.q-orb .o2{ border:1.5px solid #6ea0ff88; inset:-8px; animation:q-spin 9s linear infinite; border-top-color:transparent; border-left-color:transparent; }
+.q-orb .o3{ border:1px dashed #a78bff66; inset:-16px; animation:q-spin 16s linear infinite reverse; }
+.q-orb b{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; font-size:27px; font-weight:800; font-family:"Inter",sans-serif; text-shadow:0 0 14px #fff; z-index:2; }
+@keyframes q-spin{ to{ transform:rotate(360deg); } }
+@keyframes q-float{ 0%,100%{ transform:translateY(0) scale(1); } 50%{ transform:translateY(-4px) scale(1.04); } }
+.q-orb.big{ width:150px; height:150px; margin:8px auto; }
+.q-orb.big b{ font-size:50px; }
+
+.q-ai-core{
+  position:relative; overflow:hidden; display:flex; align-items:center; gap:16px; padding:18px 16px; cursor:pointer; border-radius:24px;
+  background:radial-gradient(260px 160px at 100% 0%,#7a4dff55,transparent 70%),radial-gradient(240px 160px at 0% 100%,#2f6bff55,transparent 70%),linear-gradient(150deg,#14235f,#0a1238);
+  border:1px solid #5a7bff66; box-shadow:0 20px 50px -22px #4d6bffcc;
+}
+.q-ai-core::after{ content:""; position:absolute; inset:0; background:linear-gradient(110deg,transparent 40%,#ffffff18 50%,transparent 60%); transform:translateX(-120%); animation:q-sheen 5.5s ease-in-out infinite; pointer-events:none; }
+@keyframes q-sheen{ 0%,55%{ transform:translateX(-120%); } 100%{ transform:translateX(120%); } }
+.q-ai-core .q-body{ flex:1; min-width:0; position:relative; z-index:1; }
+.q-ai-core h3{ font-size:15.5px; font-weight:800; }
+.q-ai-core small{ display:block; font-size:11px; color:var(--text-dim); margin:2px 0 8px; }
+.q-ai-core .q-status{ font-size:11.5px; color:var(--text-dim); line-height:1.8; margin-bottom:10px; min-height:20px; }
+.q-ai-core .q-cta{ display:block; width:100%; text-align:center; padding:10px; border-radius:14px; font-weight:800; font-size:13px; color:#fff; background:var(--q-grad); box-shadow:0 10px 24px -10px #4d6bff; border:0; cursor:pointer; transition:transform .3s var(--ease-pop),filter .3s; }
+.q-ai-core .q-cta:hover{ transform:translateY(-2px); filter:brightness(1.1); }
+.q-live{ display:inline-flex; align-items:center; gap:6px; font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:999px; background:#1fe08f1c; color:var(--q-up); }
+.q-live::before{ content:""; width:7px; height:7px; border-radius:50%; background:currentColor; box-shadow:0 0 10px currentColor; animation:q-blink 1.8s infinite; }
+.q-live.off{ background:#7f90c022; color:var(--text-faint); } .q-live.off::before{ animation:none; }
+.q-live.kill{ background:#ff4d6d1f; color:var(--q-down); }
+@keyframes q-blink{ 50%{ opacity:.35; } }
+
+.q-portfolio{ margin-top:14px; padding:18px; position:relative; overflow:hidden; }
+.q-portfolio .q-lbl{ font-size:12px; color:var(--text-dim); }
+.q-portfolio .q-total{ font-size:clamp(25px,7.2vw,33px); font-weight:800; margin:2px 0 0; letter-spacing:-.01em; line-height:1.35; }
+.q-portfolio .q-total small{ font-size:13px; color:var(--text-dim); font-weight:600; margin-inline-start:6px; }
+.q-chg{ display:inline-flex; align-items:center; gap:5px; font-weight:800; font-size:13px; direction:ltr; }
+.q-chg.up{ color:var(--q-up); } .q-chg.down{ color:var(--q-down); }
+.q-chg .ic{ width:14px; height:14px; }
+.q-spark-wrap{ height:118px; margin:6px -6px -8px; }
+.q-ranges{ display:flex; gap:6px; margin-top:10px; }
+
+.q-section{ margin:18px 2px 10px; display:flex; align-items:center; justify-content:space-between; }
+.q-section h3{ font-size:14.5px; font-weight:800; }
+.q-section a,.q-section button{ background:none; border:0; color:var(--q-blue2); font-size:12px; font-weight:700; cursor:pointer; }
+
+.q-tri{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.q-mini{ padding:12px 10px; border-radius:18px; text-align:center; cursor:pointer; background:linear-gradient(150deg,#101d4acc,#0a1536e6); border:1px solid var(--q-line); transition:transform .35s var(--ease-pop),border-color .3s,box-shadow .3s; }
+.q-mini:hover{ transform:translateY(-4px); border-color:#4d8bff88; box-shadow:0 14px 30px -16px #2f6bff; }
+.q-mini .q-h{ display:flex; align-items:center; justify-content:center; gap:6px; font-weight:800; font-size:12.5px; }
+.q-mini .q-p{ font-size:12px; margin-top:6px; }
+.q-mini .ic{ width:16px; height:16px; flex:none; }
+.q-mini .q-h{ white-space:nowrap; font-size:11.5px; }
+.q-mini .q-sp{ display:block; height:30px; }
+.bn-center .bn-lbl{ white-space:nowrap; }
+.q-mini canvas{ height:30px!important; margin-top:4px; }
+
+.q-tools{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+.q-tool{ display:flex; flex-direction:column; align-items:center; gap:7px; padding:12px 4px 10px; border-radius:18px; cursor:pointer; background:linear-gradient(150deg,#101d4acc,#0a1536e6); border:1px solid var(--q-line); font-size:11px; font-weight:700; color:var(--text-dim); text-align:center; line-height:1.5; transition:transform .35s var(--ease-pop),border-color .3s,color .3s,box-shadow .3s; }
+.q-tool:hover{ transform:translateY(-4px); color:#fff; border-color:#4d8bff88; box-shadow:0 14px 28px -14px #2f6bff; }
+.q-tool .q-ti{ width:40px; height:40px; border-radius:14px; display:flex; align-items:center; justify-content:center; color:#fff; background:linear-gradient(145deg,#2f6bff55,#7a4dff44); border:1px solid #6ea0ff55; box-shadow:0 0 18px -6px #4d6bff; }
+.q-tool .q-ti .ic{ width:20px; height:20px; }
+.q-tool:nth-child(2) .q-ti{ background:linear-gradient(145deg,#27d6ee44,#2f6bff44); }
+.q-tool:nth-child(3) .q-ti{ background:linear-gradient(145deg,#1fe08f44,#27d6ee33); }
+.q-tool:nth-child(4) .q-ti{ background:linear-gradient(145deg,#ffc24d44,#ff6a8544); }
+
+/* لیست‌های ارز */
+.q-list{ display:flex; flex-direction:column; gap:9px; }
+.q-row{ display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:18px; cursor:pointer; background:linear-gradient(150deg,#0f1c47b3,#0a1535d9); border:1px solid var(--q-line2); transition:transform .35s var(--ease-pop),border-color .3s,background .3s,box-shadow .3s; }
+[data-theme="light"] .q-row,[data-theme="light"] .q-mini,[data-theme="light"] .q-tool{ background:#fff; }
+.q-row:hover{ transform:translateX(-4px); border-color:#4d8bff77; background:#15275fcc; box-shadow:0 12px 26px -16px #2f6bff; }
+.q-row:active{ transform:scale(.985); }
+.q-row .q-id{ flex:1; min-width:0; }
+.q-row .q-nm{ font-weight:800; font-size:13.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.q-row .q-sy{ font-size:11px; color:var(--text-faint); direction:ltr; text-align:right; }
+.q-row .q-sp{ width:64px; height:30px; flex:none; }
+.q-row .q-pr{ text-align:left; min-width:92px; }
+.q-row .q-pr .p{ font-weight:800; font-size:13px; direction:ltr; }
+.q-row .q-pr .c{ font-size:11.5px; font-weight:800; direction:ltr; }
+.up,.q-up{ color:var(--q-up); } .down,.q-down{ color:var(--q-down); }
+
+.q-search{ position:relative; margin-bottom:12px; }
+.q-search .ic{ position:absolute; inset-inline-start:15px; top:50%; transform:translateY(-50%); width:18px; height:18px; color:var(--text-faint); pointer-events:none; }
+.q-search input{ width:100%; padding:13px 44px 13px 14px; height:48px; border-radius:18px; font-size:13.5px; }
+.q-filters{ display:flex; gap:8px; overflow-x:auto; padding:2px 1px 12px; scrollbar-width:none; }
+.q-filters::-webkit-scrollbar{ display:none; }
+
+/* جزئیات ارز */
+.q-coin-top{ display:flex; align-items:center; gap:12px; margin:4px 2px 4px; }
+.q-coin-top .q-id{ flex:1; }
+.q-coin-top h2{ font-size:17px; font-weight:800; }
+.q-coin-top span{ font-size:12px; color:var(--text-faint); }
+.q-bigprice{ font-size:clamp(26px,8vw,34px); font-weight:800; direction:ltr; text-align:right; margin:4px 2px 2px; letter-spacing:-.01em; }
+.q-chart-card{ padding:14px 10px 10px; margin-top:12px; }
+.q-chart-card .chart-canvas-wrap{ height:250px; margin:8px 0 0; }
+.q-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin-top:12px; }
+.q-stat{ padding:12px 8px; border-radius:16px; text-align:center; background:#ffffff07; border:1px solid var(--q-line2); }
+.q-stat .l{ font-size:10.5px; color:var(--text-faint); } .q-stat .v{ font-size:12.5px; font-weight:800; margin-top:3px; direction:ltr; }
+.q-trade-bar{ position:fixed; z-index:35; left:50%; transform:translateX(-50%); bottom:calc(88px + env(safe-area-inset-bottom)); width:min(calc(100% - 32px),calc(var(--q-col) - 32px)); display:grid; grid-template-columns:1fr 1fr; gap:10px; animation:q-rise .7s var(--ease-pop) both .2s; }
+.q-buy,.q-sell{ border:0; cursor:pointer; padding:14px; border-radius:17px; font-weight:800; font-size:15px; color:#fff; font-family:inherit; transition:transform .3s var(--ease-pop),filter .3s; }
+.q-buy{ background:var(--q-grad-up); box-shadow:0 14px 28px -12px #1fe08faa; } .q-sell{ background:var(--q-grad-down); box-shadow:0 14px 28px -12px #ff4d6daa; }
+.q-buy:hover,.q-sell:hover{ transform:translateY(-3px); filter:brightness(1.1); } .q-buy:active,.q-sell:active{ transform:scale(.96); }
+@keyframes q-rise{ from{ opacity:0; transform:translate(-50%,24px); } to{ opacity:1; transform:translate(-50%,0); } }
+
+/* کیف پول */
+.q-donut-card{ margin-top:14px; display:flex; align-items:center; gap:14px; padding:16px; }
+.q-donut{ position:relative; width:138px; height:138px; flex:none; }
+.q-donut .mid{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:11px; color:var(--text-dim); font-weight:700; pointer-events:none; }
+.q-legend{ flex:1; display:flex; flex-direction:column; gap:7px; min-width:0; }
+.q-legend div{ display:flex; align-items:center; gap:8px; font-size:12px; }
+.q-legend i{ width:10px; height:10px; border-radius:3px; flex:none; }
+.q-legend b{ margin-inline-start:auto; direction:ltr; font-weight:800; }
+.q-seg{ display:grid; grid-template-columns:1fr 1fr; padding:4px; border-radius:16px; background:#ffffff08; border:1px solid var(--q-line2); margin:14px 0 12px; }
+.q-seg button{ border:0; background:transparent; color:var(--text-dim); padding:10px; border-radius:12px; font-weight:800; font-size:13px; cursor:pointer; font-family:inherit; transition:all .35s var(--ease-pop); }
+.q-seg button.active{ background:var(--q-grad); color:#fff; box-shadow:0 8px 20px -10px #4d6bff; }
+
+/* تنظیمات */
+.q-set-group{ display:flex; flex-direction:column; gap:9px; }
+.set-row{ display:flex; align-items:center; gap:12px; padding:13px 14px; border-radius:18px; background:linear-gradient(150deg,#0f1c47b3,#0a1535d9); border:1px solid var(--q-line2); transition:border-color .3s,transform .3s var(--ease-pop); border-bottom:1px solid var(--q-line2); justify-content:space-between; }
+.set-row:hover{ border-color:#4d8bff66; transform:translateX(-3px); }
+[data-theme="light"] .set-row{ background:#fff; }
+.set-row .label{ font-weight:800; font-size:13.5px; } .set-row .desc{ font-size:11px; color:var(--text-faint); margin-top:2px; }
+.q-set-ic{ width:38px; height:38px; border-radius:13px; display:flex; align-items:center; justify-content:center; flex:none; background:linear-gradient(145deg,#2f6bff44,#7a4dff33); border:1px solid #6ea0ff44; color:#cfe0ff; }
+.q-set-ic .ic{ width:19px; height:19px; }
+.dropdown-trigger{ border-radius:13px; background:#ffffff08; border:1px solid var(--q-line); color:var(--text); padding:8px 12px; font-size:12.5px; display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-family:inherit; }
+
+/* هوش مصنوعی */
+.q-ai-hero{ text-align:center; padding:14px 10px 6px; }
+.q-ai-hero h2{ font-size:19px; font-weight:800; margin-top:6px; } .q-ai-hero p{ font-size:12px; color:var(--text-dim); margin-top:4px; line-height:1.9; }
+.q-feat{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0; }
+.ai-banner{ border-radius:20px; }
+.ai-grid2{ display:grid; grid-template-columns:1fr; gap:12px; }
+.kpi-grid,.wallet-summary{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px; }
+.kpi-card{ padding:14px; border-radius:20px; }
+.kpi-ic{ width:36px; height:36px; border-radius:12px; background:linear-gradient(145deg,#2f6bff44,#7a4dff33); color:#cfe0ff; display:flex; align-items:center; justify-content:center; }
+.kpi-ic.green{ background:#1fe08f22; color:var(--q-up); } .kpi-ic.amber{ background:#ffc24d22; color:var(--q-amber); } .kpi-ic.blue{ background:#27d6ee22; color:var(--q-cyan); }
+.kpi-label{ font-size:11.5px; color:var(--text-dim); margin-top:8px; } .kpi-value{ font-size:15px; font-weight:800; line-height:1.5; }
+.kpi-card:hover{ transform:translateY(-3px); }
+.kpi-top{ display:flex; justify-content:space-between; align-items:center; }
+
+.info-row{ display:flex; justify-content:space-between; padding:9px 0; border-bottom:1px dashed var(--q-line2); font-size:12.5px; }
+.state-box{ padding:28px 14px; text-align:center; color:var(--text-dim); }
+.state-box .title{ font-weight:800; color:var(--text); }
+
+/* ---------- ورود / اسپلش ---------- */
+.connect-shell{
+  min-height:100vh; padding:24px 22px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;
+  background:radial-gradient(560px 420px at 50% 28%,#4d3cff40,transparent 70%),radial-gradient(480px 380px at 90% 100%,#27d6ee22,transparent 70%),transparent;
+}
+.connect-shell::before,.connect-shell::after{ content:""; position:absolute; border-radius:50%; pointer-events:none; filter:blur(60px); }
+.connect-shell::before{ width:300px; height:300px; background:#2f6bff55; top:-80px; right:-60px; animation:q-drift 11s ease-in-out infinite; }
+.connect-shell::after{ width:260px; height:260px; background:#7a4dff44; bottom:-60px; left:-50px; animation:q-drift 14s ease-in-out infinite reverse; }
+@keyframes q-drift{ 50%{ transform:translate(30px,24px) scale(1.12); } }
+.connect-card{ position:relative; z-index:1; width:100%; max-width:420px; padding:26px 22px!important; background:linear-gradient(160deg,#101d4acc,#070d29e6)!important; border-radius:28px; animation:q-rise2 .8s var(--ease-pop) both; }
+@keyframes q-rise2{ from{ opacity:0; transform:translateY(28px) scale(.97); } to{ opacity:1; transform:none; } }
+.q-auth-logo{ text-align:center; margin-bottom:12px; }
+.q-auth-logo .q-orb{ margin:6px auto 22px; }
+.q-wordmark{ font-family:"Inter","Vazirmatn",sans-serif; font-size:30px; font-weight:800; letter-spacing:.22em; background:linear-gradient(180deg,#fff,#a9bdff); -webkit-background-clip:text; background-clip:text; color:transparent; padding-inline-start:.22em; }
+.q-tagline{ font-size:11.5px; color:var(--text-dim); margin-top:2px; letter-spacing:.02em; }
+.connect-title{ font-size:19px; text-align:center; margin:10px 0 6px; }
+.connect-desc{ font-size:12.5px; text-align:center; color:var(--text-dim); line-height:1.9; margin-bottom:12px; }
+.connect-foot{ text-align:center; font-size:11px; color:var(--text-faint); margin-top:14px; }
+.connect-logo{ display:none!important; }
+
+/* ---------- ورود نرم صفحه ---------- */
+#pageContent{ min-height:60vh; }
+.q-stagger > *{ animation:q-in .7s var(--ease-pop) both; }
+.q-stagger > *:nth-child(1){ animation-delay:.02s } .q-stagger > *:nth-child(2){ animation-delay:.09s } .q-stagger > *:nth-child(3){ animation-delay:.16s }
+.q-stagger > *:nth-child(4){ animation-delay:.23s } .q-stagger > *:nth-child(5){ animation-delay:.3s } .q-stagger > *:nth-child(n+6){ animation-delay:.36s }
+@keyframes q-in{ from{ opacity:0; transform:translateY(22px) scale(.98); } to{ opacity:1; transform:none; } }
+.q-row,.q-tool,.q-mini,.set-row{ animation:q-in .6s var(--ease-pop) both; }
+.q-list .q-row:nth-child(1){ animation-delay:.04s } .q-list .q-row:nth-child(2){ animation-delay:.08s } .q-list .q-row:nth-child(3){ animation-delay:.12s }
+.q-list .q-row:nth-child(4){ animation-delay:.16s } .q-list .q-row:nth-child(5){ animation-delay:.2s } .q-list .q-row:nth-child(6){ animation-delay:.24s } .q-list .q-row:nth-child(n+7){ animation-delay:.28s }
+.q-tools .q-tool:nth-child(2){ animation-delay:.07s } .q-tools .q-tool:nth-child(3){ animation-delay:.14s } .q-tools .q-tool:nth-child(4){ animation-delay:.21s }
+.q-tri .q-mini:nth-child(2){ animation-delay:.07s } .q-tri .q-mini:nth-child(3){ animation-delay:.14s }
+.nx-page-enter{ animation:q-in .6s var(--ease-pop) both; }
+.nx-page-exit{ animation:q-out .18s ease-in both; }
+@keyframes q-out{ to{ opacity:0; transform:translateY(-8px); } }
+.q-count{ display:inline-block; }
+
+@media (min-width:700px){
+  body{ background-attachment:fixed; }
+  .main{ border-inline:1px solid #22377a33; min-height:100vh; box-shadow:0 0 120px -50px #2f6bffaa; }
+}
+@media (max-width:380px){
+  .q-tools{ grid-template-columns:repeat(2,1fr); } .q-feat{ grid-template-columns:repeat(2,1fr); }
+  .q-donut{ width:116px; height:116px; }
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{ animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important; }
+}
+
 </style>
 </head>
 <body>
 
 <div id="app">
   <div class="connect-shell">
-    <div class="state-box">
-      <div class="spin" style="width:24px;height:24px;border-width:2.5px;color:var(--accent);"></div>
-      <div class="title" style="margin-top:6px;">در حال بارگذاری برنامه…</div>
+    <div class="state-box" style="position:relative;z-index:1;">
+      <div class="q-orb big"><i class="o3"></i><i class="o2"></i><i class="o1"></i><b>Q</b></div>
+      <div class="q-wordmark" style="margin-top:22px;">QAIRO</div>
+      <div class="q-tagline">AI-Powered Crypto Intelligence &amp; Trading</div>
     </div>
   </div>
 </div>
@@ -1315,6 +1724,55 @@ const Icons = {
   logout: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke-linecap="round" stroke-linejoin="round"/><path d="M16 17l5-5-5-5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12H9" stroke-linecap="round"/></svg>`,
   bot: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="8" width="16" height="11" rx="3"/><path d="M12 4v4" stroke-linecap="round"/><circle cx="12" cy="3.5" r="1"/><circle cx="9" cy="13.5" r="1.2" fill="currentColor"/><circle cx="15" cy="13.5" r="1.2" fill="currentColor"/><path d="M9.5 16.5h5" stroke-linecap="round"/></svg>`,
   clock: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+};
+
+Object.assign(Icons, {
+  home: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke-linejoin="round"/><path d="M10 20v-6h4v6"/></svg>`,
+  signals: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" stroke-linecap="round"/></svg>`,
+  chat: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H9l-5 4z" stroke-linejoin="round"/><path d="M8 9.5h8M8 12.5h5" stroke-linecap="round"/></svg>`,
+  target: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/></svg>`,
+  pie: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v9h9a9 9 0 1 1-9-9z" stroke-linejoin="round"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg>`,
+  lock: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3" stroke-linecap="round"/></svg>`,
+  globe: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>`,
+  hash: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 9h14M5 15h14M10 4L8 20M16 4l-2 16" stroke-linecap="round"/></svg>`,
+  swap: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  chevR: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+  qlogo: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="6.5"/><path d="M14.5 14.5L19 19" stroke-linecap="round"/></svg>`,
+});
+const Q = {
+  E: Utils.el,
+  reduced: () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  countUp(el, to, render, dur = 1200){
+    if(!isFinite(to) || Q.reduced()){ el.textContent = render(to); return; }
+    const t0 = performance.now();
+    const step = (t) => { const p = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - p, 4); el.textContent = render(to * e); if(p < 1 && document.body.contains(el)) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  },
+  section(title, linkText, onLink){
+    return Utils.el("div", { class:"q-section" }, [Utils.el("h3", {}, title), linkText ? Utils.el("button", { onClick:onLink }, linkText) : null]);
+  },
+  orb(big){ return Utils.el("div", { class:"q-orb" + (big ? " big" : "") }, [Utils.el("i", { class:"o3" }), Utils.el("i", { class:"o2" }), Utils.el("i", { class:"o1" }), Utils.el("b", {}, "Q")]); },
+  chg(v){
+    if(v === null || v === undefined) return Utils.el("span", { class:"q-chg" }, "—");
+    return Utils.el("span", { class:`q-chg ${v >= 0 ? "up" : "down"}` }, Utils.formatPercent(v));
+  },
+  coinRow(c, withSpark = true){
+    const E = Utils.el;
+    const row = E("div", { class:"q-row", onClick: () => Router.go(`coin/${c.id}`) }, [
+      UI.coinAvatar(c.symbol, 40),
+      E("div", { class:"q-id" }, [E("div", { class:"q-nm" }, c.name), E("div", { class:"q-sy" }, c.symbol)]),
+      withSpark ? E("canvas", { class:"q-sp", "data-key":"row_" + c.id }) : null,
+      E("div", { class:"q-pr" }, [E("div", { class:"p num" }, Utils.formatPrice(c.price, "")), E("div", { class:`c ${(c.change24h ?? 0) >= 0 ? "up" : "down"}` }, Utils.formatPercent(c.change24h))]),
+    ]);
+    return row;
+  },
+  paintSparks(root, coins){
+    const ids = coins.map(c => c.id);
+    if(!ids.length) return;
+    Api.getSparklines(ids).then(sp => {
+      coins.forEach(c => { const cv = root.querySelector(`canvas[data-key="row_${c.id}"]`); const pts = sp.data && sp.data[c.id]; if(cv && pts) Charts.sparkline(cv, pts, (c.change24h ?? 0) >= 0); });
+    }).catch(() => {});
+  },
 };
 
 function ic(name, extraClass = ""){
@@ -1657,7 +2115,7 @@ const Charts = (() => {
     }
   }
 
-  function lineChart(key, canvas, points, { color, currency = "تومان", fill = true } = {}){
+  function lineChart(key, canvas, points, { color, currency = "تومان", fill = true, minimal = false } = {}){
     if(!canvas || typeof Chart === "undefined"){ destroy(key); return null; }
     // اگر نمودار با همین کلید روی همین بوم هست، فقط داده‌ها را نرم به‌روز کن
     const existing = instances.get(key);
@@ -1668,7 +2126,7 @@ const Charts = (() => {
       return existing;
     }
     destroy(key);
-    const accent = color || cssVar("--accent") || "#17c3b2";
+    const accent = color || cssVar("--accent") || "#4d8bff";
     const grid = cssVar("--border-soft") || "#1b2436";
     const textFaint = cssVar("--text-faint") || "#5c6680";
 
@@ -1730,7 +2188,7 @@ const Charts = (() => {
         scales:{
           x:{ display:false },
           y:{
-            display:true,
+            display:!minimal,
             position:"right",
             grid:{ color: grid, drawTicks:false },
             border:{ display:false },
@@ -2008,12 +2466,11 @@ function authShellStart(container){
   container.className = "connect-shell";
   const card = Utils.el("div", { class:"card card-pad connect-card" });
   container.appendChild(card);
-  card.appendChild(Utils.el("div", { class:"connect-logo" }, [
-    Utils.el("div", { class:"brand-mark", html: ic("logo") }),
-    Utils.el("div", { class:"connect-logo-text" }, [
-      Utils.el("b", {}, "صرافی من"),
-      Utils.el("span", {}, "داشبورد شخصی مدیریت دارایی"),
-    ]),
+  card.appendChild(Utils.el("div", { class:"q-auth-logo" }, [
+    Q.orb(false),
+    Utils.el("div", { class:"q-wordmark" }, "QAIRO"),
+    Utils.el("div", { class:"q-tagline" }, "AI-Powered Crypto Intelligence & Trading"),
+    Utils.el("div", { class:"q-tagline", style:"margin-top:6px;color:var(--q-blue2);" }, "آینده مالی، با هوش مصنوعی"),
   ]));
   return card;
 }
@@ -2416,221 +2873,130 @@ const PageConnect = {
 const PageDashboard = {
   async mount(container){
     container.innerHTML = "";
-    const head = Utils.el("div", { class:"page-head" }, [
-      Utils.el("div", {}, [
-        Utils.el("h1", {}, "داشبورد"),
-        Utils.el("div", { class:"sub" }, "نمای کلی دارایی‌ها و بازار"),
+    const E = Utils.el;
+    const root = E("div", { class:"q-stagger" });
+    container.appendChild(root);
+    const phone = State.get().account.phone;
+
+    root.appendChild(E("div", { class:"q-hello" }, [E("div", {}, [
+      E("h2", {}, "سلام! 👋"),
+      E("p", {}, phone ? `حساب ${Utils.maskPhone(phone)} · خلاصه‌ی امروز شما` : "خلاصه‌ی امروز شما"),
+    ])]));
+
+    // --- هسته‌ی هوش مصنوعی (داده‌ی واقعی موتور) ---
+    const MODE_FA = { suggest:"تحلیل و پیشنهاد", paper:"معامله‌ی آزمایشی", live:"معامله‌ی واقعی" };
+    const live = E("span", { class:"q-live off" }, "در حال بررسی");
+    const status = E("div", { class:"q-status" }, "در حال دریافت وضعیت موتور…");
+    const aiCard = E("div", { class:"q-ai-core", role:"button", tabindex:"0", onClick: () => Router.go("ai") }, [
+      Q.orb(false),
+      E("div", { class:"q-body" }, [
+        E("div", { style:"display:flex;align-items:center;justify-content:space-between;gap:8px;" }, [E("h3", {}, "QAIRO AI CORE"), live]),
+        E("small", {}, "هسته‌ی هوش مصنوعی معاملاتی"),
+        status,
+        E("button", { class:"q-cta" }, "مشاهده تحلیل هوشمند"),
       ]),
     ]);
-    container.appendChild(head);
+    root.appendChild(aiCard);
+    Api.aiGet("/status").then(st => {
+      const buys = Object.values(st.analysis || {}).filter(a => a.signal === "buy").length;
+      live.className = "q-live" + (st.killed ? " kill" : st.running ? "" : " off");
+      live.textContent = st.killed ? "توقف اضطراری" : st.running ? "فعال" : "متوقف";
+      status.textContent = st.mode === "suggest"
+        ? (buys ? `الان ${buys} پیشنهاد خرید فعال دارم؛ جزئیات در گزارش هوش مصنوعی است.` : "فعلاً پیشنهاد خریدی ندارم؛ بازار را زیر نظر دارم.")
+        : `حالت «${MODE_FA[st.mode]}»؛ ${st.counts.open} موقعیت باز.`;
+    }).catch(() => { live.textContent = "نامشخص"; status.textContent = "وضعیت موتور در دسترس نیست."; });
 
-    const kpiGrid = Utils.el("div", { class:"kpi-grid" });
-    const dashGrid = Utils.el("div", { class:"dash-grid" });
-    const chartCard = Utils.el("div", { class:"card card-pad" });
-    const sideCard = Utils.el("div", { class:"card card-pad" });
-    dashGrid.append(chartCard, sideCard);
-    container.append(kpiGrid, dashGrid);
+    // --- ارزش دارایی‌ها ---
+    const pfCard = E("div", { class:"card q-portfolio" }, UI.skeletonChart(130));
+    root.appendChild(pfCard);
+    const kpiWrap = E("div", { class:"q-tri" }, [UI.skeletonCard(), UI.skeletonCard(), UI.skeletonCard()]);
+    root.appendChild(kpiWrap);
 
-    const marketCard = Utils.el("div", { class:"card card-pad", style:"margin-top:14px;" });
-    container.appendChild(marketCard);
+    root.appendChild(Q.section("وضعیت کلی بازار", "همه بازار", () => Router.go("market")));
+    const overview = E("div", { class:"q-tri" }, [UI.skeletonCard(), UI.skeletonCard(), UI.skeletonCard()]);
+    root.appendChild(overview);
 
-    // --- اسکلت بارگذاری اولیه ---
-    for(let i=0;i<4;i++) kpiGrid.appendChild(UI.skeletonCard());
-    chartCard.appendChild(UI.skeletonChart());
-    sideCard.appendChild(UI.skeletonRows(6));
-    marketCard.appendChild(UI.skeletonRows(6));
+    root.appendChild(Q.section("ابزارهای هوشمند"));
+    const goAI = (tab) => () => { PageAI.presetTab = tab; Router.go("ai"); };
+    const tools = [
+      ["signals", "سیگنال‌ها", goAI("signals")],
+      ["target", "تحلیل هوشمند", goAI("status")],
+      ["swap", "خرید و فروش", () => Router.go("trade")],
+      ["history", "تاریخچه", () => Router.go("history")],
+    ];
+    root.appendChild(E("div", { class:"q-tools" }, tools.map(([i, l, fn]) => E("div", { class:"q-tool", role:"button", tabindex:"0", onClick:fn }, [E("div", { class:"q-ti", html: ic(i) }), E("span", {}, l)]))));
+
+    root.appendChild(Q.section("رصد سریع بازار", "مشاهده همه", () => Router.go("market")));
+    const list = E("div", { class:"q-list" }, UI.skeletonRows(4));
+    root.appendChild(list);
 
     let range = "7d";
-
     const [summaryS, historyS, marketS] = await Promise.allSettled([
-      Api.getPortfolioSummary(),
-      Api.getPortfolioHistory(range),
-      Api.getMarketList(),
+      Api.getPortfolioSummary(), Api.getPortfolioHistory(range), Api.getMarketList(),
     ]);
 
-    if(marketS.status === "fulfilled"){
-      renderSideMarket(marketS.value);
-      renderMarketTable(marketS.value);
-    }else{
-      sideCard.innerHTML = ""; marketCard.innerHTML = "";
-      marketCard.appendChild(UI.errorState("دریافت اطلاعات بازار ناموفق بود", marketS.reason && marketS.reason.message, () => PageDashboard.mount(container)));
-    }
     if(summaryS.status === "fulfilled"){
-      renderKpis(summaryS.value);
+      const s = summaryS.value.data;
+      kpiWrap.innerHTML = "";
+      [["wallet", "قابل‌استفاده", Utils.formatPrice(s.availableValueIrt, "")], ["market", "دارایی‌ها", Utils.formatNumber(s.assetCount)], ["history", "سفارش باز", Utils.formatNumber(s.openOrders)]]
+        .forEach(([i, l, v]) => kpiWrap.appendChild(E("div", { class:"q-mini", style:"cursor:default;" }, [
+          E("div", { class:"q-h", html: ic(i) + `<span>${l}</span>` }), E("div", { class:"q-p num", style:"font-weight:800;" }, v)])));
     }else{
-      kpiGrid.innerHTML = "";
-      kpiGrid.appendChild(UI.errorState("دریافت اطلاعات حساب ناموفق بود", summaryS.reason && summaryS.reason.message, () => PageDashboard.mount(container)));
+      kpiWrap.remove();
     }
-    if(historyS.status === "fulfilled"){
-      renderChart(historyS.value, summaryS.value);
+
+    function renderPortfolio(){
+      pfCard.innerHTML = "";
+      if(summaryS.status !== "fulfilled"){ pfCard.appendChild(UI.errorState("دریافت اطلاعات حساب ناموفق بود", summaryS.reason && summaryS.reason.message, () => PageDashboard.mount(container))); return; }
+      const s = summaryS.value.data;
+      const total = E("span", { class:"num" }, "0");
+      pfCard.appendChild(E("div", { style:"display:flex;justify-content:space-between;align-items:flex-start;gap:8px;" }, [
+        E("div", {}, [
+          E("div", { class:"q-lbl" }, ["ارزش کل دارایی‌های من ", summaryS.value.isMock ? UI.mockFlag() : null]),
+          E("div", { class:"q-total" }, [total, E("small", {}, State.get().settings.priceUnit === "usdt" ? "تتر" : "تومان")]),
+        ]),
+        (s.change24hPercent !== undefined && s.change24hPercent !== null) ? E("span", { class:`q-chg ${s.change24hPercent >= 0 ? "up" : "down"}`, style:"padding-top:6px;" }, Utils.formatPercent(s.change24hPercent)) : null,
+      ]));
+      Q.countUp(total, s.totalValueIrt, (v) => Utils.formatPrice(v, "").trim());
+      pfCard.appendChild(E("div", { class:"q-spark-wrap chart-canvas-wrap" }, E("canvas", { id:"portfolioChart" })));
+      const ranges = [["24h", "۲۴ ساعت"], ["7d", "۷ روز"], ["30d", "۳۰ روز"], ["90d", "۹۰ روز"]];
+      const bar = E("div", { class:"q-ranges" }, ranges.map(([r, l]) => E("button", {
+        class:`chip ${r === range ? "active" : ""}`, style:"padding:5px 12px;font-size:11.5px;",
+        onClick: async (ev) => {
+          range = r; bar.querySelectorAll(".chip").forEach(c => c.classList.remove("active")); ev.currentTarget.classList.add("active");
+          let h; try{ h = await Api.getPortfolioHistory(range); }catch(e){ h = { data:[] }; }
+          drawChart(h);
+        } }, l)));
+      pfCard.appendChild(bar);
+      if(historyS.status === "fulfilled") drawChart(historyS.value);
+    }
+    function drawChart(h){
+      const pts = h && h.data;
+      const cv = document.getElementById("portfolioChart");
+      if(!cv) return;
+      if(!pts || pts.length < 2){ Charts.destroy("portfolioChart"); const w = cv.parentElement; w.innerHTML = ""; w.appendChild(E("div", { class:"text-faint", style:"text-align:center;padding:34px 8px;font-size:12px;" }, "داده‌ی تاریخی کافی هنوز ذخیره نشده است.")); return; }
+      requestAnimationFrame(() => Charts.lineChart("portfolioChart", cv, pts, { currency:"تومان", minimal:true, color:"#5b8cff" }));
+    }
+    renderPortfolio();
+
+    if(marketS.status === "fulfilled"){
+      const coins = marketS.value.data;
+      overview.innerHTML = "";
+      const pick = ["btc", "eth", "usdt"].map(id => coins.find(c => c.id === id)).filter(Boolean);
+      (pick.length ? pick : coins.slice(0, 3)).forEach(c => overview.appendChild(E("div", { class:"q-mini", onClick: () => Router.go(`coin/${c.id}`) }, [
+        E("div", { class:"q-h" }, [UI.coinAvatar(c.symbol, 22), E("span", {}, c.symbol.replace(/IRT|USDT$/i, "") || c.symbol)]),
+        E("canvas", { class:"q-sp", "data-key":"row_" + c.id, style:"width:100%;" }),
+        E("div", { class:`q-p ${(c.change24h ?? 0) >= 0 ? "up" : "down"}`, style:"font-weight:800;direction:ltr;" }, Utils.formatPercent(c.change24h)),
+      ])));
+      list.innerHTML = "";
+      const top = [...coins].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h)).slice(0, 6);
+      top.forEach(c => list.appendChild(Q.coinRow(c)));
+      if(!top.length) list.appendChild(UI.empty("بازاری یافت نشد", ""));
+      Q.paintSparks(root, [...new Map([...(pick.length ? pick : coins.slice(0, 3)), ...top].map(c => [c.id, c])).values()]);
+      State.set({ connection: { lastChecked: new Date().toISOString() } });
     }else{
-      chartCard.innerHTML = "";
-      chartCard.appendChild(UI.empty("تاریخچه پرتفو در دسترس نیست", historyS.reason && historyS.reason.message));
-    }
-    if(marketS.status === "fulfilled") State.set({ connection: { lastChecked: new Date().toISOString() } });
-
-    function renderKpis(summaryRes){
-      kpiGrid.innerHTML = "";
-      const s = summaryRes.data;
-      const items = [
-        { label:"ارزش کل دارایی‌ها", value:Utils.formatPrice(s.totalValueIrt), ic:"wallet", change:s.change24hPercent, color:"" },
-        { label:"موجودی قابل‌استفاده", value:Utils.formatPrice(s.availableValueIrt), ic:"zap", color:"blue" },
-        { label:"تعداد دارایی‌ها", value:Utils.formatNumber(s.assetCount), ic:"market", color:"green" },
-        { label:"سفارش‌های باز", value:Utils.formatNumber(s.openOrders), ic:"history", color:"amber" },
-      ];
-      items.forEach((it, idx) => {
-        const card = Utils.el("div", { class:"card kpi-card" }, [
-          Utils.el("div", { class:"kpi-top" }, [
-            Utils.el("div", { class:`kpi-ic ${it.color}`, html: ic(it.ic) }),
-            (idx === 0 && summaryRes.isMock) ? UI.mockFlag() : null,
-          ]),
-          Utils.el("div", { class:"kpi-label" }, it.label),
-          Utils.el("div", { class:"kpi-value num" }, it.value),
-          (it.change !== undefined && it.change !== null) ? Utils.el("div", { class:`kpi-change ${it.change >= 0 ? "up":"down"}` }, [
-            Utils.el("span", { html: ic(it.change >= 0 ? "trendUp" : "trendDown") }),
-            Utils.formatPercent(it.change) + " (۲۴ ساعت، بر اساس موجودی فعلی)",
-          ]) : null,
-        ]);
-        kpiGrid.appendChild(card);
-      });
-    }
-
-    function renderChart(historyRes, summaryRes){
-      chartCard.innerHTML = "";
-      const points = historyRes.data;
-      if(!points || points.length < 2){
-        chartCard.appendChild(UI.empty("داده تاریخی کافی نیست", "والکس تاریخچه ارزش پرتفو ارائه نمی‌دهد؛ این نمودار از نمونه‌هایی ساخته می‌شود که سرور از زمان فعال‌سازی ذخیره کرده است."));
-        return;
-      }
-      const last = points[points.length-1].v;
-      const first = points[0].v;
-      const pct = ((last - first) / first) * 100;
-
-      chartCard.appendChild(Utils.el("div", { class:"chart-head" }, [
-        Utils.el("div", {}, [
-          Utils.el("div", { class:"card-title" }, [
-            "ارزش کل پرتفو ",
-            historyRes.isMock ? UI.mockFlag() : null,
-          ]),
-          Utils.el("div", { class:"chart-value num" }, Utils.formatPrice(last)),
-          Utils.el("div", { class:`chart-value-sub ${pct>=0?"up":"down"}` }, `${Utils.formatPercent(pct)} در این بازه`),
-        ]),
-        Utils.el("div", { class:"range-tabs" }, ["24h","7d","30d","90d"].map(r =>
-          Utils.el("button", {
-            class:`chip ${r===range?"active":""}`,
-            onClick: async () => {
-              range = r;
-              const wrap = chartCard.querySelector(".chart-canvas-wrap");
-              if(wrap) wrap.innerHTML = "";
-              if(wrap) wrap.appendChild(UI.skeleton("100%","100%","border-radius:14px;"));
-              chartCard.querySelectorAll(".range-tabs .chip").forEach(c=>c.classList.remove("active"));
-              let hRes; try{ hRes = await Api.getPortfolioHistory(range); }catch(e){ hRes = { data:[] }; }
-              renderChart(hRes, summaryRes);
-            }
-          }, r)
-        )),
-      ]));
-
-      const wrap = Utils.el("div", { class:"chart-canvas-wrap" }, [ Utils.el("canvas", { id:"portfolioChart" }) ]);
-      chartCard.appendChild(wrap);
-      requestAnimationFrame(() => {
-        Charts.lineChart("portfolioChart", document.getElementById("portfolioChart"), points, { currency:"تومان" });
-      });
-    }
-
-    // کارت وضعیت هوش مصنوعی: همه‌ی مقدارها از موتور واقعی روی سرور خوانده می‌شوند (هیچ عدد ثابت یا نمایشی نیست)
-    function aiStatusCard(){
-      const MODE_FA = { suggest:"تحلیل و پیشنهاد", paper:"معامله‌ی آزمایشی", live:"معامله‌ی واقعی" };
-      const pulse = Utils.el("span", { class:"ai-pulse is-off" });
-      const badge = Utils.el("span", { class:"ai-live-badge" }, "در حال بررسی…");
-      const desc = Utils.el("div", { class:"ai-status-desc" }, "در حال دریافت وضعیت موتور…");
-      const foot = Utils.el("div", { class:"ai-status-foot" });
-      const card = Utils.el("div", { class:"ai-status-panel", role:"button", tabindex:"0", title:"باز کردن صفحه‌ی هوش مصنوعی معاملاتی", onClick: () => Router.go("ai") }, [
-        Utils.el("div", { class:"ai-status-top" }, [Utils.el("div", { class:"ai-status-title" }, [pulse, "هوش مصنوعی معاملاتی"]), badge]), desc, foot]);
-      Api.aiGet("/status").then(st => {
-        const buys = Object.values(st.analysis || {}).filter(a => a.signal === "buy").length;
-        pulse.className = "ai-pulse" + (st.killed ? " is-kill" : st.running ? "" : " is-off");
-        badge.textContent = st.killed ? "توقف اضطراری" : st.running ? "در حال اجرا" : "متوقف";
-        desc.textContent = st.mode === "suggest"
-          ? (buys ? `الان ${buys} پیشنهاد خرید فعال دارم؛ جزئیات و دلیل هر کدام در گزارش هوش مصنوعی است.` : "فعلاً پیشنهاد خریدی ندارم؛ بازار را طبق قوانین استراتژی زیر نظر دارم.")
-          : `حالت «${MODE_FA[st.mode]}»؛ ${st.counts.open} موقعیت باز.`;
-        foot.innerHTML = "";
-        [`حالت: ${MODE_FA[st.mode]}`, st.engine.lastAnalysisAt ? `آخرین تحلیل: ${Utils.timeAgo(st.engine.lastAnalysisAt)}` : "هنوز تحلیلی انجام نشده",
-          st.mode === "suggest" ? `پیشنهاد خرید: ${buys}` : `سود/زیان امروز: ${Utils.formatNumber(st.pnl.realizedTodayIrt)} تومان`].forEach(t => foot.appendChild(Utils.el("span", { class:"ai-stat-pill" }, t)));
-      }).catch(() => { badge.textContent = "نامشخص"; desc.textContent = "وضعیت موتور هوش مصنوعی در دسترس نیست."; });
-      return card;
-    }
-
-    function renderSideMarket(marketRes){
-      sideCard.innerHTML = "";
-      sideCard.appendChild(Utils.el("div", { class:"card-head" }, [
-        Utils.el("div", { class:"card-title" }, "رصد سریع بازار"),
-      ]));
-      const top = [...marketRes.data].sort((a,b) => Math.abs(b.change24h) - Math.abs(a.change24h)).slice(0,6);
-      if(top.length === 0){
-        sideCard.appendChild(UI.empty("بازاری یافت نشد", ""));
-        return;
-      }
-      sideCard.appendChild(aiStatusCard());
-      const list = Utils.el("div", { class:"mini-list" });
-      top.forEach(c => {
-        const row = Utils.el("div", { class:"mini-row", onClick: () => Router.go(`coin/${c.id}`) }, [
-          Utils.el("div", { class:"mini-left" }, [
-            UI.coinAvatar(c.symbol, 30),
-            Utils.el("div", {}, [
-              Utils.el("div", { class:"mini-name" }, c.name),
-              Utils.el("div", { class:"mini-sym num" }, c.symbol),
-            ]),
-          ]),
-          Utils.el("div", { class:"mini-right" }, [
-            Utils.el("div", { class:"mini-price num" }, Utils.formatPrice(c.price, "")),
-            UI.changeBadge(c.change24h),
-          ]),
-        ]);
-        row.style.cursor = "pointer";
-        list.appendChild(row);
-      });
-      sideCard.appendChild(list);
-    }
-
-    function renderMarketTable(marketRes){
-      marketCard.innerHTML = "";
-      marketCard.appendChild(Utils.el("div", { class:"card-head" }, [
-        Utils.el("div", { class:"card-title" }, [
-          "ارزهای منتخب ",
-          marketRes.isMock ? UI.mockFlag() : null,
-        ]),
-        Utils.el("button", { class:"btn btn-outline btn-sm", onClick: () => Router.go("market") }, "مشاهده همه بازار"),
-      ]));
-
-      if(!marketRes.data || marketRes.data.length === 0){
-        marketCard.appendChild(UI.empty("ارزی برای نمایش یافت نشد", ""));
-        return;
-      }
-
-      const wrap = Utils.el("div", { class:"table-wrap" });
-      const table = Utils.el("table", { class:"tbl" }, [
-        Utils.el("thead", {}, Utils.el("tr", {}, [
-          Utils.el("th", {}, "نام ارز"), Utils.el("th", { class:"col-opt" }, "نماد"),
-          Utils.el("th", {}, "آخرین قیمت"), Utils.el("th", {}, "تغییر ۲۴ساعته"),
-          Utils.el("th", { class:"col-opt" }, "حجم معاملات"), Utils.el("th", { class:"col-opt" }, ""),
-        ])),
-      ]);
-      const tbody = Utils.el("tbody");
-      marketRes.data.slice(0,6).forEach(c => {
-        const tr = Utils.el("tr", { onClick: () => Router.go(`coin/${c.id}`) }, [
-          Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(c.symbol), Utils.el("span", {}, c.name)])),
-          Utils.el("td", { class:"num text-dim col-opt" }, c.symbol),
-          Utils.el("td", { class:"num" }, Utils.formatPrice(c.price, "")),
-          Utils.el("td", {}, UI.changeBadge(c.change24h)),
-          Utils.el("td", { class:"num text-dim col-opt" }, Utils.formatNumber(c.volume24h, { compact:true })),
-          Utils.el("td", { class:"col-opt" }, Utils.el("button", { class:"btn btn-ghost btn-sm" }, "جزئیات")),
-        ]);
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody);
-      wrap.appendChild(table);
-      marketCard.appendChild(wrap);
+      overview.remove(); list.innerHTML = "";
+      list.appendChild(UI.errorState("دریافت اطلاعات بازار ناموفق بود", marketS.reason && marketS.reason.message, () => PageDashboard.mount(container)));
     }
   }
 };
@@ -2641,156 +3007,52 @@ const PageDashboard = {
 const PageMarket = {
   async mount(container){
     container.innerHTML = "";
-    let allCoins = [];
-    let query = "";
-    let marketFilter = "all";
-    let sortKey = "volume24h";
-    let sortDir = "desc";
-    let pageSize = 6;
-    let visibleCount = pageSize;
-    let loadError = false;
+    const E = Utils.el;
+    let allCoins = [], query = "", mode = "all", pageSize = 8, visible = pageSize;
+    const root = E("div", { class:"q-stagger" });
+    container.appendChild(root);
+    const search = E("div", { class:"q-search" }, [
+      E("span", { html: ic("search") }),
+      E("input", { class:"input", placeholder:"جست‌وجوی نام یا نماد ارز…", onInput: Utils.debounce((e) => { query = e.target.value.trim(); visible = pageSize; paint(); }, 180) }),
+    ]);
+    const filters = E("div", { class:"q-filters" });
+    const list = E("div", { class:"q-list" }, UI.skeletonRows(7));
+    root.append(search, filters, list);
 
-    container.appendChild(Utils.el("div", { class:"page-head" }, [
-      Utils.el("div", {}, [
-        Utils.el("h1", {}, "بازار ارزهای دیجیتال"),
-        Utils.el("div", { class:"sub" }, "قیمت‌های لحظه‌ای بازار تومانی والکس"),
-      ]),
-      Utils.el("button", { class:"btn btn-ghost btn-sm", id:"mkRefresh", html:"" }, [Utils.el("span",{html:ic("refresh")}), " به‌روزرسانی"]),
-    ]));
-
-    const toolbar = Utils.el("div", { class:"market-toolbar" });
-    container.appendChild(toolbar);
-
-    const card = Utils.el("div", { class:"card card-pad" });
-    container.appendChild(card);
-    card.appendChild(UI.skeletonRows(7));
-
-    container.querySelector("#mkRefresh").addEventListener("click", load);
-
-    function buildToolbar(){
-      toolbar.innerHTML = "";
-      toolbar.appendChild(Utils.el("div", { class:"search-wrap" }, [
-        Utils.el("span", { html: ic("search") }),
-        Utils.el("input", {
-          class:"input", placeholder:"جست‌وجوی نام یا نماد ارز…",
-          value:query,
-          onInput: Utils.debounce((e) => { query = e.target.value; visibleCount = pageSize; renderTable(); }, 200),
-        }),
-      ]));
-      toolbar.appendChild(Utils.el("div", { style:"display:flex;gap:6px;flex-wrap:wrap;" }, [
-        chip("all","همه بازارها"), chip("IRT","بازار تومانی"),
-      ]));
+    const MODES = [["all", "همه"], ["up", "رشد"], ["down", "افت"], ["vol", "حجم"], ["irt", "تومان"]];
+    function paintFilters(){
+      filters.innerHTML = "";
+      MODES.forEach(([k, l]) => filters.appendChild(E("button", { class:`chip ${mode === k ? "active" : ""}`, onClick: () => { mode = k; visible = pageSize; paintFilters(); paint(); } }, l)));
     }
-
-    function chip(val, label){
-      return Utils.el("button", {
-        class:`chip ${marketFilter===val?"active":""}`,
-        onClick: () => { marketFilter = val; visibleCount = pageSize; buildToolbar(); renderTable(); }
-      }, label);
+    function rows(){
+      let r = allCoins.filter(c => !query || c.name.includes(query) || c.symbol.toLowerCase().includes(query.toLowerCase()));
+      if(mode === "up") r = r.filter(c => c.change24h > 0).sort((a, b) => b.change24h - a.change24h);
+      else if(mode === "down") r = r.filter(c => c.change24h < 0).sort((a, b) => a.change24h - b.change24h);
+      else if(mode === "irt") r = r.filter(c => c.symbol.includes("IRT")).sort((a, b) => b.volume24h - a.volume24h);
+      else r = r.sort((a, b) => b.volume24h - a.volume24h);
+      return r;
     }
-
+    function paint(){
+      list.innerHTML = "";
+      const r = rows();
+      if(!r.length){ list.appendChild(UI.empty("نتیجه‌ای یافت نشد", "عبارت جست‌وجو یا فیلتر را تغییر دهید.")); return; }
+      const shown = r.slice(0, visible);
+      shown.forEach(c => list.appendChild(Q.coinRow(c)));
+      if(visible < r.length) list.appendChild(E("button", { class:"btn btn-outline btn-block", onClick: () => { visible += pageSize; paint(); } }, "نمایش موارد بیشتر"));
+      requestAnimationFrame(() => {
+        shown.forEach(c => { const cv = list.querySelector(`canvas[data-key="row_${c.id}"]`); if(cv && c._spark) Charts.sparkline(cv, c._spark, (c.change24h ?? 0) >= 0); });
+      });
+    }
     async function load(){
-      card.innerHTML = "";
-      card.appendChild(UI.skeletonRows(7));
       try{
         const res = await Api.getMarketList();
-        allCoins = res.data.map(c => ({ ...c, _spark: null }));
-        loadError = false;
-        buildToolbar();
-        renderTable(false);
-        Api.getSparklines(allCoins.map(c => c.id)).then(sp => {
-          allCoins.forEach(c => { c._spark = (sp.data && sp.data[c.id]) || null; });
-          renderTable(false);
-        }).catch(() => {});
+        allCoins = res.data.map(c => ({ ...c, _spark:null }));
+        paintFilters(); paint();
+        Api.getSparklines(allCoins.map(c => c.id)).then(sp => { allCoins.forEach(c => { c._spark = (sp.data && sp.data[c.id]) || null; }); paint(); }).catch(() => {});
       }catch(e){
-        loadError = true;
-        card.innerHTML = "";
-        card.appendChild(UI.errorState("دریافت بازار ناموفق بود", e.message, load));
+        list.innerHTML = ""; list.appendChild(UI.errorState("دریافت بازار ناموفق بود", e.message, load));
       }
     }
-
-    function applyFilters(){
-      let rows = allCoins.filter(c => {
-        if(marketFilter !== "all" && !c.symbol.includes(marketFilter)) return false;
-        if(query && !(c.name.includes(query) || c.symbol.toLowerCase().includes(query.toLowerCase()))) return false;
-        return true;
-      });
-      rows.sort((a,b) => {
-        const d = sortDir === "asc" ? 1 : -1;
-        return (a[sortKey] - b[sortKey]) * d;
-      });
-      return rows;
-    }
-
-    function setSort(key){
-      if(sortKey === key) sortDir = sortDir === "asc" ? "desc" : "asc";
-      else { sortKey = key; sortDir = "desc"; }
-      renderTable();
-    }
-
-    function renderTable(isMock){
-      card.innerHTML = "";
-      const rows = applyFilters();
-
-      card.appendChild(Utils.el("div", { class:"card-head" }, [
-        Utils.el("div", { class:"card-title" }, [
-          `${rows.length} ارز `,
-          isMock ? UI.mockFlag() : null,
-        ]),
-      ]));
-
-      if(rows.length === 0){
-        card.appendChild(UI.empty("نتیجه‌ای یافت نشد", "عبارت جست‌وجو یا فیلتر انتخاب‌شده را تغییر دهید."));
-        return;
-      }
-
-      const th = (label, key, opt) => Utils.el("th", {
-        class: `${key ? "sortable" : ""} ${opt ? "col-opt" : ""}`.trim(),
-        onClick: key ? () => setSort(key) : null,
-      }, [label, key && sortKey===key ? Utils.el("span", { html: ic(sortDir==="asc"?"chevronDown":"chevronDown") }) : ""]);
-
-      const wrap = Utils.el("div", { class:"table-wrap" });
-      const table = Utils.el("table", { class:"tbl" }, [
-        Utils.el("thead", {}, Utils.el("tr", {}, [
-          th("نام ارز"), th("نماد", null, true),
-          th("قیمت فعلی","price"), th("تغییر ۲۴ساعته","change24h"),
-          th("بالاترین ۲۴ساعته", null, true), th("پایین‌ترین ۲۴ساعته", null, true),
-          th("حجم معاملات","volume24h", true), th("روند"), th("", null, true),
-        ])),
-      ]);
-      const tbody = Utils.el("tbody");
-      rows.slice(0, visibleCount).forEach(c => {
-        const tr = Utils.el("tr", { onClick: () => Router.go(`coin/${c.id}`) }, [
-          Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(c.symbol), Utils.el("span", {}, c.name)])),
-          Utils.el("td", { class:"num text-dim col-opt" }, c.symbol),
-          Utils.el("td", { class:"num" }, Utils.formatPrice(c.price, "")),
-          Utils.el("td", {}, UI.changeBadge(c.change24h)),
-          Utils.el("td", { class:"num text-dim col-opt" }, Utils.formatPrice(c.high24h, "")),
-          Utils.el("td", { class:"num text-dim col-opt" }, Utils.formatPrice(c.low24h, "")),
-          Utils.el("td", { class:"num text-dim col-opt" }, Utils.formatNumber(c.volume24h, { compact:true })),
-          Utils.el("td", {}, Utils.el("canvas", { class:"sparkline", "data-key":c.id })),
-          Utils.el("td", { class:"col-opt" }, Utils.el("button", { class:"btn btn-ghost btn-sm" }, "جزئیات")),
-        ]);
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody);
-      wrap.appendChild(table);
-      card.appendChild(wrap);
-
-      if(visibleCount < rows.length){
-        card.appendChild(Utils.el("div", { style:"text-align:center;margin-top:14px;" },
-          Utils.el("button", { class:"btn btn-outline btn-sm", onClick: () => { visibleCount += pageSize; renderTable(); } }, "نمایش موارد بیشتر")
-        ));
-      }
-
-      requestAnimationFrame(() => {
-        rows.slice(0, visibleCount).forEach(c => {
-          const canvas = wrap.querySelector(`canvas[data-key="${c.id}"]`);
-          if(canvas && c._spark) Charts.sparkline(canvas, c._spark, (c.change24h ?? 0) >= 0);
-        });
-      });
-    }
-
     load();
   }
 };
@@ -2802,160 +3064,85 @@ const PageCoin = {
   async mount(container, params){
     const coinId = params.id;
     container.innerHTML = "";
-    container.appendChild(Utils.el("button", {
-      class:"btn btn-ghost btn-sm", style:"margin-bottom:14px;",
-      onClick: () => Router.go("market"),
-    }, [Utils.el("span", { html: ic("chevronLeft") }), " بازگشت به بازار"]));
-
-    const headCard = Utils.el("div", { class:"card card-pad" });
-    const grid = Utils.el("div", { class:"coin-grid", style:"margin-top:14px;" });
-    const chartCard = Utils.el("div", { class:"card card-pad" });
-    const sideCol = Utils.el("div", { style:"display:flex;flex-direction:column;gap:14px;" });
-    grid.append(chartCard, sideCol);
-    container.append(headCard, grid);
-
-    headCard.appendChild(UI.skeletonHead());
+    const E = Utils.el;
+    const root = E("div", { class:"q-stagger" });
+    container.appendChild(root);
+    const top = E("div", { class:"q-coin-top" });
+    const priceBox = E("div");
+    const chartCard = E("div", { class:"card q-chart-card" });
+    const statsBox = E("div");
+    const sideCol = E("div", { style:"display:flex;flex-direction:column;gap:12px;margin-top:12px;" });
+    root.append(top, priceBox, chartCard, statsBox, sideCol);
+    top.appendChild(UI.skeletonHead());
     chartCard.appendChild(UI.skeletonChart());
-    sideCol.append(
-      Utils.el("div", { class:"card card-pad" }, UI.skeletonRows(2)),
-      Utils.el("div", { class:"card card-pad" }, UI.skeletonRows(2)),
-    );
-
-    let range = "30d";
-    let coinFetchedAt = null;
+    let range = "30d", fetchedAt = null, bar = null;
 
     try{
       const [coinRes, histRes, walletRes, ordersRes] = await Promise.all([
-        Api.getCoin(coinId),
-        Api.getCoinHistory(coinId, range).catch(() => ({ data:[] })),
-        Api.getWalletAssets().catch(() => null),
-        Api.getOpenOrders().catch(() => null),
+        Api.getCoin(coinId), Api.getCoinHistory(coinId, range).catch(() => ({ data:[] })),
+        Api.getWalletAssets().catch(() => null), Api.getOpenOrders().catch(() => null),
       ]);
-
-      if(!coinRes.data){
-        headCard.innerHTML = "";
-        headCard.appendChild(UI.empty("ارز یافت نشد", "این نماد در فهرست ارزهای پشتیبانی‌شده وجود ندارد."));
-        return;
-      }
-
-      coinFetchedAt = coinRes.fetchedAt;
-      renderHead(coinRes.data, coinRes.isMock);
-      renderChart(histRes, coinRes.data);
-      renderSide(coinRes.data, walletRes, ordersRes);
-
+      if(!coinRes.data){ top.innerHTML = ""; top.appendChild(UI.empty("ارز یافت نشد", "این نماد در فهرست پشتیبانی نیست.")); chartCard.remove(); return; }
+      fetchedAt = coinRes.fetchedAt;
+      const coin = coinRes.data;
+      head(coin, coinRes.isMock); renderChart(histRes, coin); stats(coin); side(coin, walletRes, ordersRes);
+      mountTradeBar(coin);
     }catch(e){
-      headCard.innerHTML = "";
-      headCard.appendChild(UI.errorState("دریافت اطلاعات ارز ناموفق بود", e.message, () => PageCoin.mount(container, params)));
+      top.innerHTML = ""; chartCard.remove();
+      top.appendChild(UI.errorState("دریافت اطلاعات ارز ناموفق بود", e.message, () => PageCoin.mount(container, params)));
     }
 
-    function renderHead(coin, isMock){
-      headCard.innerHTML = "";
-      headCard.appendChild(Utils.el("div", { class:"coin-head" }, [
-        Utils.el("div", { class:"coin-id" }, [
-          UI.coinAvatar(coin.symbol, 46),
-          Utils.el("div", {}, [
-            Utils.el("div", { style:"display:flex;align-items:center;gap:8px;" }, [
-              Utils.el("h2", { style:"font-size:17px;" }, coin.name),
-              isMock ? UI.mockFlag() : null,
-            ]),
-            Utils.el("div", { class:"text-faint num", style:"font-size:12.5px;margin-top:3px;" }, coin.symbol),
-          ]),
-        ]),
-        Utils.el("div", { style:"text-align:left;" }, [
-          Utils.el("div", { class:"coin-price-row" }, [
-            Utils.el("div", { class:"coin-price num" }, Utils.formatPrice(coin.price, "")),
-            UI.changeBadge(coin.change24h),
-          ]),
-          Utils.el("div", { class:"text-faint", style:"font-size:11.5px;margin-top:4px;" },
-            `آخرین به‌روزرسانی: ${Utils.timeAgo(coinFetchedAt)}`),
-        ]),
+    function head(coin, isMock){
+      top.innerHTML = "";
+      top.append(
+        E("button", { class:"icon-btn", onClick: () => Router.go("market"), html: ic("chevR") }),
+        UI.coinAvatar(coin.symbol, 44),
+        E("div", { class:"q-id" }, [E("h2", {}, [coin.name, " ", isMock ? UI.mockFlag() : null]), E("span", { class:"num" }, coin.symbol)]),
+      );
+      priceBox.innerHTML = "";
+      const p = E("div", { class:"q-bigprice num" }, "0");
+      priceBox.append(p, E("div", { style:"display:flex;gap:10px;align-items:center;margin:0 2px;" }, [
+        E("span", { class:`q-chg ${(coin.change24h ?? 0) >= 0 ? "up" : "down"}`, style:"font-size:14px;" }, Utils.formatPercent(coin.change24h) + " (۲۴ساعت)"),
+        E("span", { class:"text-faint", style:"font-size:11px;" }, `به‌روزرسانی ${Utils.timeAgo(fetchedAt)}`),
       ]));
-      headCard.appendChild(Utils.el("div", { class:"coin-stats-row" }, [
-        stat("بالاترین ۲۴ساعته", Utils.formatPrice(coin.high24h, "")),
-        stat("پایین‌ترین ۲۴ساعته", Utils.formatPrice(coin.low24h, "")),
-        stat("حجم معاملات ۲۴ساعته", Utils.formatNumber(coin.volume24h, { compact:true })),
-      ]));
+      Q.countUp(p, coin.price, (v) => Utils.formatPrice(v, "").trim(), 900);
     }
-
-    function stat(label, value){
-      return Utils.el("div", { class:"coin-stat" }, [
-        Utils.el("div", { class:"lbl" }, label),
-        Utils.el("div", { class:"val num" }, value),
-      ]);
+    function stats(coin){
+      statsBox.innerHTML = "";
+      const s = (l, v) => E("div", { class:"q-stat" }, [E("div", { class:"l" }, l), E("div", { class:"v num" }, v)]);
+      statsBox.appendChild(E("div", { class:"q-stats" }, [
+        s("بالاترین ۲۴س", Utils.formatPrice(coin.high24h, "")), s("پایین‌ترین ۲۴س", Utils.formatPrice(coin.low24h, "")), s("حجم ۲۴س", Utils.formatNumber(coin.volume24h, { compact:true }))]));
     }
-
     function renderChart(histRes, coin){
       chartCard.innerHTML = "";
-      const points = histRes.data;
-
-      chartCard.appendChild(Utils.el("div", { class:"coin-chart-controls" }, [
-        Utils.el("div", { class:"card-title" }, [
-          `نمودار قیمت `,
-          histRes.isMock ? UI.mockFlag() : null,
-        ]),
-        Utils.el("div", { class:"range-tabs" }, ["7d","30d","90d"].map(r =>
-          Utils.el("button", {
-            class:`chip ${r===range?"active":""}`,
-            onClick: async () => {
-              range = r;
-              const wrap = chartCard.querySelector(".chart-canvas-wrap");
-              if(wrap) wrap.innerHTML = "";
-              if(wrap) wrap.appendChild(UI.skeleton("100%","100%","border-radius:14px;"));
-              let hRes; try{ hRes = await Api.getCoinHistory(coinId, range); }catch(e){ hRes = { data:[] }; }
-              renderChart(hRes, coin);
-            }
-          }, r === "7d" ? "۷ روز" : r === "30d" ? "۳۰ روز" : "۹۰ روز")
-        )),
-      ]));
-
-      if(!points || points.length < 2){
-        chartCard.appendChild(UI.empty("داده تاریخی کافی در دسترس نیست", "اطلاعات این بازه هنوز از صرافی دریافت نشده است."));
-        return;
-      }
-
-      const first = points[0].v, last = points[points.length-1].v;
-      const pct = ((last-first)/first)*100;
-      chartCard.appendChild(Utils.el("div", { style:"margin:6px 0 2px;" }, [
-        Utils.el("span", { class:`num ${pct>=0?"up":"down"}`, style:"font-size:13px;font-weight:700;" }, Utils.formatPercent(pct)),
-        Utils.el("span", { class:"text-faint", style:"font-size:12px;" }, ` در بازه انتخاب‌شده`),
-      ]));
-
-      const wrap = Utils.el("div", { class:"chart-canvas-wrap" }, [ Utils.el("canvas", { id:"coinChart" }) ]);
-      chartCard.appendChild(wrap);
-      requestAnimationFrame(() => {
-        Charts.lineChart("coinChart", document.getElementById("coinChart"), points, { color: pct>=0 ? null : getComputedStyle(document.documentElement).getPropertyValue("--red"), currency:"" });
-      });
+      const ranges = [["7d", "۷ روز"], ["30d", "۳۰ روز"], ["90d", "۹۰ روز"]];
+      bar = E("div", { class:"range-tabs", style:"padding:0 6px;" }, ranges.map(([r, l]) => E("button", {
+        class:`chip ${r === range ? "active" : ""}`, style:"padding:5px 13px;font-size:11.5px;",
+        onClick: async () => { range = r; let h; try{ h = await Api.getCoinHistory(coinId, r); }catch(e){ h = { data:[] }; } renderChart(h, coin); } }, l)));
+      chartCard.appendChild(bar);
+      const pts = histRes.data;
+      if(!pts || pts.length < 2){ chartCard.appendChild(UI.empty("داده‌ی تاریخی کافی در دسترس نیست", "")); return; }
+      const pct = ((pts[pts.length - 1].v - pts[0].v) / pts[0].v) * 100;
+      chartCard.appendChild(E("div", { class:"chart-canvas-wrap" }, E("canvas", { id:"coinChart" })));
+      requestAnimationFrame(() => Charts.lineChart("coinChart", document.getElementById("coinChart"), pts, { color: pct >= 0 ? "#1fe08f" : "#ff5d7a", currency:"" , minimal:false }));
     }
-
-    function renderSide(coin, walletRes, ordersRes){
+    function side(coin, walletRes, ordersRes){
       sideCol.innerHTML = "";
-
       const holding = walletRes ? (walletRes.data || []).find(a => a.coinId === coin.id) : null;
-      const holdCard = Utils.el("div", { class:"card card-pad" }, [
-        Utils.el("div", { class:"card-title" }, "موجودی شما از این ارز"),
-      ]);
-      if(holding){
-        holdCard.appendChild(Utils.el("div", { style:"margin-top:10px;" }, [
-          Utils.el("div", { class:"num", style:"font-size:19px;font-weight:700;" }, `${Utils.formatNumber(holding.total,{decimals:6})} ${holding.symbol}`),
-          Utils.el("div", { class:"text-faint", style:"font-size:12px;margin-top:4px;" }, `≈ ${Utils.formatPrice(holding.valueIrt, "")}`),
-        ]));
-      }else{
-        holdCard.appendChild(walletRes ? UI.empty("موجودی از این ارز ندارید", "") : UI.empty("موجودی در دسترس نیست", "دریافت اطلاعات کیف پول ممکن نشد."));
-      }
-      sideCol.appendChild(holdCard);
-
+      sideCol.appendChild(E("div", { class:"card card-pad" }, [E("div", { class:"card-title" }, "موجودی شما"),
+        holding ? E("div", { style:"margin-top:8px;" }, [E("div", { class:"num", style:"font-size:18px;font-weight:800;" }, `${Utils.formatNumber(holding.total, { decimals:6 })} ${holding.symbol}`), E("div", { class:"text-faint", style:"font-size:12px;" }, `≈ ${Utils.formatPrice(holding.valueIrt, "")}`)])
+        : (walletRes ? UI.empty("از این ارز موجودی ندارید", "") : UI.empty("موجودی در دسترس نیست", ""))]));
       const mine = ordersRes ? (ordersRes.data || []).filter(o => o.coin === coin.id.toUpperCase()) : null;
-      const ordersCard = Utils.el("div", { class:"card card-pad" }, [
-        Utils.el("div", { class:"card-title" }, "سفارش‌های باز مرتبط"),
-        mine === null ? UI.empty("سفارش‌ها در دسترس نیست", "دریافت سفارش‌های باز ممکن نشد.")
-          : mine.length === 0 ? UI.empty("سفارش فعالی برای این ارز نیست", "")
-          : Utils.el("div", {}, mine.map(o => Utils.el("div", { class:"info-row" }, [
-              Utils.el("span", { class:"k" }, `${o.type} ${Utils.formatNumber(o.amount, { decimals:6 })}`),
-              Utils.el("span", { class:"v num" }, o.desc),
-            ]))),
-        Utils.el("button", { class:"btn btn-outline btn-sm", style:"margin-top:12px;", onClick:() => Router.go(`trade/${coin.id}`) }, "خرید / فروش این ارز"),
-      ]);
-      sideCol.appendChild(ordersCard);
+      sideCol.appendChild(E("div", { class:"card card-pad" }, [E("div", { class:"card-title" }, "سفارش‌های باز"),
+        mine === null ? UI.empty("سفارش‌ها در دسترس نیست", "") : mine.length === 0 ? UI.empty("سفارش فعالی ندارید", "")
+        : E("div", {}, mine.map(o => E("div", { class:"info-row" }, [E("span", {}, `${o.type} ${Utils.formatNumber(o.amount, { decimals:6 })}`), E("span", { class:"num" }, o.desc)])))]));
+      sideCol.appendChild(E("div", { style:"height:70px;" }));
+    }
+    function mountTradeBar(coin){
+      document.querySelectorAll(".q-trade-bar").forEach(n => n.remove());
+      const go = (side) => () => { TradePrefill.value = { coinId:coin.id, side }; Router.go("trade/" + coin.id); };
+      const bar = E("div", { class:"q-trade-bar" }, [E("button", { class:"q-buy", onClick:go("buy") }, "خرید"), E("button", { class:"q-sell", onClick:go("sell") }, "فروش")]);
+      document.body.appendChild(bar);
     }
   }
 };
@@ -3207,131 +3394,89 @@ const NOBITEX_OFFICIAL_URL = "https://wallex.ir";
 const PageWallet = {
   async mount(container){
     container.innerHTML = "";
-    let hideValues = false;
-    let query = "";
-    let assets = [];
-    let coinMap = {};
-
-    container.appendChild(Utils.el("div", { class:"page-head" }, [
-      Utils.el("div", {}, [
-        Utils.el("h1", {}, "کیف پول"),
-        Utils.el("div", { class:"sub" }, "مشاهده موجودی دارایی‌ها — بدون امکان واریز یا برداشت از داخل برنامه"),
-      ]),
-      Utils.el("button", { class:"btn btn-primary btn-sm", onClick: openChargeModal }, "شارژ حساب"),
-    ]));
-
-    const summary = Utils.el("div", { class:"wallet-summary" });
-    const card = Utils.el("div", { class:"card card-pad" });
-    container.append(summary, card);
-
-    for(let i=0;i<3;i++) summary.appendChild(UI.skeletonCard());
-    card.appendChild(UI.skeletonRows(5));
+    const E = Utils.el;
+    let hide = false, query = "", assets = [], coinMap = {}, tab = "assets";
+    const root = E("div", { class:"q-stagger" });
+    container.appendChild(root);
+    const totalCard = E("div", { class:"card q-portfolio" }, UI.skeletonChart(80));
+    const donutCard = E("div", { class:"card q-donut-card" });
+    const seg = E("div", { class:"q-seg" });
+    const body = E("div");
+    root.append(totalCard, donutCard, seg, body);
+    body.appendChild(UI.skeletonRows(5));
+    const sumOf = (fn) => assets.reduce((s, a) => s + (a.valueIrt === null ? 0 : fn(a)), 0);
+    const mask = (v, f) => hide ? "••••" : f(v);
 
     try{
-      const [walletRes, marketRes] = await Promise.all([ Api.getWalletAssets(), Api.getMarketList() ]);
-      assets = walletRes.data;
-      coinMap = Object.fromEntries(marketRes.data.map(c => [c.id, c]));
-      renderSummary(walletRes.isMock);
-      renderTable(walletRes.isMock);
+      const [w, m] = await Promise.all([Api.getWalletAssets(), Api.getMarketList()]);
+      assets = w.data; coinMap = Object.fromEntries(m.data.map(c => [c.id, c]));
+      paintTop(w.isMock); paintDonut(); paintSeg(); paintBody();
     }catch(e){
-      summary.innerHTML = "";
-      card.innerHTML = "";
-      card.appendChild(UI.errorState("دریافت دارایی‌ها ناموفق بود", e.message, () => PageWallet.mount(container)));
+      totalCard.remove(); donutCard.remove(); seg.remove(); body.innerHTML = "";
+      body.appendChild(UI.errorState("دریافت دارایی‌ها ناموفق بود", e.message, () => PageWallet.mount(container)));
     }
-
-    const sumOf = (fn) => assets.reduce((s,a) => s + (a.valueIrt === null ? 0 : fn(a)), 0);
-    const unpriced = () => assets.filter(a => a.valueIrt === null).length;
-
-    function renderSummary(isMock){
-      summary.innerHTML = "";
-      const totalValue = sumOf(a => a.valueIrt);
-      const availValue = sumOf(a => a.available * a.priceIrt);
-      const lockedValue = sumOf(a => a.locked * a.priceIrt);
-
-      const items = [
-        { label:"ارزش کل دارایی‌ها", value:totalValue, ic:"wallet" },
-        { label:"موجودی قابل‌استفاده", value:availValue, ic:"zap", color:"blue" },
-        { label:"موجودی درگیر سفارش", value:lockedValue, ic:"clock", color:"amber" },
-      ];
-      items.forEach((it, idx) => {
-        summary.appendChild(Utils.el("div", { class:"card kpi-card" }, [
-          Utils.el("div", { class:"kpi-top" }, [
-            Utils.el("div", { class:`kpi-ic ${it.color||""}`, html: ic(it.ic) }),
-            (idx === 0 && isMock) ? UI.mockFlag() : null,
-          ]),
-          Utils.el("div", { class:"kpi-label" }, it.label),
-          Utils.el("div", { class:"kpi-value num" }, hideValues ? "••••••" : Utils.formatPrice(it.value, "")),
-        ]));
-      });
+    function paintTop(isMock){
+      totalCard.innerHTML = "";
+      const total = sumOf(a => a.valueIrt);
+      const avail = sumOf(a => a.available * a.priceIrt), locked = sumOf(a => a.locked * a.priceIrt);
+      const t = E("span", { class:"num" }, "0");
+      totalCard.append(
+        E("div", { style:"display:flex;justify-content:space-between;align-items:center;" }, [
+          E("div", { class:"q-lbl" }, ["ارزش کل دارایی‌های من ", isMock ? UI.mockFlag() : null]),
+          E("button", { class:"icon-btn", style:"width:34px;height:34px;", html: ic(hide ? "eyeOff" : "eye"), onClick: () => { hide = !hide; paintTop(isMock); paintBody(); } })]),
+        E("div", { class:"q-total" }, [t, E("small", {}, State.get().settings.priceUnit === "usdt" ? "تتر" : "تومان")]),
+        E("div", { class:"q-stats", style:"grid-template-columns:1fr 1fr;" }, [
+          E("div", { class:"q-stat" }, [E("div", { class:"l" }, "قابل‌استفاده"), E("div", { class:"v num" }, mask(avail, v => Utils.formatPrice(v, "")))]),
+          E("div", { class:"q-stat" }, [E("div", { class:"l" }, "درگیر سفارش"), E("div", { class:"v num" }, mask(locked, v => Utils.formatPrice(v, "")))])]),
+        E("button", { class:"btn btn-primary btn-block", style:"margin-top:12px;", onClick: openCharge }, "شارژ حساب"));
+      if(hide) t.textContent = "••••••"; else Q.countUp(t, total, v => Utils.formatPrice(v, "").trim());
     }
-
-    function renderTable(isMock){
-      card.innerHTML = "";
-      card.appendChild(Utils.el("div", { class:"card-head", style:"flex-wrap:wrap;gap:10px;" }, [
-        Utils.el("div", { class:"search-wrap" }, [
-          Utils.el("span", { html: ic("search") }),
-          Utils.el("input", {
-            class:"input", placeholder:"جست‌وجوی دارایی…", value:query,
-            onInput: Utils.debounce((e) => { query = e.target.value; renderTable(isMock); }, 200),
-          }),
-        ]),
-        Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: () => { hideValues = !hideValues; renderSummary(isMock); renderTable(isMock); } },
-          [Utils.el("span", { html: ic(hideValues ? "eyeOff" : "eye") }), hideValues ? " نمایش مقادیر" : " پنهان‌کردن مقادیر"]),
-      ]));
-
+    function paintDonut(){
+      donutCard.innerHTML = "";
+      const priced = assets.filter(a => a.valueIrt > 0).sort((a, b) => b.valueIrt - a.valueIrt);
+      if(!priced.length){ donutCard.remove(); return; }
+      const total = priced.reduce((s, a) => s + a.valueIrt, 0);
+      const top = priced.slice(0, 4), rest = priced.slice(4).reduce((s, a) => s + a.valueIrt, 0);
+      const items = top.map(a => ({ l:a.symbol, v:a.valueIrt })); if(rest > 0) items.push({ l:"سایر", v:rest });
+      const colors = ["#2f6bff", "#7a4dff", "#27d6ee", "#1fe08f", "#ffc24d"];
+      const cv = E("canvas");
+      donutCard.append(E("div", { class:"q-donut" }, [cv, E("div", { class:"mid" }, [E("span", {}, "توزیع"), E("span", {}, "دارایی‌ها")])]),
+        E("div", { class:"q-legend" }, items.map((it, i) => E("div", {}, [E("i", { style:`background:${colors[i]}` }), E("span", {}, it.l), E("b", {}, ((it.v / total) * 100).toFixed(0) + "%")]))));
+      requestAnimationFrame(() => { if(typeof Chart === "undefined") return; Charts.destroy("walletDonut");
+        new Chart(cv.getContext("2d"), { type:"doughnut", data:{ labels:items.map(i => i.l), datasets:[{ data:items.map(i => i.v), backgroundColor:colors, borderWidth:0, spacing:3, borderRadius:6 }] },
+          options:{ cutout:"70%", responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ enabled:false } }, animation:{ animateRotate:true, duration:1400, easing:"easeOutQuart" } } }); });
+    }
+    function paintSeg(){
+      seg.innerHTML = "";
+      [["assets", "دارایی‌ها"], ["pl", "سود و زیان"]].forEach(([k, l]) => seg.appendChild(E("button", { class: tab === k ? "active" : "", onClick: () => { tab = k; paintSeg(); paintBody(); } }, l)));
+    }
+    function paintBody(){
+      body.innerHTML = "";
+      body.appendChild(E("div", { class:"q-search" }, [E("span", { html: ic("search") }),
+        E("input", { class:"input", placeholder:"جست‌وجوی دارایی…", value:query, onInput: Utils.debounce((e) => { query = e.target.value; paintList(); }, 180) })]));
+      body.appendChild(E("div", { class:"q-list", id:"wList" }));
+      paintList();
+    }
+    function paintList(){
+      const l = document.getElementById("wList"); if(!l) return; l.innerHTML = "";
+      if(!assets.length){ l.appendChild(UI.empty("دارایی‌ای یافت نشد", "پس از واریز، دارایی‌ها اینجا نمایش داده می‌شود.")); return; }
       const rows = assets.filter(a => !query || a.name.includes(query) || a.symbol.toLowerCase().includes(query.toLowerCase()));
-
-      if(assets.length === 0){
-        card.appendChild(UI.empty("دارایی‌ای در حساب شما یافت نشد", "پس از واریز، دارایی‌های شما اینجا نمایش داده می‌شود."));
-        return;
-      }
-      if(rows.length === 0){
-        card.appendChild(UI.empty("نتیجه‌ای یافت نشد", "نام یا نماد دیگری را جست‌وجو کنید."));
-        return;
-      }
-
-      const wrap = Utils.el("div", { class:"table-wrap" });
-      const table = Utils.el("table", { class:"tbl" }, [
-        Utils.el("thead", {}, Utils.el("tr", {}, [
-          Utils.el("th", {}, "نام ارز"), Utils.el("th", {}, "موجودی کل"),
-          Utils.el("th", { class:"col-opt" }, "قابل‌استفاده"), Utils.el("th", { class:"col-opt" }, "قفل‌شده"),
-          Utils.el("th", { class:"col-opt" }, "قیمت واحد"), Utils.el("th", {}, "ارزش تقریبی"), Utils.el("th", {}, "تغییر ۲۴ساعته"),
-        ])),
-      ]);
-      const tbody = Utils.el("tbody");
-      rows.forEach(a => {
-        const price = a.priceIrt;
-        const value = a.valueIrt;
-        tbody.appendChild(Utils.el("tr", { onClick: () => { if(coinMap[a.coinId]) Router.go(`coin/${a.coinId}`); } }, [
-          Utils.el("td", {}, Utils.el("div", { class:"cell-asset" }, [UI.coinAvatar(a.symbol), Utils.el("span", {}, a.name)])),
-          Utils.el("td", { class:"num" }, hideValues ? "••••" : Utils.formatNumber(a.total,{decimals:6})),
-          Utils.el("td", { class:"num text-dim col-opt" }, hideValues ? "••••" : Utils.formatNumber(a.available,{decimals:6})),
-          Utils.el("td", { class:"num text-dim col-opt" }, hideValues ? "••••" : Utils.formatNumber(a.locked,{decimals:6})),
-          Utils.el("td", { class:"num text-dim col-opt" }, hideValues ? "••••" : Utils.formatPrice(price, "")),
-          Utils.el("td", { class:"num" }, hideValues ? "••••" : Utils.formatPrice(value, "")),
-          Utils.el("td", {}, UI.changeBadge(a.change24h)),
-        ]));
-      });
-      table.appendChild(tbody);
-      wrap.appendChild(table);
-      card.appendChild(wrap);
-      if(unpriced() > 0) card.appendChild(Utils.el("div", { class:"text-faint", style:"margin-top:12px;font-size:12px;" }, `قیمت ${unpriced()} دارایی در دسترس نیست و در مجموع ارزش‌ها لحاظ نشده است.`));
+      if(!rows.length){ l.appendChild(UI.empty("نتیجه‌ای یافت نشد", "")); return; }
+      rows.forEach(a => l.appendChild(E("div", { class:"q-row", onClick: () => { if(coinMap[a.coinId]) Router.go(`coin/${a.coinId}`); } }, [
+        UI.coinAvatar(a.symbol, 40),
+        E("div", { class:"q-id" }, [E("div", { class:"q-nm" }, a.name), E("div", { class:"q-sy num" }, mask(a.total, v => Utils.formatNumber(v, { decimals:6 })) + " " + a.symbol)]),
+        E("div", { class:"q-pr" }, tab === "pl"
+          ? [E("div", { class:`p ${(a.change24h ?? 0) >= 0 ? "up" : "down"}` }, Utils.formatPercent(a.change24h)), E("div", { class:"c text-faint" }, "۲۴ساعت")]
+          : [E("div", { class:"p num" }, mask(a.valueIrt, v => Utils.formatPrice(v, ""))), E("div", { class:`c ${(a.change24h ?? 0) >= 0 ? "up" : "down"}` }, Utils.formatPercent(a.change24h))]),
+      ])));
     }
-
-    function openChargeModal(){
-      const backdrop = Utils.el("div", { class:"modal-backdrop", onClick:(e) => { if(e.target===backdrop) backdrop.remove(); } });
-      backdrop.appendChild(Utils.el("div", { class:"modal" }, [
-        Utils.el("h3", {}, "انتقال به وب‌سایت صرافی"),
-        Utils.el("p", {}, "برای شارژ حساب، به وب‌سایت رسمی صرافی متصل‌شده هدایت می‌شوید. این برنامه هیچ اطلاعات بانکی یا پرداختی را دریافت نمی‌کند."),
-        Utils.el("div", { class:"modal-actions" }, [
-          Utils.el("button", { class:"btn btn-outline", onClick: () => backdrop.remove() }, "انصراف"),
-          Utils.el("button", { class:"btn btn-primary", onClick: () => {
-            window.open(NOBITEX_OFFICIAL_URL, "_blank", "noopener");
-            backdrop.remove();
-          }}, [Utils.el("span",{html:ic("externalLink")}), " رفتن به وب‌سایت صرافی"]),
-        ]),
-      ]));
-      document.body.appendChild(backdrop);
+    function openCharge(){
+      const bd = E("div", { class:"modal-backdrop", onClick: (e) => { if(e.target === bd) bd.remove(); } });
+      bd.appendChild(E("div", { class:"modal" }, [E("h3", {}, "انتقال به وب‌سایت صرافی"),
+        E("p", {}, "برای شارژ حساب به وب‌سایت رسمی صرافی هدایت می‌شوید. این برنامه هیچ اطلاعات بانکی یا پرداختی دریافت نمی‌کند."),
+        E("div", { class:"modal-actions" }, [E("button", { class:"btn btn-outline", onClick: () => bd.remove() }, "انصراف"),
+          E("button", { class:"btn btn-primary", onClick: () => { window.open(NOBITEX_OFFICIAL_URL, "_blank", "noopener"); bd.remove(); } }, [E("span", { html: ic("externalLink") }), " رفتن به وب‌سایت"])])]));
+      document.body.appendChild(bd);
     }
   }
 };
@@ -3573,7 +3718,7 @@ const PageSettings = {
     ]));
 
     const s = State.get().settings;
-    const card = Utils.el("div", { class:"card card-pad" });
+    const card = Utils.el("div", { class:"q-set-group q-stagger" });
     container.appendChild(card);
 
     function update(patch){
@@ -3602,8 +3747,10 @@ const PageSettings = {
     }
 
     function settingRow(label, desc, control){
+      const ICONS = { "تم رابط کاربری":"moon", "واحد نمایش قیمت":"hash", "نحوه نمایش اعداد":"hash", "بازه به‌روزرسانی خودکار":"refresh", "اعلان تغییرات قیمت":"bell", "اعلان وضعیت اتصال":"plug", "زبان برنامه":"globe", "نسخه برنامه":"info" };
       return Utils.el("div", { class:"set-row" }, [
-        Utils.el("div", {}, [
+        Utils.el("div", { class:"q-set-ic", html: ic(ICONS[label] || "settings") }),
+        Utils.el("div", { style:"flex:1;min-width:0;" }, [
           Utils.el("div", { class:"label" }, label),
           desc ? Utils.el("div", { class:"desc" }, desc) : null,
         ]),
@@ -3676,14 +3823,12 @@ const PageAI = {
     const badge = (cls, text) => E("span", { class:`badge badge-${cls}` }, text);
     const errMsg = (e) => (e && e.detail && e.detail.errors ? e.detail.errors.join(" ") : (e && e.message) || "خطای نامشخص");
     const rid = () => "r" + Array.from(crypto.getRandomValues(new Uint8Array(10))).map(b => b.toString(36).padStart(2, "0")).join("");
-    const ui = { tab:"status", status:null, settings:null, defaults:null, allowed:[], serverCap:null };
+    const ui = { tab:(PageAI.presetTab || "status"), status:null, settings:null, defaults:null, allowed:[], serverCap:null };
 
-    const root = E("div", { id:"aiRoot" });
+    PageAI.presetTab = null;
+    const root = E("div", { id:"aiRoot", class:"q-stagger" });
     container.appendChild(root);
-    root.appendChild(E("div", { class:"page-head" }, [E("div", {}, [
-      E("h1", {}, "هوش مصنوعی معاملاتی"),
-      E("div", { class:"sub" }, "تحلیل بازار و معامله‌ی خودکار با موتور مستقل روی سرور — پیش‌فرض: فقط تحلیل و پیشنهاد"),
-    ])]));
+    root.appendChild(E("div", { class:"q-ai-hero" }, [Q.orb(true), E("h2", {}, "QAIRO AI CENTER"), E("p", {}, "تحلیل بازار و معامله‌ی خودکار با موتور مستقل روی سرور — پیش‌فرض: فقط تحلیل و پیشنهاد")]));
     const banner = E("div", { class:"card card-pad ai-banner" });
     const tabsEl = E("div", { class:"tabs", style:"margin:14px 0;flex-wrap:wrap;" });
     const body = E("div");
@@ -4028,19 +4173,19 @@ const PageAI = {
 // ===================================================================
 
 const NAV_ITEMS = [
-  { key:"trade",     label:"خرید و فروش",         icon:"market" },
-  { key:"ai",        label:"هوش مصنوعی معاملاتی", icon:"bot" },
-  { key:"dashboard", label:"داشبورد",            icon:"dashboard" },
-  { key:"market",    label:"بازار ارزها",         icon:"market" },
-  { key:"wallet",    label:"کیف پول",             icon:"wallet" },
+  { key:"dashboard", label:"خانه",                icon:"home" },
+  { key:"market",    label:"بازار",               icon:"signals" },
+  { key:"ai",        label:"QAIRO AI",            icon:"bot" },
+  { key:"trade",     label:"خرید و فروش",         icon:"swap" },
+  { key:"wallet",    label:"دارایی‌ها",           icon:"wallet" },
   { key:"history",   label:"تاریخچه تراکنش‌ها",   icon:"history" },
   { key:"profile",   label:"پروفایل",             icon:"profile" },
   { key:"settings",  label:"تنظیمات",             icon:"settings" },
 ];
 
 const PAGE_TITLES = {
-  trade:"خرید و فروش", ai:"هوش مصنوعی معاملاتی", dashboard:"داشبورد", market:"بازار ارزهای دیجیتال", coin:"جزئیات ارز",
-  wallet:"کیف پول", history:"تاریخچه تراکنش‌ها", profile:"پروفایل", settings:"تنظیمات",
+  trade:"خرید و فروش", ai:"QAIRO AI", dashboard:"QAIRO", market:"بازار", coin:"جزئیات رمزارز",
+  wallet:"دارایی‌های من", history:"تاریخچه تراکنش‌ها", profile:"پروفایل", settings:"تنظیمات",
 };
 
 // ===================================================================
@@ -4177,10 +4322,10 @@ const App = (() => {
     const scrim = Utils.el("div", { class:"sidebar-scrim", onClick: closeSidebar });
     const sidebar = Utils.el("aside", { class:"sidebar" });
     sidebar.appendChild(Utils.el("div", { class:"brand" }, [
-      Utils.el("div", { class:"brand-mark", html: ic("logo") }),
+      Utils.el("div", { class:"brand-mark", html: ic("qlogo") }),
       Utils.el("div", {}, [
-        Utils.el("div", { class:"brand-name" }, "صرافی من"),
-        Utils.el("div", { class:"brand-sub" }, "داشبورد شخصی ارز دیجیتال"),
+        Utils.el("div", { class:"brand-name" }, "QAIRO"),
+        Utils.el("div", { class:"brand-sub" }, "Smarter Decisions. Better Future."),
       ]),
     ]));
 
@@ -4219,11 +4364,12 @@ const App = (() => {
     main.append(topbar, content);
 
     const bottomNav = Utils.el("nav", { class:"bottom-nav" });
-    ["dashboard","market","wallet","history","profile"].forEach(key => {
+    ["dashboard","market","ai","wallet","settings"].forEach(key => {
       const item = NAV_ITEMS.find(n => n.key === key);
+      const center = key === "ai";
       bottomNav.appendChild(Utils.el("div", {
-        class:"bn-item", "data-key":key,
-        html: ic(item.icon) + `<span>${item.label.replace("تاریخچه تراکنش‌ها","تاریخچه")}</span>`,
+        class:"bn-item" + (center ? " bn-center" : ""), "data-key":key,
+        html: center ? `<div class="bn-orb">${ic(item.icon)}</div><span class="bn-lbl">${item.label}</span>` : ic(item.icon) + `<span>${item.label}</span>`,
         onClick: () => Router.go(key),
       }));
     });
@@ -4366,6 +4512,7 @@ const App = (() => {
     if(!root.querySelector(".shell")) buildShell();
     const previousRoute = currentRoute;
     currentRoute = route;
+    document.querySelectorAll(".q-trade-bar").forEach(n => n.remove());
     setActiveNav(route.name);
     updateConnBadge();
     const content = document.getElementById("pageContent");
