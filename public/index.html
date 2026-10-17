@@ -808,6 +808,8 @@ hr.sep{ border:none; border-top:1px solid var(--border-soft); margin:18px 0; }
   padding:13px 14px; border-radius:var(--radius-sm);
   font-size:12.5px; margin-top:16px; font-weight:600;
 }
+.cn-ip{ display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:10px; padding:11px 14px; border-radius:14px; background:#2f6bff1a; border:1px dashed #4d8bff88; cursor:pointer; font-size:12px; color:var(--text-dim); }
+.cn-ip b{ color:#fff; font-size:14px; letter-spacing:.04em; }
 .connect-status.loading{ background:var(--blue-soft); color:var(--blue); }
 .connect-status.success{ background:var(--green-soft); color:var(--green); }
 .connect-status.error{ background:var(--red-soft); color:var(--red); }
@@ -1534,6 +1536,43 @@ input:focus,.input:focus{ outline:none; border-color:#4d8bff!important; box-shad
   *,*::before,*::after{ animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important; }
 }
 
+
+/* --- اصلاحات: اسپارک‌لاین ثابت، نمودار کوچک، نوار بالای تمام‌عرض --- */
+.q-sp{ position:relative; overflow:hidden; flex:none; }
+.q-sp canvas{ position:absolute!important; inset:0; width:100%!important; height:100%!important; }
+.q-row .q-sp{ width:64px; height:30px; }
+.q-mini .q-sp{ width:100%; height:30px; margin-top:6px; }
+.q-spark-wrap{ position:relative; height:84px!important; margin:4px -4px -2px!important; }
+.q-spark-wrap canvas{ position:absolute!important; inset:0; width:100%!important; height:100%!important; }
+.topbar{ width:100%!important; max-width:none!important; margin:0!important; box-sizing:border-box; padding:12px 16px 10px!important;
+  background:linear-gradient(180deg,#0a1438f2,#070d29e6)!important; border-bottom:1px solid var(--q-line)!important;
+  backdrop-filter:blur(18px) saturate(140%)!important; box-shadow:0 10px 30px -18px #2f6bffaa!important; }
+.topbar::before{ display:none!important; }
+[data-theme="light"] .topbar{ background:#ffffffee!important; }
+/* --- راهنمای اتصال والکس --- */
+.cn-steps{ display:flex; justify-content:space-between; gap:6px; margin:4px 0 18px; position:relative; }
+.cn-step{ flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; font-size:10.5px; color:var(--text-faint); cursor:pointer; position:relative; font-weight:700; }
+.cn-step i{ font-style:normal; width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; background:#ffffff0a; border:1px solid var(--q-line); transition:all .4s var(--ease-pop); z-index:1; }
+.cn-step.on{ color:#fff; } .cn-step.on i{ background:var(--q-grad); border-color:transparent; box-shadow:0 0 18px -2px #4d6bff; transform:scale(1.12); }
+.cn-step.done i{ background:#1fe08f22; border-color:#1fe08f66; color:var(--q-up); }
+.cn-step:not(:last-child)::after{ content:""; position:absolute; top:14px; inset-inline-start:calc(50% + 18px); width:calc(100% - 36px); height:2px; background:var(--q-line); }
+.cn-step.done:not(:last-child)::after{ background:#1fe08f66; }
+.cn-view{ animation:q-slide-fwd .55s var(--ease-pop) both; min-height:250px; }
+.cn-view.back{ animation-name:q-slide-back; }
+@keyframes q-slide-fwd{ from{ opacity:0; transform:translateX(-26px); } to{ opacity:1; transform:none; } }
+@keyframes q-slide-back{ from{ opacity:0; transform:translateX(26px); } to{ opacity:1; transform:none; } }
+.cn-point{ display:flex; gap:12px; align-items:flex-start; padding:11px 12px; border-radius:16px; background:#ffffff07; border:1px solid var(--q-line2); margin-top:10px; }
+.cn-point p{ font-size:12.5px; line-height:1.9; color:var(--text-dim); }
+.cn-pi{ width:34px; height:34px; border-radius:12px; flex:none; display:flex; align-items:center; justify-content:center; background:linear-gradient(145deg,#2f6bff44,#7a4dff33); border:1px solid #6ea0ff44; color:#cfe0ff; }
+.cn-pi .ic{ width:18px; height:18px; }
+.cn-card{ display:flex; gap:12px; align-items:flex-start; padding:13px; border-radius:18px; background:linear-gradient(150deg,#101d4acc,#0a1536e6); border:1px solid var(--q-line); margin-top:10px; }
+.cn-card b{ width:28px; height:28px; border-radius:50%; flex:none; display:flex; align-items:center; justify-content:center; background:var(--q-grad); font-size:13px; }
+.cn-card p{ font-size:12.5px; line-height:2; color:var(--text-dim); }
+.cn-links{ display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
+.cn-nav{ display:flex; gap:10px; margin-top:18px; }
+.cn-foot{ display:flex; justify-content:space-between; gap:8px; margin-top:10px; flex-wrap:wrap; }
+.connect-status{ display:flex; align-items:center; gap:8px; margin-top:12px; padding:11px 12px; border-radius:14px; font-size:12.5px; line-height:1.8; animation:q-in .4s var(--ease-pop) both; }
+.connect-status.loading{ background:#2f6bff1f; color:var(--q-blue2); } .connect-status.success{ background:#1fe08f1f; color:var(--q-up); } .connect-status.error{ background:#ff4d6d1f; color:#ff8da1; }
 </style>
 </head>
 <body>
@@ -1727,6 +1766,7 @@ const Icons = {
 };
 
 Object.assign(Icons, {
+  bolt: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 3L5 14h6l-1 7 8-11h-6z" stroke-linejoin="round"/></svg>`,
   home: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-7 9 7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke-linejoin="round"/><path d="M10 20v-6h4v6"/></svg>`,
   signals: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2" stroke-linecap="round"/></svg>`,
   chat: `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16v11H9l-5 4z" stroke-linejoin="round"/><path d="M8 9.5h8M8 12.5h5" stroke-linecap="round"/></svg>`,
@@ -1761,7 +1801,7 @@ const Q = {
     const row = E("div", { class:"q-row", onClick: () => Router.go(`coin/${c.id}`) }, [
       UI.coinAvatar(c.symbol, 40),
       E("div", { class:"q-id" }, [E("div", { class:"q-nm" }, c.name), E("div", { class:"q-sy" }, c.symbol)]),
-      withSpark ? E("canvas", { class:"q-sp", "data-key":"row_" + c.id }) : null,
+      withSpark ? E("div", { class:"q-sp" }, E("canvas", { "data-key":"row_" + c.id })) : null,
       E("div", { class:"q-pr" }, [E("div", { class:"p num" }, Utils.formatPrice(c.price, "")), E("div", { class:`c ${(c.change24h ?? 0) >= 0 ? "up" : "down"}` }, Utils.formatPercent(c.change24h))]),
     ]);
     return row;
@@ -1926,8 +1966,8 @@ const Api = (() => {
       const j = await request("/api/session/check");
       const now = new Date().toISOString();
       State.set({ connection: j.data.exchangeKeyConfigured
-        ? { status:"connected", exchangeName:"والکس", connectedAt:j.data.keyConnectedAt || State.get().connection.connectedAt || now, lastChecked:now }
-        : { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:now } });
+        ? { status:"connected", exchangeName:"والکس", connectedAt:j.data.keyConnectedAt || State.get().connection.connectedAt || now, lastChecked:now, serverIp:j.data.serverIp || null }
+        : { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:now, serverIp:j.data.serverIp || null, keyUnreadable:!!j.data.keyUnreadable } });
     }catch(e){ /* در قطعی شبکه، زمان آخرین بررسی موفق تغییر نمی‌کند */ }
     return State.get().connection;
   }
@@ -2702,167 +2742,118 @@ const PageAuthPassword = {
 // رسمی والکس، فقط کافیست متن همین آرایه به‌روز شود.
 const CONNECT_GUIDE_STEPS = [
   "در پنل رسمی والکس (wallex.ir) بخش مدیریت API را باز کنید و «ساخت API» بزنید. دسترسی «برداشت» را فعال نکنید. برای فقط دیدن اطلاعات «خواندن» کافی است؛ برای سفارش‌گذاری و معامله خودکار، «معامله» را هم فعال کنید.",
-  "در بخش «IPهای مجاز» آدرس IP همین سرور (VPS) را وارد کنید تا کلید فقط از همین سرور کار کند.",
-  "کلید ساخته‌شده را در فیلد زیر وارد کنید. سرور همان لحظه با یک درخواست واقعی به والکس آن را آزمایش می‌کند؛ اگر پذیرفته شد، رمزنگاری‌شده روی سرور ذخیره می‌شود و دیگر به مرورگر برنمی‌گردد.",
+  "در بخش «IPهای مجاز» آدرس IP سرور برنامه را وارد کنید تا کلید فقط از همین سرور کار کند.",
+  "کلید ساخته‌شده را در مرحله‌ی آخر همین راهنما وارد کنید. سرور همان لحظه با یک درخواست واقعی به والکس آن را آزمایش می‌کند؛ اگر پذیرفته شد، رمزنگاری‌شده روی سرور ذخیره می‌شود و دیگر به مرورگر برنمی‌گردد.",
   "کلید حداکثر ۹۰ روز از تاریخ ساخت اعتبار دارد؛ بعد از انقضا کلید جدید بسازید و دوباره اینجا وارد کنید.",
 ];
 
 const NOBITEX_API_GUIDE_URL = "https://developers.wallex.ir";
+const WALLEX_SITE_URL = "https://wallex.ir";
 
+// راهنمای گام‌به‌گام اتصال والکس (بعد از ثبت‌نام / ورود، تا وقتی کلید معتبر ثبت نشده باز می‌ماند)
 const PageConnect = {
   mount(container){
-    let guideOpen = false;
-    let showKey = false;
+    const E = Utils.el;
+    const STEPS = ["شروع", "ساخت کلید", "امنیت کلید", "اتصال"];
+    let step = 0, dir = 1, showKey = false;
     let status = "idle"; // idle | loading | success | error
     let errorMsg = "";
+    let draft = "";
 
-    container.innerHTML = "";
-    container.className = "connect-shell";
+    const card = authShellStart(container);
+    const body = E("div", { class:"cn-body" });
+    card.appendChild(body);
 
-    const card = Utils.el("div", { class:"card card-pad connect-card" });
-    container.appendChild(card);
+    const dots = () => E("div", { class:"cn-steps" }, STEPS.map((l, i) => E("div", { class:"cn-step" + (i === step ? " on" : i < step ? " done" : ""), onClick: () => { if(i < step || status === "idle") go(i); } }, [
+      E("i", {}, i < step ? "✓" : String(i + 1)), E("span", {}, l)])));
 
-    function renderGuide(){
-      return Utils.el("div", {}, [
-        Utils.el("div", {
-          class:"guide-toggle",
-          onClick: () => { guideOpen = !guideOpen; paint(); }
-        }, [
-          Utils.el("span", {}, "راهنمای راه‌اندازی کلید و رمزها"),
-          Utils.el("span", { html: ic(guideOpen ? "chevronDown" : "chevronLeft") }),
-        ]),
-        guideOpen ? Utils.el("ol", { class:"guide-steps", style:"list-style:none;" },
-          CONNECT_GUIDE_STEPS.map((s,i) => Utils.el("li", {}, [
-            Utils.el("span", { class:"guide-num" }, String(i+1)),
-            Utils.el("span", {}, s),
-          ]))
-        ) : null,
+    function go(n){ if(status === "loading") return; dir = n >= step ? 1 : -1; step = Math.max(0, Math.min(STEPS.length - 1, n)); status = "idle"; errorMsg = ""; paint(); }
+
+    function point(icon, text){ return E("div", { class:"cn-point" }, [E("span", { class:"cn-pi", html: ic(icon) }), E("p", {}, text)]); }
+
+    function stepView(){
+      if(step === 0) return E("div", {}, [
+        E("h1", { class:"connect-title" }, "اتصال به حساب والکس"),
+        E("p", { class:"connect-desc" }, "برای نمایش دارایی‌ها و تحلیل بازار، QAIRO باید با کلید API خودِ شما به والکس وصل شود. ساخت کلید حدود ۲ دقیقه طول می‌کشد؛ همین‌جا قدم‌به‌قدم راهنمایی‌تان می‌کنیم."),
+        point("shield", "کلید فقط سطح دسترسی‌ای را دارد که خودتان انتخاب می‌کنید. این برنامه امکان برداشت وجه ندارد."),
+        point("lock", "کلید شما فقط یک‌بار به سرور می‌رسد، رمزنگاری‌شده ذخیره می‌شود و دیگر به مرورگر برنمی‌گردد."),
+        point("bolt", "بعد از وارد کردن کلید، یک درخواست واقعی به والکس زده می‌شود و در صورت معتبر بودن، حساب شما متصل می‌شود."),
       ]);
-    }
-
-    function renderNotice(){
-      return Utils.el("div", { class:"notice-box" }, [
-        Utils.el("div", { html: ic("shield") }),
-        Utils.el("div", {}, [
-          Utils.el("p", {}, "نکات مهم امنیتی پیش از اتصال:"),
-          Utils.el("ul", {}, [
-            Utils.el("li", {}, "کلید API را فقط از وب‌سایت رسمی والکس دریافت کنید."),
-            Utils.el("li", {}, "سطح دسترسی کلید را متناسب با نیاز برنامه انتخاب کنید."),
-            Utils.el("li", {}, "در صورت امکان، دسترسی برداشت وجه را غیرفعال بگذارید."),
-            Utils.el("li", {}, "کلید API اطلاعات حساس است و نباید در اختیار دیگران قرار گیرد؛ آن را در چت یا شبکه‌های اجتماعی نفرستید."),
+      if(step === 1) return E("div", {}, [
+        E("h1", { class:"connect-title" }, "کلید API را در والکس بسازید"),
+        E("p", { class:"connect-desc" }, "این کار را در وب‌سایت یا پنل رسمی والکس انجام دهید."),
+        E("div", { class:"cn-card" }, [E("b", {}, "۱"), E("p", {}, CONNECT_GUIDE_STEPS[0])]),
+        E("div", { class:"cn-links" }, [
+          E("a", { class:"btn btn-outline btn-sm", href:WALLEX_SITE_URL, target:"_blank", rel:"noopener" }, "باز کردن والکس"),
+          E("a", { class:"btn btn-ghost btn-sm", href:NOBITEX_API_GUIDE_URL, target:"_blank", rel:"noopener" }, "راهنمای رسمی API"),
+        ]),
+      ]);
+      if(step === 2) return E("div", {}, [
+        E("h1", { class:"connect-title" }, "کلید را امن نگه دارید"),
+        E("div", { class:"cn-card" }, [E("b", {}, "۲"), E("p", {}, CONNECT_GUIDE_STEPS[1])]),
+        (State.get().connection.serverIp ? E("div", { class:"cn-ip", onClick: () => { try{ navigator.clipboard.writeText(State.get().connection.serverIp); Toast.success("کپی شد", "IP سرور کپی شد."); }catch(e){} } }, [E("span", {}, "IP سرور (برای کپی بزنید)"), E("b", { class:"num", style:"direction:ltr;" }, State.get().connection.serverIp)]) : null),
+        E("div", { class:"cn-card" }, [E("b", {}, "۳"), E("p", {}, CONNECT_GUIDE_STEPS[3])]),
+        E("div", { class:"cn-card" }, [E("b", {}, "🔒"), E("p", {}, "کلید شما رمزنگاری‌شده و فقط برای حساب خودتان ذخیره می‌شود و هیچ‌جا در برنامه یا برای کاربران دیگر نمایش داده نمی‌شود. هر زمان خواستید از تنظیمات «قطع اتصال» بزنید تا کلید از سرور حذف شود.")]),
+        E("div", { class:"notice-box" }, [E("div", { html: ic("alert") }), E("div", {}, [E("p", {}, "هرگز کلید را در چت، پیام‌رسان یا شبکه‌های اجتماعی نفرستید؛ هر کسی آن را داشته باشد به حساب شما دسترسی دارد.")])]),
+      ]);
+      return E("div", {}, [
+        E("h1", { class:"connect-title" }, "کلید را وارد کنید"),
+        E("p", { class:"connect-desc" }, CONNECT_GUIDE_STEPS[2]),
+        E("div", { class:"field" }, [
+          E("label", { for:"apiKeyInput" }, "کلید API والکس"),
+          E("div", { class:"input-wrap api-field" }, [
+            E("input", { id:"apiKeyInput", class:"input", type: showKey ? "text" : "password", placeholder:"کلید را اینجا paste کنید", autocomplete:"off", spellcheck:"false", value:draft,
+              style:"direction:ltr;text-align:left;", onInput: (e) => { draft = e.target.value; } }),
+            E("div", { class:"input-actions" }, [E("button", { class:"input-icon-btn", type:"button", html: ic(showKey ? "eyeOff" : "eye"),
+              onClick: () => { showKey = !showKey; const i = document.getElementById("apiKeyInput"); i.type = showKey ? "text" : "password"; } })]),
           ]),
+          E("span", { class:"field-hint" }, "این مقدار در مرورگر ذخیره نمی‌شود."),
         ]),
+        statusView(),
       ]);
     }
 
-    function renderStatus(){
-      if(status === "loading"){
-        return Utils.el("div", { class:"connect-status loading" }, [
-          Utils.el("span", { class:"spin", style:"width:14px;height:14px;border-width:2px;" }),
-          "سرور در حال آزمایش کلید با والکس است…",
-        ]);
-      }
-      if(status === "success"){
-        return Utils.el("div", { class:"connect-status success" }, [
-          Utils.el("span", { html: ic("check") }),
-          "اتصال به والکس برقرار شد. در حال انتقال به داشبورد…",
-        ]);
-      }
-      if(status === "error"){
-        return Utils.el("div", { class:"connect-status error" }, [
-          Utils.el("span", { html: ic("alert") }),
-          errorMsg || "اتصال برقرار نشد. لطفاً دوباره تلاش کنید.",
-        ]);
-      }
+    function statusView(){
+      if(status === "loading") return E("div", { class:"connect-status loading" }, [E("span", { class:"spin", style:"width:14px;height:14px;border-width:2px;" }), "در حال آزمایش کلید با والکس…"]);
+      if(status === "success") return E("div", { class:"connect-status success" }, [E("span", { html: ic("check") }), "اتصال به والکس برقرار شد. در حال انتقال به داشبورد…"]);
+      if(status === "error") return E("div", { class:"connect-status error" }, [E("span", { html: ic("alert") }), errorMsg || "اتصال برقرار نشد. دوباره تلاش کنید."]);
       return null;
     }
 
     async function handleConnect(){
-      const input = card.querySelector("#apiKeyInput");
-      const value = input.value.trim();
-
-      if(value.length < 1){
-        status = "error";
-        errorMsg = "کلید API والکس را وارد کنید.";
-        paint();
-        return;
-      }
-
-      status = "loading";
-      errorMsg = "";
-      paint();
-
+      const value = draft.trim();
+      if(!value){ status = "error"; errorMsg = "کلید API والکس را وارد کنید."; paint(); return; }
+      status = "loading"; errorMsg = ""; paint();
       try{
         const r = await Api.connect(value);
-        // کلید فقط برای همین فراخوانی استفاده شد و اینجا از حافظه پاک می‌شود
-        input.value = "";
-        status = "success";
-        paint();
+        draft = ""; status = "success"; paint();
         Toast.success("به والکس متصل شدید", `کلید پذیرفته شد (کلید …${r.hint})؛ ${r.assets} دارایی در حساب دیده شد.`);
-        setTimeout(() => Router.go("dashboard"), 700);
+        setTimeout(() => Router.go("dashboard"), 900);
       }catch(e){
-        status = "error";
-        errorMsg = e && e.message ? e.message : "خطایی در اتصال رخ داد.";
-        paint();
+        status = "error"; errorMsg = e && e.message ? e.message : "خطایی در اتصال رخ داد."; paint();
       }
     }
 
     function paint(){
-      card.innerHTML = "";
-      card.appendChild(Utils.el("div", { class:"connect-logo" }, [
-        Utils.el("div", { class:"brand-mark", html: ic("logo") }),
-        Utils.el("div", { class:"connect-logo-text" }, [
-          Utils.el("b", {}, "صرافی من"),
-          Utils.el("span", {}, "داشبورد شخصی مدیریت دارایی"),
-        ]),
-      ]));
-      card.appendChild(Utils.el("h1", { class:"connect-title" }, "اتصال به حساب والکس"));
-      card.appendChild(Utils.el("p", { class:"connect-desc" },
-        "کلید API والکس خود را وارد کنید تا سرور با آن به حساب شما وصل شود و داده‌های واقعی نمایش داده شود. این برنامه امکان برداشت وجه ندارد."
-      ));
-
-      card.appendChild(renderGuide());
-      card.appendChild(renderNotice());
-
-      const field = Utils.el("div", { class:"field" }, [
-        Utils.el("label", { for:"apiKeyInput" }, "کلید API والکس"),
-        Utils.el("div", { class:"input-wrap api-field" }, [
-          Utils.el("input", {
-            id:"apiKeyInput", class:"input", type: showKey ? "text" : "password",
-            placeholder:"کلید API را اینجا paste کنید", autocomplete:"off", spellcheck:"false", style:"direction:ltr;text-align:left;",
-          }),
-          Utils.el("div", { class:"input-actions" }, [
-            Utils.el("button", {
-              class:"input-icon-btn", type:"button", title: showKey ? "مخفی کردن" : "نمایش",
-              html: ic(showKey ? "eyeOff" : "eye"),
-              onClick: () => { showKey = !showKey; const inp = card.querySelector("#apiKeyInput"); const val = inp.value; paint(); const ni = card.querySelector("#apiKeyInput"); ni.value = val; ni.focus(); },
-            }),
-          ]),
-        ]),
-        Utils.el("span", { class:"field-hint" }, "این مقدار در مرورگر ذخیره نمی‌شود. سرور آن را با والکس آزمایش می‌کند و رمزنگاری‌شده نگه می‌دارد."),
+      body.innerHTML = "";
+      body.appendChild(dots());
+      const view = E("div", { class:"cn-view " + (dir > 0 ? "fwd" : "back") }, stepView());
+      body.appendChild(view);
+      const last = step === STEPS.length - 1;
+      const nav = E("div", { class:"cn-nav" }, [
+        step > 0 ? E("button", { class:"btn btn-outline", disabled: status === "loading" ? "true" : false, onClick: () => go(step - 1) }, "قبلی") : null,
+        last
+          ? E("button", { class:"btn btn-primary", style:"flex:1;height:46px;", disabled: (status === "loading" || status === "success") ? "true" : false, onClick: handleConnect }, status === "loading" ? "در حال آزمایش…" : "اتصال به والکس")
+          : E("button", { class:"btn btn-primary", style:"flex:1;height:46px;", onClick: () => go(step + 1) }, step === 0 ? "شروع راهنما" : "مرحله‌ی بعد"),
       ]);
-      card.appendChild(field);
-
-      const btn = Utils.el("button", {
-        class:"btn btn-primary btn-block", style:"margin-top:16px;height:44px;",
-        disabled: status === "loading" ? "true" : false,
-        onClick: handleConnect,
-      }, status === "loading" ? [Utils.el("span",{class:"spin"}), "در حال آزمایش با والکس…"] : "اتصال به والکس");
-      card.appendChild(btn);
-
-      const st = renderStatus();
-      if(st) card.appendChild(st);
-
-      card.appendChild(Utils.el("div", { style:"text-align:center;margin-top:10px;" }, [
-        Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: async () => { await Api.disconnect(); AppAuth.logout(); Router.go("auth-phone"); } }, "خروج از حساب برنامه"),
-      ]));
-      card.appendChild(Utils.el("div", { class:"connect-foot" }, [
-        "برای ساخت کلید API، ",
-        Utils.el("a", { href: NOBITEX_API_GUIDE_URL, target:"_blank", rel:"noopener" }, "راهنمای رسمی والکس"),
-        " را مطالعه کنید.",
-      ]));
+      body.appendChild(nav);
+      const foot = E("div", { class:"cn-foot" }, [
+        step < STEPS.length - 1 ? E("button", { class:"btn btn-ghost btn-sm", onClick: () => go(STEPS.length - 1) }, "کلید دارم، رد کردن راهنما") : null,
+        E("button", { class:"btn btn-ghost btn-sm", onClick: async () => { await Api.disconnect(); AppAuth.logout(); Router.go("auth-phone"); } }, "خروج از حساب برنامه"),
+      ]);
+      body.appendChild(foot);
+      if(last && status === "error"){ const i = document.getElementById("apiKeyInput"); if(i) i.focus(); }
     }
-
     paint();
   }
 };
@@ -2985,7 +2976,7 @@ const PageDashboard = {
       const pick = ["btc", "eth", "usdt"].map(id => coins.find(c => c.id === id)).filter(Boolean);
       (pick.length ? pick : coins.slice(0, 3)).forEach(c => overview.appendChild(E("div", { class:"q-mini", onClick: () => Router.go(`coin/${c.id}`) }, [
         E("div", { class:"q-h" }, [UI.coinAvatar(c.symbol, 22), E("span", {}, c.symbol.replace(/IRT|USDT$/i, "") || c.symbol)]),
-        E("canvas", { class:"q-sp", "data-key":"row_" + c.id, style:"width:100%;" }),
+        E("div", { class:"q-sp" }, E("canvas", { "data-key":"row_" + c.id })),
         E("div", { class:`q-p ${(c.change24h ?? 0) >= 0 ? "up" : "down"}`, style:"font-weight:800;direction:ltr;" }, Utils.formatPercent(c.change24h)),
       ])));
       list.innerHTML = "";
@@ -3690,7 +3681,7 @@ const PageProfile = {
             try{
               const st = await Api.disconnectExchange();
               backdrop.remove();
-              if(st.status === "connected") Toast.info("کلید برنامه حذف شد", "کلید ثابت سرور (WALLEX_API_KEY در .env) همچنان فعال است.");
+              if(st.status === "connected") Toast.info("کلید برنامه حذف شد", "کلید والکس از سرور حذف شد.");
               else Toast.info("اتصال قطع شد", "کلید والکس از سرور حذف شد.");
               Router.go("connect");
             }catch(e){ backdrop.remove(); Toast.error("قطع اتصال انجام نشد", e && e.message ? e.message : ""); }
