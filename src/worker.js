@@ -253,6 +253,12 @@ async function throttle(env) {
   const now = Date.now(); const at = Math.max(now, nextSlot); nextSlot = at + gap;
   if (at > now) await sleep(at - now);
 }
+// کلید باید «همین لحظه» برای همین کاربر قابل‌استفاده باشد؛ وگرنه از کش حافظه هم داده‌ی حساب برنمی‌گردد
+// (بعد از قطع اتصال یا غیرقابل‌خواندن شدن کلید، داده‌ی کش‌شده نباید تا پایان TTL نمایش داده شود)
+async function assertKey(env) {
+  const v = await ensureKey(env);
+  if (!v.key) throw new HttpError(503, "TOKEN_NOT_CONFIGURED", "کلید API والکس تنظیم نشده است؛ ابتدا از راهنمای اتصال، کلید خود را وارد کنید.");
+}
 async function wallexRaw(env, path, { method = "GET", query, body, auth = false, timeoutMs = 8000, attempts, apiKey } = {}) {
   const url = new URL(WALLEX_BASE + path);
   for (const [k, v] of Object.entries(query || {})) if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
@@ -414,6 +420,7 @@ async function getPrices(env, curs) {
   return out;
 }
 async function buildAssets(env) {
+  await assertKey(env);
   const bal = normalizeBalances(await memo(um(env, "balances"), 5000, () => wallex(env, "/v1/account/balances", { auth: true })));
   const held = bal.filter((w) => w.total > 0 || w.locked > 0);
   const curs = held.map((w) => w.cur).filter((c) => c !== "tmn");
@@ -443,7 +450,7 @@ function normalizeOrders(json) {
   return list.map(normOrder);
 }
 // UNVERIFIED: page/per_page در مستندات مقدار نمونه‌ی 0 دارند و پیش‌فرض‌هایشان نامشخص است؛ بنابراین ارسال نمی‌شوند.
-const fetchOpenOrders = (env) => memo(um(env, "orders:open"), 5000, async () => normalizeOrders(await wallex(env, "/v1/account/openOrders", { auth: true })));
+const fetchOpenOrders = async (env) => { await assertKey(env); return memo(um(env, "orders:open"), 5000, async () => normalizeOrders(await wallex(env, "/v1/account/openOrders", { auth: true }))); };
 function orderToRow(o, forceOpen) {
   const st = o.status.toUpperCase(); const open = forceOpen || o.active;
   const status = open ? "در انتظار" : st.includes("CANCEL") ? "لغو شده" : st.includes("FILL") ? "موفق" : o.status || "—";
@@ -635,7 +642,7 @@ function getTrading(env) {
     env, HttpError, hasStore: !!env.STORE, hasApiKey: () => !!currentKey(env), kv: kvApi(env), coins: COINS, tmnSymbol, priceOf, num, decimalStr,
     tradingState: () => tradingState(env), getMarkets: () => getMarketsForDisplay(env),
     fetchOhlc: (coinId, tf, days) => fetchOhlc(env, coinId, tf, days),
-    getBalances: async () => normalizeBalances(await memo(um(env, "balances"), 5000, () => wallex(env, "/v1/account/balances", { auth: true }))),
+    getBalances: async () => { await assertKey(env); return normalizeBalances(await memo(um(env, "balances"), 5000, () => wallex(env, "/v1/account/balances", { auth: true }))); },
     // سفارش واقعی خودکار (فقط بازار). همه‌ی بررسی‌های مسیر دستی + claim یکتا + استعلام وضعیت اعمال می‌شود.
     placeLiveOrder: async ({ coinId, side, amount, id, isExit }) => {
       const order = { coinId, side, execution: "market", amount: decimalStr(Number(amount), 8), price: null };
@@ -675,6 +682,8 @@ async function route(request, env, ctx, url) {
     throw new HttpError(404, "NOT_FOUND", "مسیر یافت نشد.");
   }
 
+  // ورود با رمز ثابت عمداً و برای همیشه حذف شده؛ پاسخ صریح برای کلاینت‌های قدیمی (هرگز نشست صادر نمی‌کند)
+  if (p === "/api/session") throw new HttpError(403, "PASSCODE_LOGIN_DISABLED", "ورود با رمز ثابت حذف شده است؛ با شماره موبایل و کد پیامکی وارد شوید.");
   if (p === "/api/health" && m === "GET") return ok({ status: "ok" }); // عمداً بدون جزئیات و بدون نیاز به نشست
 
   const uid = await requireSession(request, env);
@@ -703,7 +712,7 @@ async function route(request, env, ctx, url) {
     const live = (await store(env, "/kv/get", { key: "eng:trades" })).value || [];
     if (live.some((t) => t.mode === "live" && ["open", "holding", "closing", "pending_entry", "needs_review"].includes(t.status)))
       throw new HttpError(409, "OPEN_LIVE_POSITIONS", "موقعیت واقعی باز یا نامشخص وجود دارد؛ با حذف کلید، حد سود/ضرر آن‌ها پایش نمی‌شود. ابتدا آن‌ها را ببندید.");
-    await store(env, "/kv/put", { key: "secret:wallex", value: null }); await store(env, "/idx/remove", { name: "keyed", id: env.__uid }); vaults.delete(env); memoClear(""); await ensureKey(env);
+    await store(env, "/kv/put", { key: "secret:wallex", value: null }); await store(env, "/idx/remove", { name: "keyed", id: env.__uid }); vaults.delete(env); memoClear(um(env, "")); memoClear(""); await ensureKey(env);
     const v = vaultOf(env); return ok({ connected: !!v.key, source: v.source });
   }
 
@@ -742,7 +751,7 @@ async function route(request, env, ctx, url) {
   }
   if (p === "/api/orders/open" && m === "GET") return ok((await fetchOpenOrders(env)).map((o) => orderToRow(o, true)));
   if (p === "/api/orders/history" && m === "GET") return ok((await fetchOpenOrders(env)).map((o) => orderToRow(o, true)), { note: "مستندات والکس endpoint تاریخچه‌ی سفارش‌ها را مشخص نکرده؛ فقط سفارش‌های باز نمایش داده می‌شوند." });
-  if (p === "/api/profile" && m === "GET") return ok(normalizeProfile(await memo(um(env, "profile"), 60000, () => wallex(env, "/v1/account/profile", { auth: true }))));
+  if (p === "/api/profile" && m === "GET") { await assertKey(env); return ok(normalizeProfile(await memo(um(env, "profile"), 60000, () => wallex(env, "/v1/account/profile", { auth: true }))));  }
   if (p === "/api/trade/config" && m === "GET") { const ts = tradingState(env); return ok({ tradingEnabled: ts.enabled, reasons: ts.reasons, maxOrderValueIrt: ts.cap, markets: COINS.map((c) => ({ id: c.id, name: c.name })) }); }
   if (p === "/api/trade/preview" && m === "POST") return ok(await tradePreview(env, await readJson(request)));
   if (p === "/api/trade/submit" && m === "POST") return ok(await tradeSubmit(env, await readJson(request)));

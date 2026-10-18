@@ -2,9 +2,11 @@
 // src/auth.js — ورود و ثبت‌نام واقعی با شماره موبایل
 // -------------------------------------------------------------------
 // جریان: شماره → کد پیامکی (OTP) → رمز عبور (ساخت حساب یا ورود)
-// • برنامه چندکاربره است: هر شماره‌ی معتبر می‌تواند ثبت‌نام کند و کلید والکس خودش را وصل کند.
-//   (اختیاری: اگر ALLOWED_PHONES پر باشد، فقط همان شماره‌ها می‌توانند وارد شوند — حالت دعوت‌نامه‌ای.)
-// • در حالت دعوت‌نامه‌ای، برای شماره‌ی غیرمجاز هم پاسخ «کد ارسال شد» می‌دهیم (بدون پیامک) تا لو نرود.
+// • حالت ثبت‌نام با REGISTRATION_MODE تعیین می‌شود و پیش‌فرض آن «بسته» (invite) است (fail-closed):
+//     invite (پیش‌فرض): فقط شماره‌های ALLOWED_PHONES؛ اگر لیست خالی باشد ثبت‌نام/ورود غیرفعال است (NOT_CONFIGURED).
+//     open: هر شماره‌ی معتبر می‌تواند ثبت‌نام کند و کلید والکس خودش را وصل کند (برنامه‌ی عمومی).
+//   یعنی فراموش‌کردن یک متغیر محیطی هرگز سرور را ناخواسته عمومی نمی‌کند.
+// • در حالت invite، برای شماره‌ی غیرمجاز هم پاسخ «کد ارسال شد» می‌دهیم (بدون پیامک) تا لو نرود.
 // • سقف سراسری ارسال پیامک در ساعت (OTP_GLOBAL_PER_HOUR) جلوی سوءاستفاده/هزینه‌ی پیامک را می‌گیرد.
 // • کد OTP فقط به‌صورت HMAC ذخیره می‌شود؛ رمز عبور با PBKDF2-SHA256 (تکرار بالا + salt).
 // • محدودیت نرخ: هر شماره و هر IP؛ حداکثر ۵ تلاش برای هر کد؛ انقضای کد ۲ دقیقه.
@@ -33,12 +35,12 @@ export function createAuth(d) {
   const bad = (status, code, msg, extra) => new HttpError(status, code, msg, extra);
   const secret = () => env.SESSION_SECRET;
   const cfg = () => ({
-    allowed: parseAllowed(env.ALLOWED_PHONES), globalOtpPerHour: clampInt(env.OTP_GLOBAL_PER_HOUR, 10, 100000, 500), provider: String(env.SMS_PROVIDER || "").toLowerCase(),
+    allowed: parseAllowed(env.ALLOWED_PHONES), open: String(env.REGISTRATION_MODE || "invite").toLowerCase() === "open", globalOtpPerHour: clampInt(env.OTP_GLOBAL_PER_HOUR, 10, 100000, 500), provider: String(env.SMS_PROVIDER || "").toLowerCase(),
     otpTtl: clampInt(env.OTP_TTL_SEC, 60, 600, 120), resend: clampInt(env.OTP_RESEND_SEC, 30, 600, 60), maxAttempts: 5,
     iter: Math.max(1000, Number(env.PBKDF2_ITER) || 600000), resetOk: env.ALLOW_PASSWORD_RESET === "true",
   });
 
-  const permitted = (c, phone) => !c.allowed.size || c.allowed.has(phone); // لیست خالی = ثبت‌نام عمومی
+  const permitted = (c, phone) => c.open || c.allowed.has(phone);
 
   async function limit(key, max, windowMs) {
     const r = await rl.check(key, max, windowMs);
@@ -87,6 +89,7 @@ export function createAuth(d) {
   async function otpSend(phoneRaw, ip) {
     const c = cfg(); const phone = normalizePhone(phoneRaw);
     if (!phone) throw bad(400, "INVALID_PHONE", "شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.");
+    if (!c.open && !c.allowed.size) throw bad(503, "NOT_CONFIGURED", "ثبت‌نام بسته است: ALLOWED_PHONES را پر کنید یا برای ثبت‌نام عمومی REGISTRATION_MODE=open بگذارید.");
     if (!c.provider) throw bad(503, "SMS_NOT_CONFIGURED", "ارسال پیامک تنظیم نشده است (SMS_PROVIDER).");
     await limit("otp-global", c.globalOtpPerHour, 3600000); await limit(`otp-ip:${ip}`, 20, 3600000); await limit(`otp:${phone}`, 5, 15 * 60000);
     const key = `auth:otp:${phone}`; const prev = await kv.get(key); const t = now();
