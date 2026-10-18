@@ -2837,6 +2837,7 @@ const PageConnect = {
     function paint(){
       body.innerHTML = "";
       body.appendChild(dots());
+      if(State.get().connection.keyUnreadable) body.appendChild(E("div", { class:"connect-status error", style:"margin:0 0 12px;" }, [E("span", { html: ic("alert") }), "کلید ذخیره‌شده‌ی شما روی سرور قابل‌خواندن نیست (احتمالاً تنظیمات امنیتی سرور تغییر کرده). لطفاً کلید API را دوباره وارد کنید."]));
       const view = E("div", { class:"cn-view " + (dir > 0 ? "fwd" : "back") }, stepView());
       body.appendChild(view);
       const last = step === STEPS.length - 1;
