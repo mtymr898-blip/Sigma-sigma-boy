@@ -22,7 +22,7 @@
 
 import { createTrading } from "./trading.js";
 import { createAuth } from "./auth.js";
-import { seal, open as openSealed, fromB64u } from "./vault.js";
+import { seal, open as openSealed, fromB64u, deriveUserSecret, vaultAadFor, vaultSecretsFor, isStrongSecret } from "./vault.js";
 
 const WALLEX_BASE = "https://api.wallex.ir";
 const UA = "wallex-personal-dashboard/1.0";
@@ -226,17 +226,26 @@ const um = (env, k) => `${env.__uid || ""}|${k}`; // کلید کش مخصوص ک
 // هرگز به مرورگر برنمی‌گردد (فقط ۴ رقم آخر برای نمایش).
 const vaults = new WeakMap();
 const vaultOf = (env) => { let v = vaults.get(env); if (!v) { v = { loaded: false, key: null, source: null, savedAt: null, hint: null, corrupt: false, loading: null }; vaults.set(env, v); } return v; };
-const vaultSecret = (env) => env.VAULT_SECRET || env.SESSION_SECRET;
-// کلید رمزنگاری هر کاربر جداست (مشتق‌شده از راز سرور + شناسه‌ی کاربر) و رکورد با شناسه‌ی کاربر «قفل» می‌شود (AAD)
-const userVaultSecret = (env) => hmacB64u(vaultSecret(env), "wallex-key:" + env.__uid);
-const vaultAad = (env) => "wallex-key:" + env.__uid;
+const vaultAad = (env) => vaultAadFor(env.__uid);
 async function ensureKey(env) {
   const v = vaultOf(env); if (v.loaded) return v;
   if (!v.loading) v.loading = (async () => {
     let storeOk = true, rec = null;
     if (env.STORE) { try { rec = (await store(env, "/kv/get", { key: "secret:wallex" })).value; } catch (_) { storeOk = false; } }
-    v.key = null; v.source = null; v.corrupt = false;
-    if (rec && rec.sealed && vaultSecret(env) && env.__uid) { try { v.key = await openSealed(await userVaultSecret(env), rec.sealed, vaultAad(env)); v.source = "ui"; v.savedAt = rec.savedAt; v.hint = rec.hint; } catch (_) { v.corrupt = true; } }
+    v.key = null; v.source = null; v.corrupt = false; v.secretUsed = null; v.corruptReason = null;
+    if (rec && rec.sealed && env.__uid) {
+      // رازها به ترتیب امتحان می‌شوند؛ اگر هیچ‌کدام باز نکرد، «ناخوانا» اعلام می‌شود (نه بی‌صدا معتبر و نه بی‌صدا حذف)
+      const cands = vaultSecretsFor(env);
+      if (!cands.length) { v.corrupt = true; v.corruptReason = "VAULT_SECRET_MISSING"; }
+      else {
+        for (const c of cands) {
+          try { v.key = await openSealed(await deriveUserSecret(c.secret, env.__uid), rec.sealed, vaultAad(env)); v.source = "ui"; v.savedAt = rec.savedAt; v.hint = rec.hint; v.secretUsed = c.id; break; } catch (_) { /* راز بعدی */ }
+        }
+        if (!v.key) { v.corrupt = true; v.corruptReason = "VAULT_SECRET_MISMATCH"; }
+      }
+      if (v.corrupt) console.error(`[vault] کلید ذخیره‌شده‌ی یک کاربر خوانده نشد (${v.corruptReason}). راز رمزنگاری تغییر کرده؟ VAULT_SECRET_PREVIOUS را تنظیم کنید یا از پشتیبان بازیابی کنید؛ کلیدی حذف نشده است.`);
+      else if (v.secretUsed !== "current") console.warn(`[vault] کلید یک کاربر با راز «${v.secretUsed}» خوانده شد؛ با اسکریپت scripts/vault-rotate.mjs (ابتدا dry-run و پشتیبان) به VAULT_SECRET فعلی منتقل کنید.`);
+    }
     // عمداً هیچ کلیدی از .env یا کد خوانده نمی‌شود؛ فقط کلیدی که کاربر در برنامه وارد کرده (رمزنگاری‌شده در store)
     v.loaded = storeOk; v.loading = null; // اگر خواندن از store شکست خورد، دفعه‌ی بعد دوباره تلاش می‌شود
   })();
@@ -694,6 +703,7 @@ async function route(request, env, ctx, url) {
     const ip = request.headers.get("CF-Connecting-IP") || "unknown"; const rl = { key: "connect:" + ip, max: 10, windowMs: 15 * 60000 };
     const rlu = { key: "connect-u:" + env.__uid, max: 10, windowMs: 15 * 60000 };
     for (const r of [rl, rlu]) { const c = await store(env, "/rl/check", r); if (c.blocked) throw new HttpError(429, "TOO_MANY_ATTEMPTS", "تعداد تلاش‌های اتصال زیاد است؛ بعداً دوباره امتحان کنید.", { retryAfter: c.retryAfterSec }); await store(env, "/rl/fail", r); }
+    if (!isStrongSecret(env.VAULT_SECRET)) throw new HttpError(503, "VAULT_NOT_CONFIGURED", "ذخیره‌ی کلید غیرفعال است: مدیر سرور باید VAULT_SECRET (حداقل ۳۲ کاراکتر، جدا از SESSION_SECRET) را تنظیم کند. هیچ کلیدی ذخیره نشد.");
     const key = String((await readJson(request)).apiKey || "").trim();
     if (key.length < 8 || key.length > 400 || /\s/.test(key)) throw new HttpError(400, "INVALID_KEY", "قالب کلید API معتبر نیست (بدون فاصله، حداقل ۸ و حداکثر ۴۰۰ کاراکتر).");
     let balances;
@@ -703,7 +713,7 @@ async function route(request, env, ctx, url) {
       throw e;
     }
     const savedAt = new Date().toISOString(); const hint = key.slice(-4);
-    await store(env, "/kv/put", { key: "secret:wallex", value: { sealed: await seal(await userVaultSecret(env), key, vaultAad(env)), savedAt, hint } });
+    await store(env, "/kv/put", { key: "secret:wallex", value: { sealed: await seal(await deriveUserSecret(env.VAULT_SECRET, env.__uid), key, vaultAad(env)), savedAt, hint } });
     await store(env, "/idx/add", { name: "keyed", id: env.__uid });
     Object.assign(vaultOf(env), { loaded: true, key, source: "ui", savedAt, hint, corrupt: false }); memoClear("");
     return ok({ connected: true, source: "ui", hint, assets: balances.filter((b) => b.total > 0).length });
@@ -721,7 +731,7 @@ async function route(request, env, ctx, url) {
     const body = m === "GET" || m === "DELETE" ? {} : await readJson(request);
     return ok(await getTrading(env).handle(m, sub, url.searchParams, body));
   }
-  if (p === "/api/session/check" && m === "GET") { const v = vaultOf(env); return ok({ authenticated: true, exchangeKeyConfigured: !!v.key, serverIp: env.PUBLIC_SERVER_IP || null, keySource: v.source, keyHint: v.key ? v.hint : null, keyConnectedAt: v.savedAt, keyUnreadable: v.corrupt && !v.key, tradingEnabled: tradingState(env).enabled }); }
+  if (p === "/api/session/check" && m === "GET") { const v = vaultOf(env); return ok({ authenticated: true, exchangeKeyConfigured: !!v.key, serverIp: env.PUBLIC_SERVER_IP || null, keySource: v.source, keyHint: v.key ? v.hint : null, keyConnectedAt: v.savedAt, keyUnreadable: v.corrupt && !v.key, keyUnreadableReason: v.corrupt && !v.key ? v.corruptReason : null, vaultStatus: v.corrupt && !v.key ? "unreadable" : v.key && v.secretUsed && v.secretUsed !== "current" ? "needs_rotation" : "ok", canStoreKey: isStrongSecret(env.VAULT_SECRET), tradingEnabled: tradingState(env).enabled }); }
   if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing, priceSources: r.priceSources, note: r.note, stale: r.stale, staleReason: r.stale ? r.reason : undefined }, r.t); }
   let mt;
   if ((mt = p.match(/^\/api\/history\/([a-z0-9]+)$/)) && m === "GET") {

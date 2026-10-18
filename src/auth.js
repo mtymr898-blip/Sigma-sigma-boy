@@ -35,12 +35,12 @@ export function createAuth(d) {
   const bad = (status, code, msg, extra) => new HttpError(status, code, msg, extra);
   const secret = () => env.SESSION_SECRET;
   const cfg = () => ({
-    allowed: parseAllowed(env.ALLOWED_PHONES), open: String(env.REGISTRATION_MODE || "invite").toLowerCase() === "open", globalOtpPerHour: clampInt(env.OTP_GLOBAL_PER_HOUR, 10, 100000, 500), provider: String(env.SMS_PROVIDER || "").toLowerCase(),
+    allowed: parseAllowed(env.ALLOWED_PHONES), mode: String(env.REGISTRATION_MODE === undefined || env.REGISTRATION_MODE === "" ? "invite" : env.REGISTRATION_MODE).trim().toLowerCase(), get open() { return this.mode === "open"; }, get badMode() { return this.mode !== "open" && this.mode !== "invite"; }, globalOtpPerHour: clampInt(env.OTP_GLOBAL_PER_HOUR, 10, 100000, 500), provider: String(env.SMS_PROVIDER || "").toLowerCase(),
     otpTtl: clampInt(env.OTP_TTL_SEC, 60, 600, 120), resend: clampInt(env.OTP_RESEND_SEC, 30, 600, 60), maxAttempts: 5,
     iter: Math.max(1000, Number(env.PBKDF2_ITER) || 600000), resetOk: env.ALLOW_PASSWORD_RESET === "true",
   });
 
-  const permitted = (c, phone) => c.open || c.allowed.has(phone);
+  const permitted = (c, phone) => !c.badMode && (c.open || c.allowed.has(phone));
 
   async function limit(key, max, windowMs) {
     const r = await rl.check(key, max, windowMs);
@@ -89,6 +89,7 @@ export function createAuth(d) {
   async function otpSend(phoneRaw, ip) {
     const c = cfg(); const phone = normalizePhone(phoneRaw);
     if (!phone) throw bad(400, "INVALID_PHONE", "شماره موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.");
+    if (c.badMode) throw bad(503, "NOT_CONFIGURED", "REGISTRATION_MODE نامعتبر است؛ فقط open یا invite مجاز است. تا اصلاح، ثبت‌نام بسته می‌ماند.");
     if (!c.open && !c.allowed.size) throw bad(503, "NOT_CONFIGURED", "ثبت‌نام بسته است: ALLOWED_PHONES را پر کنید یا برای ثبت‌نام عمومی REGISTRATION_MODE=open بگذارید.");
     if (!c.provider) throw bad(503, "SMS_NOT_CONFIGURED", "ارسال پیامک تنظیم نشده است (SMS_PROVIDER).");
     await limit("otp-global", c.globalOtpPerHour, 3600000); await limit(`otp-ip:${ip}`, 20, 3600000); await limit(`otp:${phone}`, 5, 15 * 60000);
