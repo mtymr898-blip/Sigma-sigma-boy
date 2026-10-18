@@ -2487,7 +2487,10 @@ const Router = (() => {
   }
 
   function go(path){
-    location.hash = "#/" + path.replace(/^#\/?/, "");
+    const target = "#/" + path.replace(/^#\/?/, "");
+    // اگر هش همان است، مرورگر رویداد hashchange نمی‌دهد؛ مثلاً صفحه‌ی اتصال روی مسیر dashboard نمایش داده می‌شود و بعد از اتصال موفق باید دوباره رندر شود
+    if(location.hash === target) window.dispatchEvent(new HashChangeEvent("hashchange"));
+    else location.hash = target;
   }
 
   function start(onChange){
