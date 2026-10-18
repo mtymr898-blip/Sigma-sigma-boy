@@ -93,7 +93,8 @@ const ctx = { waitUntil: (p) => Promise.resolve(p).catch(() => {}) };
 
 if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) console.warn("⚠ SESSION_SECRET تنظیم نشده یا کوتاه‌تر از ۳۲ کاراکتر است.");
 if (!env.VAULT_SECRET || env.VAULT_SECRET.length < 32) console.warn("⚠ VAULT_SECRET (جدا از SESSION_SECRET، حداقل ۳۲ کاراکتر) تنظیم نشده؛ کلیدهای والکس کاربران با SESSION_SECRET رمز می‌شوند. توصیه می‌شود حتماً یک راز جدا بگذارید.");
-if (env.ALLOWED_PHONES) console.log("ℹ ALLOWED_PHONES پر است: ثبت‌نام فقط دعوت‌نامه‌ای است. برای ثبت‌نام عمومی آن را خالی بگذارید.");
+if (String(env.REGISTRATION_MODE || "invite").toLowerCase() !== "open" && !env.ALLOWED_PHONES) console.warn("⚠ ثبت‌نام بسته است: ALLOWED_PHONES خالی و REGISTRATION_MODE=open نیست؛ هیچ‌کس نمی‌تواند وارد شود.");
+if (String(env.REGISTRATION_MODE).toLowerCase() === "open") console.log("ℹ REGISTRATION_MODE=open: ثبت‌نام عمومی فعال است (سقف پیامک سراسری: OTP_GLOBAL_PER_HOUR).");
 if (!env.PUBLIC_SERVER_IP) console.warn("⚠ PUBLIC_SERVER_IP تنظیم نشده؛ در راهنمای اتصال، IP سرور برای ثبت در «IPهای مجاز» والکس نمایش داده نمی‌شود.");
 if (!env.SMS_PROVIDER) console.warn("⚠ SMS_PROVIDER تنظیم نشده (kavenegar | smsir | console)؛ کد ورود ارسال نمی‌شود.");
 if (String(env.SMS_PROVIDER || "").toLowerCase() === "console") console.warn("⚠ SMS_PROVIDER=console: کد ورود فقط در لاگ سرور چاپ می‌شود، پیامکی ارسال نمی‌شود. فقط برای راه‌اندازی/آزمایش.");
