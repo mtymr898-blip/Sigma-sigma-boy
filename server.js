@@ -92,8 +92,12 @@ const env = { ...safeEnv, WALLEX_API_KEY: undefined, STORE, ASSETS: { fetch: ser
 const ctx = { waitUntil: (p) => Promise.resolve(p).catch(() => {}) };
 
 if (!env.SESSION_SECRET || env.SESSION_SECRET.length < 32) console.warn("⚠ SESSION_SECRET تنظیم نشده یا کوتاه‌تر از ۳۲ کاراکتر است.");
-if (!env.VAULT_SECRET || env.VAULT_SECRET.length < 32) console.warn("⚠ VAULT_SECRET (جدا از SESSION_SECRET، حداقل ۳۲ کاراکتر) تنظیم نشده؛ کلیدهای والکس کاربران با SESSION_SECRET رمز می‌شوند. توصیه می‌شود حتماً یک راز جدا بگذارید.");
-if (String(env.REGISTRATION_MODE || "invite").toLowerCase() !== "open" && !env.ALLOWED_PHONES) console.warn("⚠ ثبت‌نام بسته است: ALLOWED_PHONES خالی و REGISTRATION_MODE=open نیست؛ هیچ‌کس نمی‌تواند وارد شود.");
+if (!env.VAULT_SECRET || env.VAULT_SECRET.length < 32) console.warn("⚠ VAULT_SECRET (مستقل از SESSION_SECRET، حداقل ۳۲ کاراکتر) تنظیم نشده یا کوتاه است: ذخیره‌ی کلید والکس برای کاربران جدید غیرفعال است. کلیدهای ذخیره‌شده‌ی قبلی دست‌نخورده می‌مانند و در صورت امکان با راز قدیمی خوانده می‌شوند.");
+if (env.VAULT_SECRET && env.VAULT_SECRET === env.SESSION_SECRET) console.warn("⚠ VAULT_SECRET نباید با SESSION_SECRET یکسان باشد.");
+if (env.VAULT_SECRET_PREVIOUS) console.log("ℹ VAULT_SECRET_PREVIOUS تنظیم است (فقط‌خواندنی). پس از انتقال رکوردها با scripts/vault-rotate.mjs آن را بردارید.");
+{ const mode = String(env.REGISTRATION_MODE || "invite").trim().toLowerCase();
+  if (mode !== "open" && mode !== "invite") console.warn("⚠ REGISTRATION_MODE نامعتبر است (open یا invite)؛ ثبت‌نام بسته می‌ماند.");
+  else if (mode === "invite" && !env.ALLOWED_PHONES) console.warn("⚠ ثبت‌نام بسته است: ALLOWED_PHONES خالی و REGISTRATION_MODE=open نیست؛ هیچ‌کس نمی‌تواند وارد شود."); }
 if (String(env.REGISTRATION_MODE).toLowerCase() === "open") console.log("ℹ REGISTRATION_MODE=open: ثبت‌نام عمومی فعال است (سقف پیامک سراسری: OTP_GLOBAL_PER_HOUR).");
 if (!env.PUBLIC_SERVER_IP) console.warn("⚠ PUBLIC_SERVER_IP تنظیم نشده؛ در راهنمای اتصال، IP سرور برای ثبت در «IPهای مجاز» والکس نمایش داده نمی‌شود.");
 if (!env.SMS_PROVIDER) console.warn("⚠ SMS_PROVIDER تنظیم نشده (kavenegar | smsir | console)؛ کد ورود ارسال نمی‌شود.");
