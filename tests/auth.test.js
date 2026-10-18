@@ -4,7 +4,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import worker, { DashboardStore } from "../src/worker.js";
 import { normalizePhone, parseAllowed } from "../src/auth.js";
-import { seal, open } from "../src/vault.js";
+import { seal, open, deriveUserSecret, vaultAadFor } from "../src/vault.js";
 
 const realNow = Date.now, realFetch = globalThis.fetch;
 let vnow = Date.UTC(2026, 9, 15, 10, 0, 0);
@@ -23,6 +23,7 @@ globalThis.fetch = async (url, init = {}) => {
   if (u.hostname === "api.sms.ir") { net.sms.push({ smsir: JSON.parse(init.body), key: init.headers["x-api-key"] }); return json({ status: 1, message: "ok" }); }
   if (u.hostname === "api.wallex.ir") {
     const k = (init.headers || {})["X-API-Key"]; net.wallexKeys.push(k);
+    if (u.pathname === "/v1/markets") return json({ success: true, result: { symbols: { BTCTMN: { stats: { lastPrice: "100", bidPrice: "99", askPrice: "101", "24h_ch": 1 }, stepSize: 6, tickSize: 0, minQty: 0, minNotional: 0 }, ETHTMN: { stats: { lastPrice: "10", bidPrice: "9", askPrice: "11", "24h_ch": -1 }, stepSize: 6, tickSize: 0, minQty: 0, minNotional: 0 } } } });
     if (u.pathname === "/v1/account/balances") { if (k !== net.goodKey) return json({ success: false, message: "invalid api key" }, 401); return json({ success: true, result: { balances: { TMN: { asset: "TMN", value: "250000", locked: "0" }, BTC: { asset: "BTC", value: "0.5", locked: "0" }, ETH: { asset: "ETH", value: "0", locked: "0" } } } }); }
     return json({ success: false, message: "not mocked" }, 404);
   }
@@ -33,13 +34,15 @@ class MemStorage { constructor() { this.m = new Map(); } async get(k) { const v 
 function mkEnv(extra = {}) {
   const storage = new MemStorage(); const durable = new DashboardStore({ storage }); let chain = Promise.resolve();
   const STORE = { idFromName: (n) => n, get: () => ({ fetch: (url, init) => { const p = chain.then(() => durable.fetch(new Request(url, init))); chain = p.catch(() => {}); return p; } }) };
-  return { env: { STORE, SESSION_SECRET: "s".repeat(40), ALLOWED_PHONES: OWNER, SMS_PROVIDER: "kavenegar", KAVENEGAR_API_KEY: "kv-key-SECRET", KAVENEGAR_TEMPLATE: "verify", PBKDF2_ITER: "1000", UPSTREAM_GAP_MS: "0", ...extra }, storage };
+  return { env: { STORE, SESSION_SECRET: "s".repeat(40), VAULT_SECRET: "v".repeat(40), ALLOWED_PHONES: OWNER, SMS_PROVIDER: "kavenegar", KAVENEGAR_API_KEY: "kv-key-SECRET", KAVENEGAR_TEMPLATE: "verify", PBKDF2_ITER: "1000", UPSTREAM_GAP_MS: "0", ...extra }, storage };
 }
 async function call(env, method, path, body, token) {
   const headers = { Accept: "application/json" }; if (body !== undefined) headers["Content-Type"] = "application/json"; if (token) headers.Authorization = "Bearer " + token;
   const res = await worker.fetch(new Request("https://dash.test" + path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined }), env, { waitUntil() {} });
   return { status: res.status, body: await res.json() };
 }
+const uidOf = (token) => token.split(".")[2]; // شناسه‌ی کاربر داخل توکن نشست
+const slotOf = (token) => "kv:u:" + uidOf(token) + ":secret:wallex"; // رکورد رمزشده‌ی کلید همان کاربر
 const lastCode = () => net.sms[net.sms.length - 1].code;
 async function otp(env, phone = OWNER) { const r = await call(env, "POST", "/api/auth/otp/send", { phone }); assert.equal(r.status, 200, JSON.stringify(r.body)); return r; }
 async function verified(env, phone = OWNER) { await otp(env, phone); const v = await call(env, "POST", "/api/auth/otp/verify", { phone, code: lastCode() }); assert.equal(v.status, 200, JSON.stringify(v.body)); return v.body.data; }
@@ -124,54 +127,121 @@ test("ورود: رمز غلط، محدودیت ۵ تلاش، رمز درست، �
   assert.equal((await call(r.env, "POST", "/api/auth/login", { phone: OWNER, otpToken: w.otpToken, password: "New-strong-pass-1" })).status, 200);
 });
 
-test("ورود قدیمی با رمز ثابت به‌صورت پیش‌فرض خاموش است", async () => {
-  const { env } = mkEnv({ DASHBOARD_PASSCODE: "old-pass" });
-  assert.equal((await call(env, "POST", "/api/session", { passcode: "old-pass" })).body.error.code, "PASSCODE_LOGIN_DISABLED");
-  const on = mkEnv({ DASHBOARD_PASSCODE: "old-pass", ALLOW_PASSCODE_LOGIN: "true" }); assert.equal((await call(on.env, "POST", "/api/session", { passcode: "old-pass" })).status, 200);
+test("ورود قدیمی با رمز ثابت برای همیشه خاموش است (حتی با ALLOW_PASSCODE_LOGIN=true) و نشست صادر نمی‌کند", async () => {
+  for (const extra of [{ DASHBOARD_PASSCODE: "old-pass" }, { DASHBOARD_PASSCODE: "old-pass", ALLOW_PASSCODE_LOGIN: "true" }]) {
+    const { env } = mkEnv(extra);
+    for (const body of [{ passcode: "old-pass" }, { passcode: "wrong" }, {}]) {
+      const r = await call(env, "POST", "/api/session", body);
+      assert.equal(r.status, 403); assert.equal(r.body.error.code, "PASSCODE_LOGIN_DISABLED"); assert.equal(r.body.data, undefined);
+    }
+  }
 });
 
 async function loginSession(env) {
   advance(10 * 60_000); let v = await verified(env); const reg = await call(env, "POST", "/api/auth/register", { phone: OWNER, otpToken: v.otpToken, password: "Strong-pass-9" }); return reg.body.data.token;
 }
 
-test("اتصال واقعی: کلید با والکس آزمایش می‌شود؛ کلید غلط ذخیره نمی‌شود؛ کلید درست رمز می‌شود و در همه‌ی درخواست‌های بعدی استفاده می‌شود", async () => {
-  const { env, storage } = mkEnv(); const token = await loginSession(env);
-  let st = await call(env, "GET", "/api/session/check", undefined, token); assert.equal(st.body.data.exchangeKeyConfigured, false);
+test("اتصال واقعی: کلید با والکس آزمایش می‌شود؛ کلید غلط ذخیره نمی‌شود؛ کلید درست در فضای همان کاربر رمز می‌شود و در درخواست‌های بعدی استفاده می‌شود", async () => {
+  const { env, storage } = mkEnv(); const token = await loginSession(env); const slot = slotOf(token), uid = uidOf(token);
+  let st = await call(env, "GET", "/api/session/check", undefined, token); assert.equal(st.body.data.exchangeKeyConfigured, false); assert.equal(st.body.data.canStoreKey, true);
   assert.equal((await call(env, "POST", "/api/connect", { apiKey: "short" }, token)).body.error.code, "INVALID_KEY");
   net.wallexKeys.length = 0;
   const badKey = await call(env, "POST", "/api/connect", { apiKey: "WRONG-KEY-0000000000" }, token);
   assert.equal(badKey.status, 400); assert.equal(badKey.body.error.code, "BAD_API_KEY"); assert.ok(net.wallexKeys.includes("WRONG-KEY-0000000000"), "درخواست واقعی به والکس با همان کلید رفته");
-  assert.equal(storage.m.get("kv:secret:wallex"), undefined, "کلید غلط ذخیره نشود");
+  assert.equal(storage.m.get(slot), undefined, "کلید غلط ذخیره نشود");
   const good = await call(env, "POST", "/api/connect", { apiKey: "  " + net.goodKey + "\n" }, token);
   assert.equal(good.status, 200); assert.equal(good.body.data.connected, true); assert.equal(good.body.data.assets, 2); assert.equal(good.body.data.hint, net.goodKey.slice(-4));
   assert.ok(!JSON.stringify(good.body).includes(net.goodKey), "کلید نباید به کلاینت برگردد");
-  // رمز‌شده روی دیسک
+  // رمزشده روی دیسک و فقط در فضای همین کاربر (هیچ رکورد سراسری وجود ندارد)
   const raw = JSON.stringify([...storage.m.entries()]); assert.ok(!raw.includes(net.goodKey), "کلید نباید به‌صورت متن ساده ذخیره شود");
-  const rec = storage.m.get("kv:secret:wallex"); assert.equal(await open(env.SESSION_SECRET, rec.sealed), net.goodKey); await assert.rejects(open("x".repeat(40), rec.sealed));
-  st = await call(env, "GET", "/api/session/check", undefined, token); assert.equal(st.body.data.exchangeKeyConfigured, true); assert.equal(st.body.data.keySource, "ui");
-  // درخواست خصوصی بعدی با همین کلید می‌رود
-  net.wallexKeys.length = 0; const w = await call(env, "GET", "/api/wallets", undefined, token); const authed = net.wallexKeys.filter(Boolean); assert.ok(authed.length > 0 && authed.every((k) => k === net.goodKey), JSON.stringify(net.wallexKeys)); // درخواست‌های عمومی بازار کلید ندارند
-  // پس از «ری‌استارت» (env جدید با همان ذخیره‌سازی) کلید از دیسک خوانده می‌شود
-  const env2 = { ...env }; advance(30_000); net.wallexKeys.length = 0; // (کش حافظه‌ی ۵ثانیه‌ای منقضی شود) await call(env2, "GET", "/api/wallets", undefined, token); const a2 = net.wallexKeys.filter(Boolean); assert.ok(a2.length > 0 && a2.every((k) => k === net.goodKey));
+  assert.equal(storage.m.get("kv:secret:wallex"), undefined, "رکورد سراسری قدیمی ساخته نشود");
+  const rec = storage.m.get(slot); assert.ok(rec && rec.sealed && rec.sealed.startsWith("v1."));
+  const aad = vaultAadFor(uid), mine = await deriveUserSecret(env.VAULT_SECRET, uid);
+  assert.equal(await open(mine, rec.sealed, aad), net.goodKey);
+  await assert.rejects(open(env.SESSION_SECRET, rec.sealed, aad), "SESSION_SECRET خام نباید باز کند");
+  await assert.rejects(open(env.VAULT_SECRET, rec.sealed, aad), "راز سرور (بدون اشتقاق کاربر) نباید باز کند");
+  await assert.rejects(open(await deriveUserSecret("x".repeat(40), uid), rec.sealed, aad), "راز اشتباه");
+  await assert.rejects(open(await deriveUserSecret(env.VAULT_SECRET, "AAAAAAAAAAAAAAAAAAAAAAAA"), rec.sealed, vaultAadFor("AAAAAAAAAAAAAAAAAAAAAAAA")), "راز کاربر دیگر");
+  await assert.rejects(open(mine, rec.sealed, vaultAadFor("AAAAAAAAAAAAAAAAAAAAAAAA")), "AAD کاربر دیگر");
+  st = await call(env, "GET", "/api/session/check", undefined, token); assert.equal(st.body.data.exchangeKeyConfigured, true); assert.equal(st.body.data.keySource, "ui"); assert.equal(st.body.data.vaultStatus, "ok");
+  // درخواست خصوصی بعدی با همین کلید می‌رود (درخواست‌های عمومی بازار کلید ندارند)
+  net.wallexKeys.length = 0; await call(env, "GET", "/api/wallets", undefined, token); const authed = net.wallexKeys.filter(Boolean); assert.ok(authed.length > 0 && authed.every((k) => k === net.goodKey), JSON.stringify(net.wallexKeys));
+  // پس از «ری‌استارت» (env جدید با همان ذخیره‌سازی و حافظه‌ی خالی) کلید از دیسک خوانده می‌شود
+  const env2 = { ...env }; advance(30_000); net.wallexKeys.length = 0; // کش ۵ثانیه‌ای حافظه منقضی شود
+  const again = await call(env2, "GET", "/api/wallets", undefined, token); assert.equal(again.status, 200);
+  const a2 = net.wallexKeys.filter(Boolean); assert.ok(a2.length > 0 && a2.every((k) => k === net.goodKey));
 });
 
-test("قطع اتصال: کلید پاک می‌شود؛ با موقعیت واقعی باز ممنوع است", async () => {
-  const { env, storage } = mkEnv(); const token = await loginSession(env);
+test("قطع اتصال: کلید پاک می‌شود؛ با موقعیت واقعی باز ممنوع است؛ روی کاربر دیگر اثر ندارد", async () => {
+  const { env, storage } = mkEnv({ ALLOWED_PHONES: OWNER + "," + STRANGER }); const token = await loginSession(env);
   await call(env, "POST", "/api/connect", { apiKey: net.goodKey }, token);
-  storage.m.set("kv:eng:trades", [{ id: "t1", mode: "live", status: "open" }]);
+  advance(10 * 60_000); const v = await verified(env, STRANGER); const reg2 = await call(env, "POST", "/api/auth/register", { phone: STRANGER, otpToken: v.otpToken, password: "Other-pass-9" }); const t2 = reg2.body.data.token;
+  await call(env, "POST", "/api/connect", { apiKey: net.goodKey }, t2);
+  const uid = uidOf(token), tradesKey = "kv:u:" + uid + ":eng:trades";
+  storage.m.set(tradesKey, [{ id: "t1", mode: "live", status: "open" }]);
   assert.equal((await call(env, "POST", "/api/disconnect", {}, token)).body.error.code, "OPEN_LIVE_POSITIONS");
-  storage.m.set("kv:eng:trades", []);
+  assert.ok(storage.m.get(slotOf(token)).sealed, "با موقعیت باز، کلید پاک نشود");
+  storage.m.set(tradesKey, []);
   const d = await call(env, "POST", "/api/disconnect", {}, token); assert.equal(d.status, 200); assert.equal(d.body.data.connected, false);
+  assert.equal(storage.m.get(slotOf(token)), null); assert.ok(!(storage.m.get("idx:keyed") || []).includes(uid));
   assert.equal((await call(env, "GET", "/api/session/check", undefined, token)).body.data.exchangeKeyConfigured, false);
   assert.equal((await call(env, "GET", "/api/wallets", undefined, token)).body.error.code, "TOKEN_NOT_CONFIGURED");
+  assert.equal((await call(env, "GET", "/api/session/check", undefined, t2)).body.data.exchangeKeyConfigured, true, "کاربر دیگر متصل می‌ماند");
+  assert.equal((await call(env, "GET", "/api/wallets", undefined, t2)).status, 200);
 });
 
-test("کلید ثابت .env همچنان کار می‌کند و کلید UI بر آن ترجیح دارد؛ با تغییر SESSION_SECRET کلید ذخیره‌شده خوانا نیست", async () => {
-  const { env, storage } = mkEnv({ WALLEX_API_KEY: "ENV-KEY-0123456789" }); const token = await loginSession(env);
-  let st = await call(env, "GET", "/api/session/check", undefined, token); assert.equal(st.body.data.keySource, "env"); assert.equal(st.body.data.exchangeKeyConfigured, true);
+test("کلید .env هرگز خوانده نمی‌شود؛ کلید فقط از رابط کاربر می‌آید", async () => {
+  const { env } = mkEnv({ WALLEX_API_KEY: "ENV-KEY-0123456789" }); const token = await loginSession(env); net.wallexKeys.length = 0;
+  let st = await call(env, "GET", "/api/session/check", undefined, token); assert.equal(st.body.data.exchangeKeyConfigured, false); assert.equal(st.body.data.keySource, null);
+  assert.equal((await call(env, "GET", "/api/wallets", undefined, token)).body.error.code, "TOKEN_NOT_CONFIGURED");
+  assert.ok(!net.wallexKeys.includes("ENV-KEY-0123456789"), "کلید env نباید به والکس برود");
   await call(env, "POST", "/api/connect", { apiKey: net.goodKey }, token); st = await call(env, "GET", "/api/session/check", undefined, token); assert.equal(st.body.data.keySource, "ui");
-  const rotated = { ...env, SESSION_SECRET: "r".repeat(40) }; const t2 = (await (async () => { return null; })());
-  const st2 = await worker.fetch(new Request("https://dash.test/api/session/check", { headers: { Authorization: "Bearer " + token } }), rotated, { waitUntil() {} });
-  assert.equal(st2.status, 401, "با Secret جدید نشست قبلی نامعتبر است");
-  assert.ok(storage.m.get("kv:secret:wallex"));
+  net.wallexKeys.length = 0; await call(env, "GET", "/api/wallets", undefined, token); assert.ok(net.wallexKeys.filter(Boolean).every((k) => k === net.goodKey));
+});
+
+const checkWith = async (env, token) => (await call(env, "GET", "/api/session/check", undefined, token)).body.data;
+
+test("چرخش راز: SESSION_SECRET نشست‌ها را باطل می‌کند؛ VAULT_SECRET نادرست کلید را «ناخوانا» اعلام می‌کند و هیچ‌چیز حذف نمی‌شود؛ PREVIOUS دوباره خواندن را ممکن می‌کند", async () => {
+  const { env, storage } = mkEnv(); const token = await loginSession(env); await call(env, "POST", "/api/connect", { apiKey: net.goodKey }, token);
+  const before = structuredClone(storage.m.get(slotOf(token)));
+  // ۱) تغییر SESSION_SECRET: نشست قبلی نامعتبر؛ رکورد کلید دست‌نخورده
+  const sessRot = { ...env, SESSION_SECRET: "r".repeat(40) };
+  const st2 = await worker.fetch(new Request("https://dash.test/api/session/check", { headers: { Authorization: "Bearer " + token } }), sessRot, { waitUntil() {} });
+  assert.equal(st2.status, 401, "با Secret جدید نشست قبلی نامعتبر است"); assert.deepEqual(storage.m.get(slotOf(token)), before);
+  // ۲) VAULT_SECRET عوض شود (بدون PREVIOUS): ناخوانا، با دلیل روشن، بدون حذف و بدون خوانده‌شدن بی‌صدا
+  const rot = { ...env, VAULT_SECRET: "n".repeat(40) }; let c = await checkWith(rot, token);
+  assert.equal(c.exchangeKeyConfigured, false); assert.equal(c.keyUnreadable, true); assert.equal(c.keyUnreadableReason, "VAULT_SECRET_MISMATCH"); assert.equal(c.vaultStatus, "unreadable");
+  assert.equal((await call(rot, "GET", "/api/wallets", undefined, token)).body.error.code, "TOKEN_NOT_CONFIGURED"); assert.deepEqual(storage.m.get(slotOf(token)), before, "رکورد ناخوانا نباید دست‌کاری شود");
+  // ۳) با VAULT_SECRET_PREVIOUS خوانا می‌شود و وضعیت «نیازمند انتقال» اعلام می‌شود
+  const prev = { ...rot, VAULT_SECRET_PREVIOUS: env.VAULT_SECRET }; c = await checkWith(prev, token);
+  assert.equal(c.exchangeKeyConfigured, true); assert.equal(c.keyUnreadable, false); assert.equal(c.vaultStatus, "needs_rotation"); assert.equal((await call(prev, "GET", "/api/wallets", undefined, token)).status, 200);
+  // ۴) بازگشت به راز درست: دوباره عادی
+  assert.equal((await checkWith({ ...env }, token)).vaultStatus, "ok");
+});
+
+test("VAULT_SECRET تنظیم‌نشده/کوتاه: ذخیره‌ی کلید جدید رد می‌شود، کلید قدیمی (با SESSION_SECRET) دست‌نخورده و خوانا می‌ماند", async () => {
+  for (const vs of [undefined, "", "short-secret", "v".repeat(31)]) {
+    const { env, storage } = mkEnv({ VAULT_SECRET: vs }); const token = await loginSession(env);
+    assert.equal((await checkWith(env, token)).canStoreKey, false);
+    const r = await call(env, "POST", "/api/connect", { apiKey: net.goodKey }, token);
+    assert.equal(r.status, 503); assert.equal(r.body.error.code, "VAULT_NOT_CONFIGURED"); assert.equal(storage.m.get(slotOf(token)), undefined, "هیچ کلیدی نباید ذخیره شود");
+    assert.ok(!JSON.stringify(r.body).includes(net.goodKey));
+  }
+  // رکورد قدیمی که با SESSION_SECRET رمز شده بود: خوانا و «نیازمند انتقال»؛ بدون هیچ نوشتن/حذف
+  const { env, storage } = mkEnv({ VAULT_SECRET: undefined }); const token = await loginSession(env); const uid = uidOf(token);
+  const rec = { sealed: await seal(await deriveUserSecret(env.SESSION_SECRET, uid), net.goodKey, vaultAadFor(uid)), savedAt: "2026-10-01T00:00:00.000Z", hint: net.goodKey.slice(-4) };
+  storage.m.set(slotOf(token), structuredClone(rec));
+  const c = await checkWith(env, token); assert.equal(c.exchangeKeyConfigured, true); assert.equal(c.vaultStatus, "needs_rotation"); assert.deepEqual(storage.m.get(slotOf(token)), rec);
+  assert.equal((await call(env, "GET", "/api/wallets", undefined, token)).status, 200);
+});
+
+test("پیکربندی ثبت‌نام: پیش‌فرض invite؛ open فقط با تنظیم صریح؛ مقدار نامعتبر بسته می‌ماند؛ خطاها روشن‌اند", async () => {
+  const send = async (extra, phone = OWNER) => (await call(mkEnv(extra).env, "POST", "/api/auth/otp/send", { phone })).body;
+  assert.equal((await send({ REGISTRATION_MODE: undefined, ALLOWED_PHONES: "" })).error.code, "NOT_CONFIGURED", "پیش‌فرض بسته (fail-closed)");
+  assert.equal((await send({ REGISTRATION_MODE: "invite", ALLOWED_PHONES: "" })).error.code, "NOT_CONFIGURED");
+  for (const bad of ["opne", "public", "true", "OPEN2"]) { const b = await send({ REGISTRATION_MODE: bad }); assert.equal(b.error.code, "NOT_CONFIGURED"); assert.match(b.error.message, /REGISTRATION_MODE/); }
+  net.sms.length = 0;
+  assert.equal((await send({ REGISTRATION_MODE: "open", ALLOWED_PHONES: "" }, STRANGER)).ok, true); assert.equal(net.sms.length, 1, "در حالت open هر شماره‌ی معتبر کد می‌گیرد");
+  assert.equal((await send({ REGISTRATION_MODE: " Open " }, STRANGER)).ok, true, "فاصله/حروف بزرگ نادیده گرفته می‌شود");
+  net.sms.length = 0; const inv = await send({ REGISTRATION_MODE: "invite" }, STRANGER); assert.equal(inv.ok, true); assert.equal(net.sms.length, 0, "در invite شماره‌ی غیرمجاز پیامک نمی‌گیرد");
 });

@@ -206,3 +206,20 @@ test("موتور خودکار: بدون AUTO_TRADING_ENABLED حالت live قف�
   assert.equal(sent.orders, before);
   assert.deepEqual([...sent.hosts].filter((h) => h !== "api.wallex.ir"), []); // هیچ میزبان بیرونی
 });
+
+test("معاملات خودکار: پیش‌فرض خاموش؛ حالت live قفل سرور دارد و بدون تنظیم صریح هیچ سفارشی نمی‌رود", async () => {
+  const before = sent.orders; curEnv = env; // env بدون TRADING_ENABLED / AUTO_TRADING_ENABLED
+  const st = (await call("/api/trading/status", { token: A })).json.data;
+  assert.equal(st.live.serverUnlocked, false); assert.ok(st.live.lockReasons.includes("AUTO_TRADING_DISABLED")); assert.ok(st.live.lockReasons.includes("TRADING_DISABLED"));
+  const m = await call("/api/trading/mode", { token: A, body: { mode: "live", confirm: "ACTIVATE LIVE TRADING", ack: true } });
+  assert.equal(m.status, 403); assert.equal(m.json.error.code, "LIVE_LOCKED_BY_SERVER");
+  await call("/api/trading/start", { token: A, body: {} }); await worker.engineTick({}, env, ctx);
+  assert.equal(sent.orders, before, "هیچ سفارشی نباید ارسال شود");
+});
+test("توقف اضطراری هر کاربر فقط روی خودش اثر دارد", async () => {
+  assert.equal((await call("/api/connect", { token: B, body: { apiKey: KEY_B } })).status, 200);
+  const k = await call("/api/trading/emergency-stop", { token: A, body: { reason: "تست" } }); assert.equal(k.status, 200); assert.equal(k.json.data.killed, true);
+  assert.equal((await call("/api/trading/status", { token: A })).json.data.killed, true);
+  assert.equal((await call("/api/trading/status", { token: B })).json.data.killed, false, "کاربر B تحت‌تأثیر نیست");
+  assert.equal((await call("/api/trading/events", { token: B })).json.data.items.some((e) => e.type === "kill_switch"), false);
+});

@@ -47,7 +47,13 @@ globalThis.fetch = async (url, init = {}) => {
 class MemStorage { constructor() { this.m = new Map(); } async get(k) { const v = this.m.get(k); return v === undefined ? undefined : structuredClone(v); } async put(k, v) { this.m.set(k, structuredClone(v)); } async delete(k) { return this.m.delete(k); } }
 const durable = new DashboardStore({ storage: new MemStorage() }); let chain = Promise.resolve();
 const STORE = { idFromName: (n) => n, get: () => ({ fetch: (url, init) => { const p = chain.then(() => durable.fetch(new Request(url, init))); chain = p.catch(() => {}); return p; } }) };
-const env = { STORE, SESSION_SECRET: "x".repeat(40), DASHBOARD_PASSCODE: "pass-123", ALLOW_PASSCODE_LOGIN: "true", WALLEX_API_KEY: "test-key", TRADING_ENABLED: "true", AUTO_TRADING_ENABLED: "true", MAX_ORDER_VALUE_IRT: "1000000", UPSTREAM_GAP_MS: "0" };
+// معماری چندکاربره: نشست فقط با شماره‌موبایل + OTP + رمز؛ کلید والکس را کاربر از مسیر /api/connect وارد می‌کند (نه .env).
+// معاملات «واقعی» اینجا فقط روی والکس جعلی (mock) فعال‌اند و fetch هر میزبان دیگری را رد می‌کند.
+const PHONE = "09121234567", TEST_KEY = "smoke-test-key-0123456789";
+const env = { STORE, SESSION_SECRET: "x".repeat(40), VAULT_SECRET: "v".repeat(40), ALLOWED_PHONES: PHONE, SMS_PROVIDER: "console", PBKDF2_ITER: "1000",
+  TRADING_ENABLED: "true", AUTO_TRADING_ENABLED: "true", MAX_ORDER_VALUE_IRT: "1000000", UPSTREAM_GAP_MS: "0" };
+let lastOtp = null; const realLog = console.log;
+console.log = (...a) => { const m = String(a[0]).match(/\[OTP\] (\d+) → (\d+)/); if (m) lastOtp = m[2]; else realLog(...a); };
 const ctx = { waitUntil() {} };
 let token = null;
 async function call(method, path, body, { auth = true } = {}) {
@@ -55,12 +61,19 @@ async function call(method, path, body, { auth = true } = {}) {
   const res = await worker.fetch(new Request("https://dash.test" + path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined }), env, ctx);
   return { status: res.status, body: await res.json() };
 }
-test.after(() => { Date.now = realNow; globalThis.fetch = realFetch; });
+test.after(() => { Date.now = realNow; globalThis.fetch = realFetch; console.log = realLog; });
 
 test("سلامت عمومی بدون نشست؛ مسیر معامله‌گری بدون نشست ۴۰۱", async () => {
   const h = await call("GET", "/api/health", undefined, { auth: false }); assert.equal(h.status, 200); assert.equal(h.body.data.status, "ok");
   const s = await call("GET", "/api/trading/status", undefined, { auth: false }); assert.equal(s.status, 401);
-  const login = await call("POST", "/api/session", { passcode: "pass-123" }, { auth: false }); assert.equal(login.status, 200); token = login.body.data.token;
+  // ورود با رمز ثابت برای همیشه غیرفعال است (حتی با تنظیمات قدیمی)
+  const old = await call("POST", "/api/session", { passcode: "pass-123" }, { auth: false }); assert.equal(old.status, 403); assert.equal(old.body.error.code, "PASSCODE_LOGIN_DISABLED");
+  // ورود واقعی: شماره → کد پیامکی → ثبت‌نام با رمز؛ سپس اتصال کلید والکس (آزمایش‌شده با mock)
+  assert.equal((await call("POST", "/api/auth/otp/send", { phone: PHONE }, { auth: false })).status, 200); assert.match(lastOtp, /^\d{6}$/);
+  const v = await call("POST", "/api/auth/otp/verify", { phone: PHONE, code: lastOtp }, { auth: false }); assert.equal(v.status, 200);
+  const reg = await call("POST", "/api/auth/register", { phone: PHONE, otpToken: v.body.data.otpToken, password: "Smoke-pass-9" }, { auth: false }); assert.equal(reg.status, 200); token = reg.body.data.token;
+  assert.equal((await call("POST", "/api/trading/emergency-stop", {}, { auth: false })).status, 401, "بدون نشست حتی توقف اضطراری هم رد می‌شود");
+  const con = await call("POST", "/api/connect", { apiKey: TEST_KEY }); assert.equal(con.status, 200); assert.equal(con.body.data.connected, true);
 });
 
 test("حالت پیشنهاد: تحلیل با داده‌ی (جعلی) والکس؛ سیگنال کامل و بدون هیچ سفارش", async () => {
