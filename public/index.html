@@ -1966,8 +1966,8 @@ const Api = (() => {
       const j = await request("/api/session/check");
       const now = new Date().toISOString();
       State.set({ connection: j.data.exchangeKeyConfigured
-        ? { status:"connected", exchangeName:"والکس", connectedAt:j.data.keyConnectedAt || State.get().connection.connectedAt || now, lastChecked:now, serverIp:j.data.serverIp || null }
-        : { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:now, serverIp:j.data.serverIp || null, keyUnreadable:!!j.data.keyUnreadable } });
+        ? { status:"connected", exchangeName:"والکس", connectedAt:j.data.keyConnectedAt || State.get().connection.connectedAt || now, lastChecked:now, serverIp:j.data.serverIp || null, canStoreKey:j.data.canStoreKey !== false }
+        : { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:now, serverIp:j.data.serverIp || null, keyUnreadable:!!j.data.keyUnreadable, canStoreKey:j.data.canStoreKey !== false } });
     }catch(e){ /* در قطعی شبکه، زمان آخرین بررسی موفق تغییر نمی‌کند */ }
     return State.get().connection;
   }
@@ -2837,6 +2837,7 @@ const PageConnect = {
     function paint(){
       body.innerHTML = "";
       body.appendChild(dots());
+      if(State.get().connection.canStoreKey === false) body.appendChild(E("div", { class:"connect-status error", style:"margin:0 0 12px;" }, [E("span", { html: ic("alert") }), "ذخیره‌ی کلید موقتاً غیرفعال است (تنظیمات امنیتی سرور کامل نیست). لطفاً با مدیر سرویس تماس بگیرید."]));
       if(State.get().connection.keyUnreadable) body.appendChild(E("div", { class:"connect-status error", style:"margin:0 0 12px;" }, [E("span", { html: ic("alert") }), "کلید ذخیره‌شده‌ی شما روی سرور قابل‌خواندن نیست (احتمالاً تنظیمات امنیتی سرور تغییر کرده). لطفاً کلید API را دوباره وارد کنید."]));
       const view = E("div", { class:"cn-view " + (dir > 0 ? "fwd" : "back") }, stepView());
       body.appendChild(view);
