@@ -8,9 +8,21 @@
 <meta name="theme-color" content="#061326">
 <link rel="icon" type="image/png" href="img/icon-192.png">
 <link rel="apple-touch-icon" href="img/icon-192.png">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet" type="text/css" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;800&display=swap" rel="stylesheet">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="QAIRO">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="QAIRO">
+<meta property="og:locale" content="fa_IR">
+<meta property="og:title" content="QAIRO — هوش مصنوعی معاملات ارز دیجیتال">
+<meta property="og:description" content="داشبورد شخصی مدیریت و تحلیل دارایی‌های ارز دیجیتال">
+<meta name="twitter:card" content="summary">
+<link rel="manifest" href="manifest.webmanifest">
+<!-- فونت‌ها: اول از فایل‌های خودِ سایت، اگر نبود از CDN؛ بدون مسدود کردن نمایش صفحه -->
+<link rel="stylesheet" href="fonts/vazirmatn/Vazirmatn-font-face.css" media="print" onload="this.media='all'" onerror="this.onerror=null;this.media='print';this.href='https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css'">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@600;800&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css"></noscript>
 <style>
 /* ===================================================================
    توکن‌های طراحی
@@ -1319,7 +1331,8 @@ input:focus,.input:focus{ outline:none; border-color:#4de6ff!important; box-shad
 .skel{ background:linear-gradient(90deg,#17314c 0%,#1d5f6b 50%,#17314c 100%); background-size:200% 100%; animation:q-shimmer 1.4s linear infinite; border-radius:10px; }
 @keyframes q-shimmer{ to{ background-position:-200% 0; } }
 
-.coin-ic{ border-radius:50%; font-weight:800; display:flex; align-items:center; justify-content:center; flex:none; }
+.coin-ic{ border-radius:50%; font-weight:800; display:flex; align-items:center; justify-content:center; flex:none; overflow:hidden; }
+.coin-ic .coin-img{ width:100%; height:100%; object-fit:contain; border-radius:50%; display:block; }
 .mock-flag{ border-radius:999px; }
 
 /* ---------- جدول‌ها → لیست کارتی ---------- */
@@ -1502,7 +1515,9 @@ input:focus,.input:focus{ outline:none; border-color:#4de6ff!important; box-shad
 .connect-card{ position:relative; z-index:1; width:100%; max-width:420px; padding:26px 22px!important; background:linear-gradient(160deg,#132c47cc,#091727e6)!important; border-radius:28px; animation:q-rise2 .8s var(--ease-pop) both; }
 @keyframes q-rise2{ from{ opacity:0; transform:translateY(28px) scale(.97); } to{ opacity:1; transform:none; } }
 .q-auth-logo{ text-align:center; margin-bottom:12px; }
-.q-auth-logo .q-orb{ margin:6px auto 22px; }
+.q-auth-logo .q-orb{ width:50px; height:50px; margin:4px auto 14px; }
+.q-auth-logo .q-orb .o3{ display:none; }
+.q-auth-logo .q-orb .o2{ inset:-6px; border-width:1.2px; }
 .q-wordmark{ font-family:"Inter","Vazirmatn",sans-serif; font-size:30px; font-weight:800; letter-spacing:.22em; background:linear-gradient(180deg,#fff,#a9f2ff); -webkit-background-clip:text; background-clip:text; color:transparent; padding-inline-start:.22em; }
 .q-tagline{ font-size:11.5px; color:var(--text-dim); margin-top:2px; letter-spacing:.02em; }
 .connect-title{ font-size:19px; text-align:center; margin:10px 0 6px; }
@@ -1662,9 +1677,287 @@ body{ background:
 [data-theme="light"] .card{ background:#fff; }
 .wl-logo{ display:block; margin:0 auto; }
 .q-brand img,.brand-mark img{ filter:none!important; box-shadow:none!important; border-radius:0; }
+
+/* ===================================================================
+   SPLASH 2 — ورود سینمایی لوگو: ذرات، کره‌ی سه‌بعدی، رمزگشایی متن،
+   نمودار زنده و پرواز لوگو به نوار بالا
+   =================================================================== */
+#splash{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:24px;
+  background:radial-gradient(560px 460px at 50% 40%,rgba(101,231,242,.11),transparent 70%),#0A0D12;color:#F1F5F9;
+  transition:background-color .8s ease,opacity .5s ease;cursor:pointer;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#splash::before{content:"";position:absolute;inset:0;z-index:0;opacity:.5;
+  background-image:linear-gradient(rgba(164,175,192,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(164,175,192,.045) 1px,transparent 1px);background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(circle at 50% 42%,#000 0,transparent 62%);mask-image:radial-gradient(circle at 50% 42%,#000 0,transparent 62%);
+  animation:sp-grid 2.4s ease-out both;transition:opacity .5s}
+#splash.leaving{background:transparent;pointer-events:none}
+#splash.leaving::before,#splash.leaving .sp-word,#splash.leaving .sp-tag,#splash.leaving .sp-chart,#splash.leaving .sp-cv{opacity:0!important;transition:opacity .45s ease}
+#splash.out{opacity:0}
+.sp-cv,.sp-chart{position:absolute;inset:0;z-index:1;pointer-events:none}
+.sp-chart{z-index:0;-webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
+.sp-chart path{fill:none;stroke:#65E7F2;stroke-width:1.6;stroke-linejoin:round;stroke-linecap:round;opacity:.42;stroke-dasharray:1;stroke-dashoffset:1;
+  filter:drop-shadow(0 0 6px rgba(101,231,242,.55));animation:sp-chartdraw 1.6s .1s cubic-bezier(.5,0,.2,1) forwards}
+@keyframes sp-chartdraw{to{stroke-dashoffset:0}}
+
+.sp-mark{position:relative;z-index:2;width:156px;height:156px;perspective:720px}
+.sp-3d{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
+.sp-orbit{position:absolute;left:50%;top:50%;border-radius:50%;border:1px solid rgba(101,231,242,.42);opacity:0;transform-style:preserve-3d}
+.sp-orbit::after{content:"";position:absolute;top:-3.5px;left:50%;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:#65E7F2;box-shadow:0 0 12px 2px rgba(101,231,242,.8)}
+.sp-o1{width:128px;height:128px;margin:-64px 0 0 -64px;animation:sp-in .8s 1.1s forwards,sp-o1 7s linear infinite}
+.sp-o2{width:152px;height:152px;margin:-76px 0 0 -76px;border-color:rgba(164,175,192,.38);animation:sp-in .8s 1.25s forwards,sp-o2 10s linear infinite reverse}
+.sp-o2::after{background:#A4AFC0;box-shadow:0 0 10px rgba(164,175,192,.8);width:5px;height:5px;margin-left:-2.5px;top:-2.5px}
+.sp-o3{width:176px;height:176px;margin:-88px 0 0 -88px;border:1px dashed rgba(101,231,242,.26);animation:sp-in .8s 1.4s forwards,sp-o3 14s linear infinite}
+.sp-o3::after{display:none}
+@keyframes sp-o1{from{transform:rotateX(72deg) rotateZ(0)}to{transform:rotateX(72deg) rotateZ(360deg)}}
+@keyframes sp-o2{from{transform:rotateY(70deg) rotateZ(0)}to{transform:rotateY(70deg) rotateZ(360deg)}}
+@keyframes sp-o3{from{transform:rotateX(48deg) rotateY(48deg) rotateZ(0)}to{transform:rotateX(48deg) rotateY(48deg) rotateZ(360deg)}}
+@keyframes sp-in{to{opacity:1}}
+.sp-core{position:absolute;left:50%;top:50%;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;
+  background:radial-gradient(circle at 34% 28%,#E9FCFE 0%,#8BEFF7 15%,#2FA9B8 44%,#16414F 76%,#0A0D12 100%);
+  box-shadow:0 0 0 1px rgba(241,245,249,.16) inset,0 0 42px rgba(101,231,242,.34),0 0 96px rgba(101,231,242,.15);
+  opacity:0;transform:scale(.3);filter:blur(12px);animation:sp-core 1s .55s cubic-bezier(.2,.9,.2,1) forwards,sp-beat 2.4s 1.8s ease-in-out infinite}
+.sp-core::before{content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(ellipse 55% 38% at 32% 22%,rgba(255,255,255,.6),transparent 70%);pointer-events:none}
+.sp-core::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:inset -10px -12px 20px rgba(0,0,0,.5),inset 2px 2px 7px rgba(255,255,255,.22);pointer-events:none}
+.sp-core img{position:absolute;inset:15px;width:calc(100% - 30px);height:calc(100% - 30px);object-fit:contain;border-radius:50%}
+.sp-core.flash{animation:sp-core 0s forwards,sp-flash .9s ease-out,sp-beat 2.4s .9s ease-in-out infinite}
+@keyframes sp-core{to{opacity:1;transform:scale(1);filter:blur(0)}}
+@keyframes sp-beat{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+@keyframes sp-flash{0%{filter:brightness(2.3) blur(0);box-shadow:0 0 0 1px rgba(255,255,255,.4) inset,0 0 80px rgba(101,231,242,.9),0 0 160px rgba(101,231,242,.45)}100%{filter:brightness(1) blur(0)}}
+
+.sp-word{position:relative;z-index:2;display:flex;direction:ltr;gap:.2em;font:800 34px/1 "Inter","Vazirmatn",system-ui,sans-serif;
+  -webkit-mask-image:linear-gradient(100deg,#000 40%,rgba(0,0,0,.35) 50%,#000 60%);-webkit-mask-size:250% 100%;mask-size:250% 100%;animation:sp-sweep 1.5s 2.1s ease-out both}
+.sp-word span{display:inline-block;width:.84em;text-align:center;opacity:0;transform:translateY(10px);
+  background:linear-gradient(180deg,#fff,#A4AFC0);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
+  animation:sp-letter .6s cubic-bezier(.2,.8,.2,1) forwards}
+.sp-word span:nth-child(1){animation-delay:.60s}.sp-word span:nth-child(2){animation-delay:.64s}.sp-word span:nth-child(3){animation-delay:.68s}
+.sp-word span:nth-child(4){animation-delay:.72s}.sp-word span:nth-child(5){animation-delay:.76s}
+.sp-word span.scr{background:none;-webkit-text-fill-color:#65E7F2;color:#65E7F2;text-shadow:0 0 12px rgba(101,231,242,.55)}
+.sp-word span.lock{animation:sp-letter .01s forwards,sp-lock .5s ease-out}
+@keyframes sp-lock{0%{transform:scale(1.28);filter:brightness(1.8)}100%{transform:none;filter:none}}
+@keyframes sp-letter{to{opacity:1;transform:none}}
+@keyframes sp-sweep{from{-webkit-mask-position:120% 0;mask-position:120% 0}to{-webkit-mask-position:-20% 0;mask-position:-20% 0}}
+.sp-tag{position:relative;z-index:2;margin-top:-6px;font:500 10.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.1em;color:#A4AFC0;direction:ltr;white-space:nowrap;opacity:0;animation:sp-in .5s 1.45s forwards}
+.sp-tag i{font-style:normal;display:inline-block;width:.62em;text-align:center}
+.sp-tag i.scr{color:#65E7F2;text-shadow:0 0 8px rgba(101,231,242,.5)}
+@keyframes sp-grid{from{opacity:0;transform:scale(1.15)}to{opacity:.5;transform:none}}
+
+.sp-flyer{position:fixed;left:0;top:0;z-index:100000;border-radius:50%;pointer-events:none;will-change:transform,width,height;
+  background:radial-gradient(circle at 34% 28%,#E9FCFE 0%,#8BEFF7 15%,#2FA9B8 44%,#16414F 76%,#0A0D12 100%);
+  box-shadow:0 0 0 1px rgba(241,245,249,.16) inset,0 0 28px rgba(101,231,242,.45)}
+.sp-flyer img{position:absolute;inset:20%;width:60%;height:60%;object-fit:contain;border-radius:50%}
+
+@media (prefers-reduced-motion:reduce){
+  #splash *,#splash::before{animation-duration:.01s!important;animation-delay:0s!important}
+  .sp-chart path{stroke-dashoffset:0}
+
+/* ===================================================================
+   قوانین و مقررات — صفحه‌ی توافق‌نامه
+   =================================================================== */
+.q-legal-link{ background:none; border:0; padding:0; margin:0; font:inherit; font-weight:800; color:var(--accent); cursor:pointer; text-decoration:underline; text-decoration-thickness:1.5px; text-underline-offset:4px; text-decoration-color:currentColor; }
+.q-legal-link:hover{ filter:brightness(1.15); }
+.q-legal-link:focus-visible{ outline:2px solid var(--accent); outline-offset:3px; border-radius:4px; }
+:root[data-theme="light"] .q-legal-link{ color:#0a7f94; }
+
+.q-legal{ position:fixed; inset:0; z-index:400; display:flex; flex-direction:column; background:var(--q-bg, var(--bg)); animation:q-legal-in .26s var(--ease); }
+@keyframes q-legal-in{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+.q-legal-top{ flex:0 0 auto; display:flex; align-items:center; gap:10px; padding:calc(10px + env(safe-area-inset-top)) 14px 10px; border-bottom:1px solid var(--border-soft); background:var(--surface); }
+.q-legal-x{ width:38px; height:38px; flex:0 0 38px; border-radius:50%; border:1px solid var(--border); background:var(--surface-hover); color:var(--text); font-size:16px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+.q-legal-top h2{ font-size:14.5px; font-weight:800; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.q-legal-scroll{ flex:1 1 auto; overflow-y:auto; -webkit-overflow-scrolling:touch; padding:18px 16px 28px; }
+.q-legal-doc{ max-width:720px; margin:0 auto; }
+.q-legal-switch{ width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:18px; }
+.q-legal-title{ font-size:21px; font-weight:900; line-height:1.5; margin-bottom:10px; }
+.q-legal-lead{ font-size:13.5px; line-height:2; color:var(--text-dim); margin-bottom:6px; }
+.q-legal-sec{ margin-top:22px; padding-top:20px; border-top:1px solid var(--border-soft); }
+.q-legal-sec-h{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.q-legal-num{ flex:0 0 28px; height:28px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; background:var(--accent-soft-strong); color:var(--accent); }
+:root[data-theme="light"] .q-legal-num{ color:#0a7f94; }
+.q-legal-sec-h h3{ font-size:15px; font-weight:800; line-height:1.6; }
+.q-legal-sec p{ font-size:13.5px; line-height:2.05; color:var(--text-dim); margin-top:8px; text-align:justify; }
+.q-legal-sec p.warn{ color:var(--text); background:var(--amber-soft); border:1px solid #e2a23c40; border-radius:12px; padding:11px 13px; }
+.q-legal-final{ margin-top:26px; padding:16px; border-radius:var(--radius-lg); background:var(--surface); border:1px solid var(--border); }
+.q-legal-final h3{ font-size:15px; font-weight:800; margin-bottom:6px; }
+.q-legal-final p{ font-size:13.5px; line-height:2.05; color:var(--text-dim); text-align:justify; }
+.q-legal-empty{ margin-top:18px; padding:26px 16px; text-align:center; border:1px dashed var(--border); border-radius:var(--radius-lg); color:var(--text-dim); font-size:13.5px; line-height:2; }
+.q-legal-sub{ font-size:13px; color:var(--text-dim); margin-bottom:6px; }
+.q-legal-meta{ margin:14px 0 6px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); overflow:hidden; }
+.q-legal-meta > div{ display:flex; gap:12px; justify-content:space-between; align-items:baseline; padding:9px 13px; font-size:12.5px; color:var(--text-dim); border-top:1px solid var(--border-soft); }
+.q-legal-meta > div:first-child{ border-top:0; }
+.q-legal-meta b{ color:var(--text); font-weight:700; text-align:end; }
+.q-legal-sec p .q-legal-cn{ font-weight:800; color:var(--accent); margin-inline-end:6px; white-space:nowrap; }
+:root[data-theme="light"] .q-legal-sec p .q-legal-cn{ color:#0a7f94; }
+.q-legal-doc .q-legal-meta:last-child{ margin-top:24px; }
+.q-legal-bar{ flex:0 0 auto; display:flex; flex-wrap:wrap; gap:10px; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--border-soft); background:var(--surface); }
+.q-legal-bar .btn{ flex:1 1 150px; }
+.q-legal-bar .btn-priv{ flex-basis:100%; }
 </style>
 </head>
 <body>
+<noscript><div style="padding:40px 20px;text-align:center;font-family:Tahoma,sans-serif;color:#cfe;">برای استفاده از QAIRO باید جاوااسکریپت مرورگر فعال باشد.</div></noscript>
+<div id="splash" role="presentation" aria-hidden="true">
+  <svg class="sp-chart"><path pathLength="1" d=""/></svg>
+  <canvas class="sp-cv"></canvas>
+  <div class="sp-mark">
+    <div class="sp-3d">
+      <div class="sp-orbit sp-o3"></div>
+      <div class="sp-orbit sp-o2"></div>
+      <div class="sp-core"><img src="img/logo.png" alt="" onerror="this.remove()"></div>
+      <div class="sp-orbit sp-o1"></div>
+    </div>
+  </div>
+  <div class="sp-word"><span>Q</span><span>A</span><span>I</span><span>R</span><span>O</span></div>
+  <div class="sp-tag" data-text="SMARTER DECISIONS. BETTER FUTURE."></div>
+</div>
+<script>
+(function(){
+  var W=window, D=document, el=D.getElementById("splash"); if(!el) return;
+  var reduced=W.matchMedia&&W.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var revealed=false, gone=false, t0=performance.now();
+  var mark=el.querySelector(".sp-mark"), d3=el.querySelector(".sp-3d"), core=el.querySelector(".sp-core");
+  var cv=el.querySelector(".sp-cv"), svg=el.querySelector(".sp-chart"), path=svg.querySelector("path");
+  var word=[].slice.call(el.querySelectorAll(".sp-word span")), tag=el.querySelector(".sp-tag");
+  function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function eio(t){return t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;}
+  function startApp(){
+    if(W.__qairoStart) return W.__qairoStart();
+    D.addEventListener("DOMContentLoaded",function(){ W.__qairoStart&&W.__qairoStart(); });
+  }
+  function remove(){ gone=true; el.remove(); }
+
+  // حرکت کم: بدون جلوه، فقط نمایش کوتاه و عبور
+  if(reduced){
+    el.querySelector(".sp-tag").textContent=tag.getAttribute("data-text");
+    if(D.readyState==="loading") D.addEventListener("DOMContentLoaded",startApp); else startApp();
+    W.addEventListener("load",function(){ setTimeout(function(){ el.classList.add("out"); setTimeout(remove,550); },500); });
+    setTimeout(function(){ if(!gone){ el.classList.add("out"); setTimeout(remove,550);} },3500);
+    return;
+  }
+
+  /* ---------- رمزگشایی متن ---------- */
+  var GL="ABCDEFGHJKLMNPQRSTUVWXYZ0123456789#%&$<>/+*";
+  var rnd=function(){return GL.charAt((Math.random()*GL.length)|0);};
+  var tagText=tag.getAttribute("data-text"), tagEls=[];
+  for(var i=0;i<tagText.length;i++){ var s=D.createElement("i"); s.textContent=tagText.charAt(i)===" "?"\u00a0":rnd(); tag.appendChild(s); tagEls.push(s); }
+  word.forEach(function(s){ s.setAttribute("data-ch",s.textContent); s.textContent=rnd(); s.className="scr"; });
+  function decode(els,finals,start,step){
+    var t1=performance.now(); els.forEach(function(e){ if(finals[els.indexOf(e)]!=="\u00a0") e.classList.add("scr"); });
+    var iv=setInterval(function(){
+      var e=performance.now()-t1, all=true;
+      els.forEach(function(n,k){
+        if(n._d) return;
+        if(finals[k]==="\u00a0"){ n._d=1; return; }
+        if(e>=start+k*step){ n.textContent=finals[k]; n.classList.remove("scr"); n.classList.add("lock"); n._d=1; }
+        else { all=false; n.textContent=rnd(); }
+      });
+      if(all||gone) clearInterval(iv);
+    },52);
+  }
+  setTimeout(function(){ decode(word,word.map(function(s){return s.getAttribute("data-ch");}),650,170); },600);
+  setTimeout(function(){ decode(tagEls,tagText.split("").map(function(c){return c===" "?"\u00a0":c;}),0,24); },1500);
+
+  /* ---------- بوم ذرات + شوک‌ویو ---------- */
+  var ctx=cv.getContext("2d"), dpr=Math.min(W.devicePixelRatio||1,2), w=0,h=0,cx=0,cy=0,P=[],base=[],flatY=0;
+  var TSHOCK=1650, morphDone=false;
+  function build(){
+    var N=W.innerWidth<520?80:120; P=[];
+    for(var i=0;i<N;i++){
+      var phi=Math.acos(1-2*(i+.5)/N), th=Math.PI*(1+Math.sqrt(5))*(i+.5), ang=Math.random()*6.2832, dist=Math.max(w,h)*(.6+Math.random()*.3);
+      P.push({sx:Math.cos(th)*Math.sin(phi),sy:Math.sin(th)*Math.sin(phi),sz:Math.cos(phi),x0:cx+Math.cos(ang)*dist,y0:cy+Math.sin(ang)*dist,d:Math.random()*750,u:950+Math.random()*550});
+    }
+  }
+  function chartD(m){
+    var d="",N=base.length;
+    for(var i=0;i<N;i++){ var x=i/(N-1)*w, y=lerp(base[i],flatY,m); d+=(i?"L":"M")+x.toFixed(1)+" "+y.toFixed(1); }
+    path.setAttribute("d",d);
+  }
+  function size(){
+    w=W.innerWidth; h=W.innerHeight;
+    cv.width=w*dpr; cv.height=h*dpr; cv.style.width=w+"px"; cv.style.height=h+"px"; ctx.setTransform(dpr,0,0,dpr,0,0);
+    svg.setAttribute("viewBox","0 0 "+w+" "+h); svg.setAttribute("width",w); svg.setAttribute("height",h);
+    var r=mark.getBoundingClientRect(); cx=r.left+r.width/2; cy=r.top+r.height/2;
+    var tr=tag.getBoundingClientRect(); flatY=tr.bottom+16;
+    base=[]; var y=0,N=48;
+    for(var i=0;i<N;i++){ y+=(Math.random()-.45)*26; base.push(cy+78-i/(N-1)*120+y*.5); }
+    if(!P.length) build();
+    chartD(0);
+  }
+  size(); W.addEventListener("resize",function(){ if(!revealed){ size(); } });
+
+  /* ---------- پارالاکس سه‌بعدی ---------- */
+  var tx=0,ty=0,cxr=0,cyr=0;
+  W.addEventListener("pointermove",function(e){ ty=(e.clientX/w-.5)*34; tx=-(e.clientY/h-.5)*34; },{passive:true});
+  W.addEventListener("deviceorientation",function(e){ if(e.gamma==null) return; ty=clamp(e.gamma,-30,30)*.9; tx=-clamp((e.beta||45)-45,-30,30)*.7; },{passive:true});
+
+  /* ---------- حلقه‌ی اصلی ---------- */
+  var shocked=false;
+  function frame(now){
+    if(gone) return;
+    var t=now-t0;
+    cxr+=(tx+Math.cos(t/1100)*5-cxr)*.08; cyr+=(ty+Math.sin(t/900)*7-cyr)*.08;
+    d3.style.transform="rotateX("+cxr.toFixed(2)+"deg) rotateY("+cyr.toFixed(2)+"deg)";
+    if(!shocked&&t>TSHOCK){ shocked=true; core.classList.add("flash"); }
+
+    ctx.clearRect(0,0,w,h);
+    var rot=t*.00045, cr=Math.cos(rot), sr=Math.sin(rot);
+    var R=72+(t>TSHOCK?26*Math.exp(-(t-TSHOCK)/260):0), n=P.length, X=new Array(n), Y=new Array(n), Q=new Array(n);
+    for(var i=0;i<n;i++){
+      var p=P[i], q=clamp((t-p.d)/p.u,0,1), e=1-Math.pow(1-q,3);
+      var x3=p.sx*cr+p.sz*sr, z3=-p.sx*sr+p.sz*cr;
+      var x=lerp(p.x0,cx+x3*R,e), y=lerp(p.y0,cy+p.sy*R,e), dep=(z3+1)/2;
+      X[i]=x; Y[i]=y; Q[i]=q;
+      var a=Math.min(1,q*2.5)*(.3+.65*dep);
+      ctx.fillStyle="rgba(101,231,242,"+a.toFixed(3)+")"; ctx.beginPath(); ctx.arc(x,y,.9+1.5*dep,0,6.2832); ctx.fill();
+    }
+    if(t>700){
+      ctx.lineWidth=.7;
+      for(var a1=0;a1<n;a1++){ if(Q[a1]<.85) continue;
+        for(var b=a1+1;b<n;b++){ if(Q[b]<.85) continue; var dx=X[a1]-X[b], dy=Y[a1]-Y[b], d2=dx*dx+dy*dy;
+          if(d2<1500){ ctx.strokeStyle="rgba(101,231,242,"+(.16*(1-d2/1500)).toFixed(3)+")"; ctx.beginPath(); ctx.moveTo(X[a1],Y[a1]); ctx.lineTo(X[b],Y[b]); ctx.stroke(); } } }
+    }
+    [0,150].forEach(function(dl,k){
+      var q=(t-TSHOCK-dl)/1200; if(q<0||q>1) return;
+      var rr=lerp(40,Math.max(w,h)*.75,1-Math.pow(1-q,3));
+      ctx.strokeStyle="rgba(101,231,242,"+((k?.18:.5)*(1-q)).toFixed(3)+")"; ctx.lineWidth=k?1:1.6; ctx.beginPath(); ctx.arc(cx,cy,rr,0,6.2832); ctx.stroke();
+    });
+    // نمودار زنده → خط صاف زیر شعار
+    if(t>2150&&!morphDone){ var m=clamp((t-2150)/550,0,1); chartD(eio(m)); if(m>=1) morphDone=true; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  /* ---------- پرواز لوگو به نوار بالا ---------- */
+  function reveal(){
+    if(revealed) return; revealed=true;
+    startApp();
+    var cr=core.getBoundingClientRect(), size0=cr.width;
+    var fly=D.createElement("div"); fly.className="sp-flyer";
+    var im=core.querySelector("img"); if(im){ var c2=D.createElement("img"); c2.src=im.src; c2.alt=""; fly.appendChild(c2); }
+    fly.style.width=fly.style.height=size0+"px"; fly.style.transform="translate("+cr.left+"px,"+cr.top+"px)";
+    D.body.appendChild(fly); mark.style.visibility="hidden"; el.classList.add("leaving");
+    var sx=cr.left+cr.width/2, sy=cr.top+cr.height/2, tStart=null, tWait=performance.now(), target=null;
+    function finish(){ fly.style.transition="opacity .22s"; fly.style.opacity="0"; if(target) target.style.visibility=""; setTimeout(function(){ fly.remove(); },260); setTimeout(remove,700); el.classList.add("out"); }
+    function step(now){
+      if(!target){
+        var f=D.querySelector(".q-brand img");
+        if(f){ target=f; f.style.visibility="hidden"; }
+        else if(now-tWait>900){ finish(); return; }
+        else { requestAnimationFrame(step); return; }
+      }
+      if(tStart===null) tStart=now;
+      var r=target.getBoundingClientRect(); if(!r.width){ r={left:W.innerWidth/2-14,top:14,width:28,height:28}; }
+      var p=clamp((now-tStart)/900,0,1), e=eio(p);
+      var tcx=r.left+r.width/2, tcy=r.top+r.height/2, sz=lerp(size0,Math.max(r.width,r.height),e);
+      fly.style.width=fly.style.height=sz+"px";
+      fly.style.transform="translate("+(lerp(sx,tcx,e)-sz/2).toFixed(1)+"px,"+(lerp(sy,tcy,e)-sz/2).toFixed(1)+"px)";
+      if(p<1) requestAnimationFrame(step); else finish();
+    }
+    requestAnimationFrame(step);
+  }
+  el.addEventListener("click",reveal);
+  setTimeout(reveal,3000);
+  setTimeout(function(){ if(!revealed) reveal(); },6500);
+})();
+</script>
 
 <div id="app">
   <div class="connect-shell">
@@ -1676,8 +1969,13 @@ body{ background:
   </div>
 </div>
 
-<script>window.__API_BASE__ = ""; /* آدرس Worker؛ خالی = همان دامنه */</script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script>
+window.__API_BASE__ = ""; /* آدرس Worker؛ خالی = همان دامنه */
+/* راه‌های ارتباط با پشتیبانی؛ هر کدام که پر شود در «تنظیمات» نمایش داده می‌شود. مثال: telegram:"qairo_support"، email:"support@example.com" */
+window.__SUPPORT__ = { telegram:"", email:"" };
+</script>
+<script src="vendor/chart.umd.min.js"></script>
+<script>window.Chart || document.write('<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"><\/script>');</script>
 <script>
 // ===================================================================
 // توابع کمکی عمومی: قالب‌بندی عدد، تاریخ، ابزارهای DOM
@@ -1810,7 +2108,23 @@ const Utils = (() => {
     return digits.slice(0,4) + "***" + digits.slice(-3);
   }
 
-  return { setUsdtRate, formatNumber, formatPrice, formatPercent, formatDateTime, formatDate, timeAgo, el, debounce, initials, maskSecret, maskPhone };
+  // ---- پیام‌های خطای کاربرپسند: جزئیات فنی (کد خطا، نام تنظیمات سرور، متن انگلیسی) هرگز به کاربر نشان داده نمی‌شود ----
+  const FA_LETTER = /[\u0600-\u06FF]/;
+  const TECH_RE = /\b[A-Z]{2,}(?:_[A-Z0-9]+)+\b|HTTP\s*\d{3}|\b(?:Worker|Workers|Secrets?|wrangler|Cloudflare|KV|undefined|NaN|null|JSON|Error|TypeError|ReferenceError|SyntaxError|RangeError|fetch|stack|exception|Unexpected|Failed)\b|\bat\s+\S+:\d+|\.(?:js|ts)\b/i;
+  function isUserSafe(msg){ return typeof msg === "string" && msg.trim().length > 0 && msg.length <= 220 && FA_LETTER.test(msg) && !TECH_RE.test(msg); }
+  function friendlyText(msg, fallback){ return isUserSafe(msg) ? msg.trim() : (fallback === undefined ? "" : fallback); }
+  function friendlyError(err, fallback){
+    const def = fallback || "مشکلی پیش آمد. لطفاً دوباره تلاش کنید.";
+    const msg = err && err.message;
+    if(isUserSafe(msg)) return msg.trim();
+    try{ if(err && typeof err === "object"){ if(!err._logged){ err._logged = true; console.warn("[QAIRO]", err.rawMessage || msg, err); } } else { console.warn("[QAIRO]", err); } }catch(_){ /* ignore */ }
+    const st = err && err.status;
+    if(st === 429) return "تعداد درخواست‌ها زیاد است. چند لحظه صبر کنید و دوباره تلاش کنید.";
+    if(st >= 500) return "سرویس موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.";
+    return def;
+  }
+
+  return { friendlyError, friendlyText, setUsdtRate, formatNumber, formatPrice, formatPercent, formatDateTime, formatDate, timeAgo, el, debounce, initials, maskSecret, maskPhone };
 })();
 // ===================================================================
 // مجموعه آیکون‌های خطی ساده (SVG) — سبک یکپارچه برای کل برنامه
@@ -1888,7 +2202,7 @@ const Q = {
   coinRow(c, withSpark = true){
     const E = Utils.el;
     const row = E("div", { class:"q-row", onClick: () => Router.go(`coin/${c.id}`) }, [
-      UI.coinAvatar(c.symbol, 40),
+      UI.coinAvatar(c.symbol, 40, c.icon || c.image || c.logo),
       E("div", { class:"q-id" }, [E("div", { class:"q-nm" }, c.name), E("div", { class:"q-sy" }, c.symbol)]),
       withSpark ? E("div", { class:"q-sp" }, E("canvas", { "data-key":"row_" + c.id })) : null,
       E("div", { class:"q-pr" }, [E("div", { class:"p num" }, Utils.formatPrice(c.price, "")), E("div", { class:`c ${(c.change24h ?? 0) >= 0 ? "up" : "down"}` }, Utils.formatPercent(c.change24h))]),
@@ -2010,14 +2324,15 @@ const Api = (() => {
       res = await fetch(API_BASE + path, { method, headers, signal: ctl.signal, body: body !== undefined ? JSON.stringify(body) : undefined });
     }catch(e){
       const timedOut = e && e.name === "AbortError";
-      const err = new Error(timedOut ? "پاسخی از سرور نرسید (زمان انتظار تمام شد)؛ احتمالاً والکس کند یا در دسترس نیست." : "اتصال به سرور برقرار نشد. اینترنت یا آدرس Worker را بررسی کنید.");
+      const err = new Error(timedOut ? "پاسخی از سرور نرسید. لطفاً چند لحظه بعد دوباره تلاش کنید." : "اتصال به سرور برقرار نشد. اینترنت خود را بررسی کنید و دوباره تلاش کنید.");
       err.code = timedOut ? "TIMEOUT" : "NETWORK"; throw err;
     }finally{ clearTimeout(timer); }
     let json = null;
     try{ json = await res.json(); }catch(e){ /* غیر JSON */ }
     if(!res.ok || !json || json.ok !== true){
       const e = (json && json.error) || {};
-      const err = new Error(e.message || `خطای سرور (HTTP ${res.status})`);
+      const err = new Error(Utils.friendlyError({ message:e.message, status:res.status }));
+      err.rawMessage = e.message || ("HTTP " + res.status);
       err.code = e.code || ("HTTP_" + res.status); err.status = res.status; err.detail = e;
       if(res.status === 401 && err.code === "SESSION_INVALID"){
         clearSession();
@@ -2337,6 +2652,134 @@ const Charts = (() => {
     return chart;
   }
 
+
+  // ---------------------------------------------------------------
+  // نمودار کندل‌استیک (بدون افزونه‌ی بیرونی؛ روی Chart.js رسم می‌شود)
+  // ورودی: یا نقطه‌های {t,o,h,l,c} (کندل واقعی از سرور) یا نقطه‌های قیمتی {t,v}
+  // که در این حالت به کندل تبدیل می‌شوند.
+  // ---------------------------------------------------------------
+  const CANDLE_UP = "#1fe08f", CANDLE_DOWN = "#ff5d7a";
+
+  function toCandles(points, target = 48){
+    if(!points || !points.length) return [];
+    if(points[0].o !== undefined && points[0].c !== undefined){
+      return points.map(p => ({ t:p.t, o:+p.o, h:+p.h, l:+p.l, c:+p.c }));
+    }
+    const n = points.length;
+    const size = Math.max(2, Math.ceil(n / target));
+    const out = [];
+    for(let i = 0; i < n; i += size){
+      const chunk = points.slice(i, i + size);
+      const vals = chunk.map(x => +x.v);
+      const o = out.length ? out[out.length - 1].c : vals[0];
+      const c = vals[vals.length - 1];
+      out.push({ t:chunk[chunk.length - 1].t, o, c, h:Math.max(o, ...vals), l:Math.min(o, ...vals) });
+    }
+    return out;
+  }
+
+  function candleChart(key, canvas, points, { currency = "" } = {}){
+    destroy(key);
+    if(!canvas || typeof Chart === "undefined") return null;
+    const candles = toCandles(points);
+    if(candles.length < 2) return null;
+
+    const grid = cssVar("--border-soft") || "#1b2436";
+    const textFaint = cssVar("--text-faint") || "#5c6680";
+    const reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const lo = Math.min(...candles.map(x => x.l)), hi = Math.max(...candles.map(x => x.h));
+    const pad = (hi - lo || hi * 0.01 || 1) * 0.08;
+    const last = candles[candles.length - 1];
+    const fmt = (v) => Utils.formatPrice(v, currency).trim();
+
+    const plugin = {
+      id: "qCandles",
+      afterInit(chart){ chart.$p = reduced ? 1 : 0; },
+      afterDatasetsDraw(chart){
+        const { ctx, chartArea, scales } = chart;
+        const x = scales.x, y = scales.y;
+        const prog = chart.$p == null ? 1 : chart.$p;
+        const slot = chartArea.width / candles.length;
+        const w = Math.max(2, Math.min(14, slot * 0.62));
+        const shown = Math.ceil(candles.length * prog);
+        ctx.save();
+        ctx.beginPath(); ctx.rect(chartArea.left, chartArea.top - 4, chartArea.width, chartArea.height + 8); ctx.clip();
+
+        // خط قیمت آخر
+        const ly = y.getPixelForValue(last.c);
+        ctx.setLineDash([4, 4]); ctx.lineWidth = 1; ctx.strokeStyle = (last.c >= last.o ? CANDLE_UP : CANDLE_DOWN) + "99";
+        ctx.beginPath(); ctx.moveTo(chartArea.left, ly); ctx.lineTo(chartArea.right, ly); ctx.stroke(); ctx.setLineDash([]);
+
+        // خط راهنمای کندل انتخاب‌شده
+        const act = chart.tooltip && chart.tooltip.getActiveElements ? chart.tooltip.getActiveElements() : [];
+        if(act.length){
+          const ax = x.getPixelForValue(act[0].index);
+          ctx.strokeStyle = textFaint + "66"; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(ax, chartArea.top); ctx.lineTo(ax, chartArea.bottom); ctx.stroke();
+        }
+
+        for(let i = 0; i < shown; i++){
+          const k = candles[i], cx = x.getPixelForValue(i);
+          const up = k.c >= k.o, col = up ? CANDLE_UP : CANDLE_DOWN;
+          const yh = y.getPixelForValue(k.h), yl = y.getPixelForValue(k.l);
+          const yo = y.getPixelForValue(k.o), yc = y.getPixelForValue(k.c);
+          ctx.strokeStyle = col; ctx.fillStyle = col; ctx.lineWidth = Math.max(1, Math.min(2, w * 0.18)); ctx.lineCap = "round";
+          ctx.beginPath(); ctx.moveTo(cx, yh); ctx.lineTo(cx, yl); ctx.stroke();
+          const top = Math.min(yo, yc), h = Math.max(2, Math.abs(yo - yc));
+          const r = Math.min(2.5, w / 3);
+          ctx.beginPath();
+          if(ctx.roundRect) ctx.roundRect(cx - w / 2, top, w, h, r); else ctx.rect(cx - w / 2, top, w, h);
+          ctx.fill();
+        }
+        ctx.restore();
+      },
+    };
+
+    const chart = new Chart(canvas.getContext("2d"), {
+      type: "line",
+      data: {
+        labels: candles.map(k => k.t),
+        datasets: [{ data: candles.map(k => k.c), borderColor: "transparent", backgroundColor: "transparent", borderWidth: 0, pointRadius: 0, pointHoverRadius: 0, pointHitRadius: 12 }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false, axis: "x" },
+        layout: { padding: { left: 4, right: 2 } },
+        animation: reduced ? false : {
+          duration: 900, easing: "easeOutQuart",
+          onProgress: (a) => { chart.$p = 1 - Math.pow(1 - Math.min(1, a.currentStep / a.numSteps), 3); },
+          onComplete: () => { chart.$p = 1; },
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            rtl: true,
+            backgroundColor: cssVar("--surface") || "#121a2b",
+            borderColor: cssVar("--accent") || "#00E5FF", borderWidth: 1,
+            titleColor: textFaint, bodyColor: cssVar("--text") || "#e9eef6",
+            caretPadding: 8, cornerRadius: 12, boxPadding: 4, padding: 10, displayColors: false,
+            titleFont: { family: "Vazirmatn", size: 11 }, bodyFont: { family: "Vazirmatn", size: 12, weight: "700" },
+            callbacks: {
+              title: (items) => Utils.formatDateTime(items[0].label),
+              label: (item) => { const k = candles[item.dataIndex]; return ["باز: " + fmt(k.o), "بالا: " + fmt(k.h), "پایین: " + fmt(k.l), "بسته: " + fmt(k.c)]; },
+            },
+          },
+        },
+        scales: {
+          x: { display: false, offset: true },
+          y: {
+            position: "right", min: lo - pad, max: hi + pad,
+            grid: { color: grid, drawTicks: false }, border: { display: false },
+            ticks: { color: textFaint, font: { family: "Vazirmatn", size: 10 }, maxTicksLimit: 5, callback: (v) => Utils.formatNumber(v, { compact: true }) },
+          },
+        },
+      },
+      plugins: [plugin],
+    });
+    instances.set(key, chart);
+    return chart;
+  }
+
   function sparkline(canvas, points, positive = true){
     if(!canvas || typeof Chart === "undefined") return null;
     const key = "spark_" + (canvas.dataset.key || Math.random());
@@ -2363,7 +2806,7 @@ const Charts = (() => {
     return chart;
   }
 
-  return { lineChart, sparkline, destroy };
+  return { lineChart, candleChart, toCandles, sparkline, destroy };
 })();
 // ===================================================================
 // کامپوننت‌های قابل استفاده مجدد (کارت، جدول، وضعیت خالی/خطا و ...)
@@ -2473,15 +2916,50 @@ const UI = (() => {
     return hash;
   }
 
-  function coinAvatar(symbol, size = 28){
+  // لوگوی واقعی هر ارز: اول از پوشه‌ی خودِ سایت (img/coins/btc.png)، بعد از CDN؛
+  // اگر هیچ‌کدام نبود، حروف اول نماد روی رنگ مخصوص همان ارز نشان داده می‌شود.
+  const COIN_ICON_SOURCES = [
+    (c) => `img/coins/${c}.png`,
+    (c) => `https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${c}.png`,
+    (c) => `https://assets.coincap.io/assets/icons/${c}@2x.png`,
+  ];
+  const coinIconCache = new Map(); // نماد → نشانی لوگوی سالم، یا null اگر هیچ منبعی نداشت
+  function coinBase(symbol){
+    const s = String(symbol || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return s.replace(/(irt|usdt|tmn)$/, "") || s;
+  }
+
+  function coinAvatar(symbol, size = 28, imageUrl){
     const letters = (symbol || "?").replace(/[^A-Za-z]/g,"").slice(0,3) || "?";
     const hue = coinHue(symbol);
     const bg = `linear-gradient(135deg, hsl(${hue} 72% 52%), hsl(${(hue+40)%360} 72% 42%))`;
     const glow = `0 3px 10px -2px hsl(${hue} 72% 45% / .55), inset 0 1px 0 #ffffff30`;
-    return Utils.el("div", {
+    const box = Utils.el("div", {
       class:"coin-ic",
       style:`width:${size}px;height:${size}px;font-size:${Math.round(size*0.36)}px;background:${bg};box-shadow:${glow};color:#ffffffe8;`,
-    }, letters);
+    });
+    const base = coinBase(symbol);
+    const showLetters = () => { box.textContent = letters; };
+    const cached = coinIconCache.get(base);
+    if(!base || (cached === null && !imageUrl)){ showLetters(); return box; }
+
+    const urls = imageUrl ? [imageUrl] : [];
+    if(cached) urls.push(cached); else COIN_ICON_SOURCES.forEach(f => urls.push(f(base)));
+    const img = document.createElement("img");
+    img.className = "coin-img"; img.alt = ""; img.decoding = "async"; img.draggable = false;
+    let i = 0;
+    const next = () => {
+      if(i >= urls.length){ if(!imageUrl) coinIconCache.set(base, null); img.remove(); showLetters(); return; }
+      img.src = urls[i++];
+    };
+    img.onload = () => {
+      if(!imageUrl) coinIconCache.set(base, img.currentSrc || img.src);
+      box.style.background = "transparent"; box.style.boxShadow = "0 2px 8px -3px #0008";
+    };
+    img.onerror = next;
+    box.appendChild(img);
+    next();
+    return box;
   }
 
   function statusBadge(status){
@@ -2644,11 +3122,147 @@ function authShellStart(container){
   card.appendChild(Utils.el("div", { class:"q-auth-logo" }, [
     Q.orb(false),
     Utils.el("div", { class:"q-wordmark" }, "QAIRO"),
-    Utils.el("div", { class:"q-tagline" }, "AI-Powered Crypto Intelligence & Trading"),
     Utils.el("div", { class:"q-tagline", style:"margin-top:6px;color:var(--q-blue2);" }, "آینده مالی، با هوش مصنوعی"),
   ]));
   return card;
 }
+
+
+// ===================================================================
+//  قوانین و مقررات (توافق‌نامه) — متن خلاصه + قرارداد کامل
+// ===================================================================
+const Legal = (() => {
+  const SUMMARY = {
+    title: "توافق‌نامه استفاده از کایرو",
+    lead: [
+      "پیش از ورود به کایرو، لطفاً موارد زیر را با دقت مطالعه کنید.",
+      "کایرو نرم‌افزاری برای تحلیل بازار رمزارز و اجرای معاملات خودکار از طریق حساب والکس شماست.",
+    ],
+    sections: [
+      { t:"معاملات خودکار و ریسک سرمایه", p:[
+        "با فعال‌سازی معاملات خودکار، به کایرو اجازه می‌دهید مطابق تنظیمات شما و بدون تأیید جداگانه هر سفارش، معاملات خریدوفروش انجام دهد.",
+        { warn:"معاملات رمزارزی با ریسک همراه هستند. هوش مصنوعی ممکن است اشتباه کند و هیچ سودی تضمین نمی‌شود. امکان از دست رفتن بخشی یا تمام سرمایه اختصاص‌یافته به معاملات وجود دارد." },
+      ]},
+      { t:"سرمایه اختصاص‌یافته به هوش مصنوعی", p:[
+        "شما می‌توانید میزان سرمایه اختصاص‌یافته به هوش مصنوعی را تعیین و تغییر دهید.",
+        "این سرمایه در حساب والکس خودتان باقی می‌ماند. کایرو مجاز نیست بدون اجازه معتبر شما از سایر دارایی‌هایتان برای جبران زیان معاملات استفاده کند.",
+        "تعیین سقف سرمایه، تضمین نمی‌کند که زیان واقعی دقیقاً به همان مبلغ محدود بماند.",
+      ]},
+      { t:"سهم خدمات کایرو", p:[
+        "سهم کایرو معادل ۵ درصد از سود خالص مثبت و تحقق‌یافته معاملات هوش مصنوعی در هر روز است که در ساعت ۲۳:۵۹ محاسبه می‌شود.",
+        "سود و زیان هر روز مستقل محاسبه می‌شوند. معاملات دستی شما مشمول سهم کایرو نیستند.",
+        "با پذیرش این شرایط، با دریافت خودکار سهم محاسبه‌شده از طریق سازوکار پرداخت اعلام‌شده و مجاز موافقت می‌کنید.",
+      ]},
+      { t:"مجوز برداشت", p:[
+        "مجوز برداشت، صرفاً برای دریافت سهم خدمات کایرو و در حدود مبلغ معتبر محاسبه‌شده در نظر گرفته شده است.",
+        "کایرو مجاز نیست از این مجوز برای انتقال سرمایه معاملاتی شما به حساب ارائه‌دهنده یا اشخاص دیگر استفاده کند.",
+      ]},
+      { t:"توقف معاملات", p:[
+        "شما می‌توانید هر زمان که بخواهید معاملات خودکار را متوقف کنید یا در صورت پشتیبانی نرم‌افزار به حالت تحلیل و پیشنهاد تغییر وضعیت دهید.",
+        "توقف کایرو لزوماً سفارش‌های باز را لغو نمی‌کند. پس از توقف، وضعیت سفارش‌های خود را در والکس بررسی کنید.",
+      ]},
+      { t:"خطاهای نرم‌افزاری", p:[
+        "اگر خسارت مستقیم ناشی از خطای نرم‌افزاری احراز شود، درخواست جبران مطابق سیاست جبران خسارت کایرو و قوانین قابل اجرا بررسی خواهد شد.",
+        "مبنای معمول جبران خسارت کایرو ۲۰ درصد خسارت مستقیم و مستند احرازشده است؛ بااین‌حال، میزان نهایی ممکن است با توجه به شرایط و الزامات قانونی کمتر یا بیشتر باشد.",
+      ]},
+      { t:"اطلاعات و حریم خصوصی", p:[
+        "اطلاعات شما برای ارائه خدمات کایرو پردازش می‌شوند و مطابق سیاست حریم خصوصی نگهداری خواهند شد.",
+        "پس از قطع اتصال، اطلاعات مرتبط با اتصال مطابق سیاست حذف اطلاعات حذف می‌شوند، مگر مواردی که نگهداری آن‌ها به دلایل قانونی، مالی یا امنیتی ضروری باشد.",
+      ]},
+    ],
+    final: { t:"تأیید نهایی", p:"با انتخاب گزینه «می‌پذیرم و ادامه می‌دهم»، تأیید می‌کنم که موارد بالا و قرارداد کامل شرایط و قوانین کایرو را مطالعه کرده‌ام، ریسک معاملات خودکار را می‌دانم و با مفاد آن موافقم." },
+  };
+
+  // متن «قرارداد کامل» — بعداً اینجا پر می‌شود. ساختار: { title, lead:[...], sections:[{ t, p:[...] }], final:{ t, p } }
+  const FULL = {"title": "قرارداد جامع شرایط و قوانین استفاده از کایرو (KAIRO)", "sub": "نرم‌افزار تحلیل و معاملات هوشمند رمزارز", "meta": ["نسخه: ۱.۰", "ارائه‌دهنده: مالک و توسعه‌دهنده حقیقی نرم‌افزار کایرو", "نام نرم‌افزار: کایرو (KAIRO)", "قلمرو فعالیت فعلی: جمهوری اسلامی ایران"], "lead": ["این قرارداد، شرایط استفاده از نرم‌افزار کایرو، نحوه اتصال به حساب معاملاتی کاربر در صرافی والکس، مدیریت سرمایه اختصاص‌یافته به هوش مصنوعی، محاسبه سهم خدمات، امنیت اطلاعات و حدود مسئولیت طرفین را تعیین می‌کند.", "با ثبت پذیرش الکترونیکی این قرارداد، کاربر موافقت خود را با مفاد آن اعلام می‌کند."], "sections": [{"t": "تعاریف", "p": ["۱-۱. کایرو: نرم‌افزاری که با استفاده از الگوریتم‌ها و فناوری هوش مصنوعی، امکان تحلیل بازار، ارائه پیشنهادهای معاملاتی و اجرای خودکار یا نیمه‌خودکار معاملات رمزارزی را از طریق اتصال به حساب کاربر در صرافی والکس فراهم می‌کند.", "۱-۲. ارائه‌دهنده: شخص حقیقی مالک و توسعه‌دهنده کایرو که خدمات نرم‌افزاری موضوع این قرارداد را ارائه می‌دهد.", "۱-۳. کاربر: شخصی که با داشتن حساب مجاز در صرافی والکس، از امکانات کایرو استفاده می‌کند.", "۱-۴. صرافی: صرافی والکس و زیرساخت‌های معاملاتی مرتبط با حساب کاربر.", "۱-۵. API: رابط فنی مورد استفاده برای اتصال کایرو به حساب کاربر در صرافی.", "۱-۶. سرمایه اختصاص‌یافته: بخشی از دارایی موجود کاربر در حساب والکس که کاربر برای فعالیت معاملاتی هوش مصنوعی تعیین می‌کند.", "۱-۷. معاملات هوش مصنوعی: سفارش‌ها و معاملاتی که تصمیم معاملاتی آن‌ها توسط الگوریتم هوش مصنوعی کایرو اتخاذ شده و از طریق نرم‌افزار اجرا می‌شوند.", "۱-۸. معاملات دستی: معاملات مستقلی که کاربر شخصاً و خارج از فرایند معاملاتی هوش مصنوعی کایرو انجام می‌دهد.", "۱-۹. سود خالص روزانه: سود خالص تحقق‌یافته معاملات مشمول کایرو در دوره محاسباتی روزانه، پس از کسر هزینه‌های معاملاتی مرتبط و اعمال تعدیلات لازم برای تفکیک سود معاملاتی از واریز، برداشت و سایر تغییرات غیرمعاملاتی.", "۱-۱۰. خطای نرم‌افزاری: نقص فنی قابل انتساب به کایرو که موجب عملکرد نادرست نرم‌افزار، اجرای سفارش برخلاف منطق اجرایی مورد انتظار یا نقض یک محدودیت فنی اعلام‌شده و قابل اجرا شود.", "۱-۱۱. خطای تصمیم‌گیری هوش مصنوعی: تحلیل نادرست، پیش‌بینی ناموفق یا تصمیم معاملاتی زیان‌ده هوش مصنوعی که به‌خودی‌خود ناشی از نقص فنی نرم‌افزار نباشد.", "۱-۱۲. سفارش باز: سفارشی که در صرافی ثبت شده، اما اجرای آن کامل نشده یا وضعیت نهایی آن مشخص نیست."]}, {"t": "موضوع و ماهیت خدمات", "p": ["۲-۱. موضوع این قرارداد، ارائه خدمات نرم‌افزاری تحلیل بازار، تولید پیشنهادهای معاملاتی و اجرای معاملات خودکار یا نیمه‌خودکار رمزارزی از طریق حساب معاملاتی خود کاربر است.", "۲-۲. کایرو بر اساس تنظیمات کاربر، اطلاعات در دسترس بازار و خروجی الگوریتم‌های خود عمل می‌کند.", "۲-۳. کایرو سود مشخص، بازده تضمین‌شده، جلوگیری قطعی از زیان یا موفقیت همیشگی تصمیم‌های هوش مصنوعی را تضمین نمی‌کند.", "۲-۴. کاربر می‌پذیرد که تحلیل‌ها و تصمیم‌های هوش مصنوعی ممکن است اشتباه باشند و عملکرد بازار می‌تواند برخلاف پیش‌بینی نرم‌افزار تغییر کند.", "۲-۵. استفاده از کایرو موجب انتقال مالکیت دارایی‌های کاربر به ارائه‌دهنده نمی‌شود. سرمایه معاملاتی در حساب والکس خود کاربر باقی می‌ماند و کایرو از طریق دسترسی‌های فنی مجاز، عملیات معاملاتی را انجام می‌دهد.", "۲-۶. کایرو ابزار نرم‌افزاری است و ماهیت حقوقی خدمات آن تابع عملکرد واقعی نرم‌افزار و قوانین قابل اجرا خواهد بود، نه صرفاً عنوانی که در این قرارداد استفاده شده است.", "۲-۷. در صورت لزوم اخذ مجوز قانونی برای هر بخش از خدمات، ارائه‌دهنده موظف است الزامات قابل اجرا را رعایت کند."]}, {"t": "پذیرش شرایط و مسئولیت کاربر", "p": ["۳-۱. کاربر با تأیید الکترونیکی این قرارداد، اعلام می‌کند که مفاد آن را مطالعه کرده و پذیرفته است.", "۳-۲. کاربر مسئول صحت اطلاعات ارائه‌شده و مجاز بودن استفاده از حساب معاملاتی خود است.", "۳-۳. کاربر موظف است از حسابی استفاده کند که قانوناً اجازه دسترسی و معامله از طریق آن را دارد.", "۳-۴. کاربر مسئول انتخاب میزان سرمایه اختصاص‌یافته، تنظیمات معاملاتی و ارزیابی تناسب ریسک با شرایط مالی خود است.", "۳-۵. کاربر می‌پذیرد که فعال‌سازی معاملات خودکار به کایرو اجازه می‌دهد بدون دریافت تأیید جداگانه برای هر سفارش، در محدوده تنظیمات و مجوزهای معتبر اقدام کند.", "۳-۶. پذیرش این قرارداد موجب اسقاط حقوق قانونی غیرقابل اسقاط کاربر نخواهد شد."]}, {"t": "اتصال به حساب والکس و مجوزهای API", "p": ["۴-۱. کاربر با اتصال حساب خود، مجوزهای فنی لازم برای مشاهده اطلاعات مجاز و اجرای معاملات در محدوده دسترسی‌های فعال‌شده را در اختیار کایرو قرار می‌دهد.", "۴-۲. دسترسی‌های موردنیاز برای معاملات شامل مشاهده اطلاعات مربوط و ثبت سفارش‌های خریدوفروش است.", "۴-۳. با توجه به سازوکار اعلام‌شده کایرو، دسترسی برداشت صرفاً برای دریافت خودکار سهم خدمات کایرو در نظر گرفته می‌شود و برای انتقال سرمایه معاملاتی کاربر به حساب ارائه‌دهنده یا اشخاص دیگر استفاده نخواهد شد.", "۴-۴. کایرو مجاز نیست با استفاده از دسترسی برداشت، سرمایه معاملاتی کاربر را به کیف پول شخصی ارائه‌دهنده یا مقصد دیگری منتقل کند.", "۴-۵. دریافت سهم کایرو باید محدود به مبلغی باشد که مطابق این قرارداد محاسبه شده و سررسید آن فرارسیده است.", "۴-۶. دسترسی برداشت باید تا حد امکان از طریق محدودیت‌های فنی قابل اعمال، محدود به عملیات و مبلغ مجاز باشد. اگر زیرساخت API امکان اعمال محدودیت موردنیاز را نداشته باشد، ارائه‌دهنده باید پیش از فعال‌سازی این قابلیت، راهکار فنی و حقوقی مناسب را تعیین کند.", "۴-۷. کاربر مسئول ایجاد و مدیریت API Key و بررسی مجوزهای اعطاشده است؛ با این حال، این مسئولیت موجب رفع تعهدات امنیتی ارائه‌دهنده در قبال نگهداری و استفاده از اطلاعات دریافتی نمی‌شود.", "۴-۸. کاربر می‌تواند دسترسی API خود را لغو کند. لغو دسترسی ممکن است موجب توقف عملیات بعدی کایرو شود، اما لزوماً سفارش‌های قبلی را لغو نمی‌کند."]}, {"t": "سرمایه اختصاص‌یافته به هوش مصنوعی", "p": ["۵-۱. کاربر می‌تواند میزان سرمایه‌ای را که برای معاملات هوش مصنوعی در نظر گرفته است، در محدوده امکانات کایرو تعیین کند.", "۵-۲. سرمایه اختصاص‌یافته در حساب والکس خود کاربر باقی می‌ماند و به حساب یا کیف پول دیگری منتقل نمی‌شود.", "۵-۳. مبلغ تعیین‌شده، سقف سرمایه‌ای است که کایرو مجاز است برای فعالیت معاملاتی هوش مصنوعی به کار گیرد؛ این مبلغ لزوماً سقف مبلغ هر سفارش نیست.", "۵-۴. برای مثال، اگر کاربر سقف سرمایه اختصاص‌یافته را ۱۰ دلار تعیین کند، کایرو باید فعالیت معاملاتی هوش مصنوعی را بر اساس همین سرمایه مدیریت کند.", "۵-۵. اگر ارزش سرمایه معاملاتی به ۱۵ دلار برسد، مبلغ مازاد ۵ دلار باید مطابق سازوکار مدیریت سرمایه کایرو از سرمایه در گردش هوش مصنوعی خارج شود و برای معاملات بعدی آن بخش مورد استفاده قرار نگیرد.", "۵-۶. اگر ارزش سرمایه معاملاتی به ۵ دلار کاهش یابد، کایرو فقط با همان سرمایه باقی‌مانده ادامه خواهد داد و بدون مجوز معتبر کاربر از سایر دارایی‌های او برای جبران زیان استفاده نخواهد کرد.", "۵-۷. تغییر سقف سرمایه یا درخواست خروج سرمایه از فعالیت معاملاتی باید مطابق امکانات نرم‌افزار انجام شود. اجرای درخواست ممکن است به وضعیت سفارش‌های باز، محدودیت‌های صرافی یا شرایط فنی وابسته باشد.", "۵-۸. سقف سرمایه اختصاص‌یافته به‌تنهایی تضمین نمی‌کند که ارزش دارایی دقیقاً در همان محدوده باقی بماند؛ کارمزدها، لغزش قیمت، نوسانات بازار و تأخیر در اجرای سفارش ممکن است بر نتیجه تأثیر بگذارند.", "۵-۹. ارائه‌دهنده متعهد است سازوکار فنی لازم برای جلوگیری از استفاده بدون مجوز از دارایی خارج از سرمایه اختصاص‌یافته را پیاده‌سازی کند."]}, {"t": "اختیار کاربر برای توقف و تغییر حالت", "p": ["۶-۱. کاربر می‌تواند در هر زمان درخواست توقف معاملات خودکار را ثبت کند.", "۶-۲. در صورت پشتیبانی نرم‌افزار، کاربر می‌تواند حالت فعالیت را از معاملات خودکار به حالت صرفاً تحلیل و ارائه پیشنهاد تغییر دهد.", "۶-۳. کاربر می‌تواند درخواست تغییر میزان سرمایه اختصاص‌یافته یا خروج آن از فعالیت معاملاتی هوش مصنوعی را ثبت کند.", "۶-۴. پس از دریافت و اجرای موفق درخواست توقف، کایرو نباید سفارش جدیدی برخلاف وضعیت انتخابی کاربر ارسال کند؛ مگر در حد عملیات ضروری برای تکمیل یا مدیریت سفارش‌های قبلی که به‌طور روشن به اطلاع کاربر رسیده باشد.", "۶-۵. توقف کایرو به معنای لغو خودکار سفارش‌های ثبت‌شده در والکس نیست.", "۶-۶. سفارش‌های باز ممکن است پس از توقف نرم‌افزار همچنان فعال بمانند. کاربر باید وضعیت آن‌ها را بررسی کند و در صورت امکان از طریق امکانات صرافی نسبت به لغو آن‌ها اقدام کند.", "۶-۷. درخواست توقف یا بازگرداندن سرمایه ممکن است در شرایط اختلال فنی یا محدودیت صرافی با تأخیر مواجه شود. این موضوع نباید به‌عنوان مجوز استفاده نامحدود از دارایی کاربر تلقی شود."]}, {"t": "محاسبه سود و سهم خدمات کایرو", "p": ["۷-۱. در برابر خدمات ارائه‌شده، سهم کایرو معادل پنج درصد (۵٪) از سود خالص مثبت و تحقق‌یافته معاملات هوش مصنوعی در هر روز است.", "۷-۲. محاسبه روزانه در ساعت ۲۳:۵۹ بر اساس منطقه زمانی اعلام‌شده در نرم‌افزار انجام می‌شود. منطقه زمانی مبنا باید پیش از انتشار عمومی به‌طور مشخص اعلام شود.", "۷-۳. سود هر روز مستقل از سود و زیان روزهای قبل و بعد محاسبه می‌شود. زیان یک روز به‌طور خودکار از سود روز دیگر کسر نخواهد شد.", "۷-۴. در روزی که سود خالص قابل محاسبه مثبت نباشد، سهمی بابت سود همان روز تعلق نمی‌گیرد.", "۷-۵. سهم کایرو فقط از معاملات هوش مصنوعی محاسبه می‌شود. سود معاملات دستی کاربر مشمول سهم کایرو نیست.", "۷-۶. معاملات باید به‌گونه‌ای ثبت و تفکیک شوند که امکان تشخیص معاملات هوش مصنوعی از معاملات دستی وجود داشته باشد.", "۷-۷. مبنای محاسبه، سود تحقق‌یافته معاملات مشمول کایرو است. افزایش ارزش دارایی یا سود تحقق‌نیافته معاملات باز، به‌تنهایی سود قابل تسویه محسوب نمی‌شود.", "۷-۸. در محاسبه سود خالص، کارمزدهای معاملاتی مرتبط و هزینه‌های مستقیم قابل انتساب به معاملات هوش مصنوعی کسر می‌شوند.", "۷-۹. واریز، برداشت، انتقال دارایی و سایر تغییرات غیرمعاملاتی نباید به‌عنوان سود حاصل از معاملات هوش مصنوعی محاسبه شوند.", "۷-۱۰. روش تبدیل سود حاصل از دارایی‌های مختلف به واحد پول مبنای محاسبه باید در نرم‌افزار مشخص باشد و به شکلی اعمال شود که محاسبه سهم قابل بررسی باشد.", "۷-۱۱. کایرو باید گزارش قابل بررسی از سود محاسبه‌شده، هزینه‌های کسرشده و مبلغ سهم خدمات در اختیار کاربر قرار دهد.", "۷-۱۲. کاربر می‌تواند نسبت به محاسبه سهم کایرو درخواست بررسی ثبت کند."]}, {"t": "دریافت خودکار سهم کایرو", "p": ["۸-۱. کاربر با پذیرش این قرارداد، با دریافت خودکار سهم خدمات کایرو از طریق سازوکار پرداخت اعلام‌شده و مورد تأیید خود موافقت می‌کند.", "۸-۲. مبلغ قابل دریافت باید با سهم محاسبه‌شده مطابق ماده ۷ مطابقت داشته باشد.", "۸-۳. برداشت برای دریافت سهم کایرو، مجوزی برای برداشت آزادانه سایر دارایی‌های کاربر ایجاد نمی‌کند.", "۸-۴. کایرو مجاز نیست با عنوان دریافت سهم خدمات، مبلغی بیشتر از بدهی معتبر کاربر برداشت کند.", "۸-۵. ارائه‌دهنده موظف است مبلغ، زمان و مبنای هر برداشت را در سوابق قابل دسترس ثبت کند.", "۸-۶. در صورت ناموفق بودن برداشت، کایرو نباید بدون مبنای قراردادی و مجوز معتبر، برداشت‌های مکرر یا مبالغ نامشخص انجام دهد.", "۸-۷. اگر امکان محدود کردن فنی مجوز برداشت به سهم کایرو وجود نداشته باشد، ارائه‌دهنده باید پیش از فعال‌سازی برداشت خودکار، راهکار امن و سازگار با قوانین و شرایط صرافی را تعیین کند."]}, {"t": "کارمزدهای معاملاتی و هزینه‌ها", "p": ["۹-۱. کارمزد صرافی، اختلاف قیمت خریدوفروش، لغزش قیمت و سایر هزینه‌های معاملاتی ممکن است سود نهایی کاربر را کاهش دهند.", "۹-۲. سهم پنج‌درصدی کایرو جدا از کارمزد صرافی است.", "۹-۳. سهم کایرو باید بر اساس سود خالص پس از کسر هزینه‌های معاملاتی مرتبط محاسبه شود.", "۹-۴. هر هزینه اضافی برای استفاده از نرم‌افزار باید پیش از دریافت به‌طور روشن به اطلاع کاربر برسد."]}, {"t": "پذیرش ریسک و عدم تضمین سود", "p": ["۱۰-۱. معاملات رمزارزی با ریسک مالی همراه هستند و ممکن است موجب از دست رفتن بخشی یا تمام سرمایه اختصاص‌یافته شوند.", "۱۰-۲. هوش مصنوعی ممکن است شرایط بازار را نادرست تحلیل کند یا تصمیم نامناسبی بگیرد.", "۱۰-۳. هیچ تضمینی درباره سودآوری، میزان بازده، موفقیت معاملات یا جلوگیری از زیان ارائه نمی‌شود.", "۱۰-۴. عملکرد گذشته، نتایج آزمایشی یا معاملات موفق قبلی، تضمینی برای نتایج آینده نیستند.", "۱۰-۵. تعیین سقف سرمایه اختصاص‌یافته به هوش مصنوعی، به‌تنهایی تضمین جلوگیری از زیان بیش از مقدار مورد انتظار نیست.", "۱۰-۶. نوسانات ناگهانی بازار، کمبود نقدشوندگی، لغزش قیمت، تأخیر اجرای سفارش و کارمزدها ممکن است بر نتیجه معاملات اثر بگذارند.", "۱۰-۷. کاربر مسئول تعیین میزان سرمایه در معرض ریسک و بررسی تناسب آن با توان مالی خود است."]}, {"t": "مسئولیت خطاهای نرم‌افزاری و تصمیم‌های هوش مصنوعی", "p": ["۱۱-۱. ارائه‌دهنده متعهد است اقدامات متعارف فنی را برای نگهداری و عملکرد صحیح نرم‌افزار انجام دهد.", "۱۱-۲. اگر زیان ناشی از نقص فنی قابل انتساب به کایرو احراز شود، موضوع برای تعیین میزان خسارت مستقیم و قابل انتساب بررسی خواهد شد.", "۱۱-۳. سیاست جبران خسارت کایرو، پرداخت مبلغی معادل ۲۰ درصد خسارت مستقیم و مستند احرازشده ناشی از خطای نرم‌افزاری به‌عنوان مبنای معمول جبران است.", "۱۱-۴. میزان نهایی جبران خسارت می‌تواند با توجه به شرایط فنی، میزان تقصیر، رابطه سببیت، شدت خسارت و الزامات قانونی قابل اجرا کمتر یا بیشتر از مبنای مذکور تعیین شود. این سیاست به معنای تعیین سقف مطلق مسئولیت قانونی ارائه‌دهنده نیست.", "۱۱-۵. زیان ناشی از تصمیم معاملاتی ناموفق هوش مصنوعی، به‌خودی‌خود خطای نرم‌افزاری محسوب نمی‌شود.", "۱۱-۶. برای تشخیص منشأ زیان، سوابق سفارش‌ها، گزارش‌های نرم‌افزار، داده‌های فنی و اطلاعات در دسترس صرافی بررسی می‌شوند.", "۱۱-۷. کاربر می‌تواند درخواست بررسی خسارت ثبت کند و مستندات مرتبط را ارائه دهد.", "۱۱-۸. ارائه‌دهنده موظف است درخواست را با حسن نیت بررسی و نتیجه را با توضیح مبنای تصمیم اعلام کند.", "۱۱-۹. هیچ‌یک از مفاد این ماده مسئولیت‌هایی را که طبق قوانین قابل اجرا قابل اسقاط نیستند، از بین نمی‌برد."]}, {"t": "امنیت اطلاعات و حفاظت از داده‌ها", "p": ["۱۲-۱. کایرو ممکن است برای ارائه خدمات، اطلاعات مجاز حساب، اطلاعات API، تنظیمات معاملاتی، تاریخچه سفارش‌ها و گزارش عملکرد را پردازش کند.", "۱۲-۲. ارائه‌دهنده متعهد است اقدامات امنیتی متناسب با ماهیت اطلاعات، از جمله رمزنگاری مناسب و محدودسازی دسترسی‌های غیرضروری را اجرا کند.", "۱۲-۳. نحوه نگهداری اطلاعات API باید با معماری واقعی نرم‌افزار مطابقت داشته باشد و از دسترسی غیرمجاز جلوگیری کند.", "۱۲-۴. ارائه‌دهنده متعهد است اطلاعات کاربران را برای آموزش مدل‌های هوش مصنوعی استفاده نکند، مگر آنکه استفاده جدید به‌صورت شفاف اعلام شده و رضایت‌ها و مجوزهای لازم اخذ شده باشند.", "۱۲-۵. اطلاعات کاربران در اختیار اشخاص ثالث قرار نمی‌گیرد، مگر در مواردی که برای ارائه خدمت ضروری و از پیش اعلام شده باشد، رضایت معتبر کاربر وجود داشته باشد یا قانون الزام کند.", "۱۲-۶. کاربر می‌تواند درخواست قطع اتصال حساب را ثبت کند. پس از قطع اتصال، اطلاعات مرتبط با اتصال باید مطابق سیاست حذف اطلاعات کایرو حذف شوند؛ به‌جز اطلاعاتی که نگهداری آن‌ها برای انجام تعهدات مالی، رسیدگی به اختلاف، امنیت یا رعایت الزام قانونی ضروری است.", "۱۲-۷. مدت نگهداری اطلاعات در نسخه‌های پشتیبان و گزارش‌های فنی باید در سیاست حریم خصوصی مشخص شود.", "۱۲-۸. ارائه‌دهنده نباید تضمین امنیت مطلق ارائه کند و موظف است درباره اقدامات حفاظتی خود صادقانه اطلاع‌رسانی کند.", "۱۲-۹. جزئیات بیشتر در سیاست حریم خصوصی کایرو تعیین می‌شود."]}, {"t": "اختلالات فنی و شرایط خارج از کنترل", "p": ["۱۳-۱. اختلال صرافی، قطعی اینترنت، عدم دسترسی به API، اختلال سرور، تأخیر داده‌ها و سایر شرایط فنی ممکن است موجب اختلال در خدمات شوند.", "۱۳-۲. ارائه‌دهنده تلاش متعارف خود را برای رفع اختلال و بازگرداندن خدمات انجام می‌دهد.", "۱۳-۳. اختلال یا توقف کایرو لزوماً موجب لغو سفارش‌های قبلی نمی‌شود.", "۱۳-۴. کاربر باید در صورت مشاهده اختلال، وضعیت سفارش‌ها و دارایی‌های خود را از طریق امکانات صرافی بررسی کند.", "۱۳-۵. این ماده موجب رفع مسئولیت ارائه‌دهنده در مواردی که طبق قانون یا تعهدات صریح قرارداد مسئول شناخته می‌شود، نخواهد شد."]}, {"t": "مالکیت فکری", "p": ["۱۴-۱. حقوق مربوط به کد نرم‌افزار، طراحی، الگوریتم‌های اختصاصی، رابط کاربری، نام و نشان کایرو، در حدود قوانین قابل اجرا، متعلق به مالک یا صاحبان قانونی مربوط است.", "۱۴-۲. استفاده از نرم‌افزار به معنای انتقال مالکیت فکری آن به کاربر نیست.", "۱۴-۳. کاربر مجاز نیست بدون مجوز لازم، نرم‌افزار را تکثیر، توزیع یا برای مقاصد غیرقانونی استفاده کند."]}, {"t": "تعلیق و خاتمه خدمات", "p": ["۱۵-۱. کاربر می‌تواند هر زمان که بخواهد استفاده از معاملات خودکار را متوقف کند.", "۱۵-۲. کاربر می‌تواند در صورت پشتیبانی نرم‌افزار، حالت تحلیل و پیشنهاد را جایگزین معاملات خودکار کند.", "۱۵-۳. ارائه‌دهنده می‌تواند در صورت وجود خطر امنیتی، سوءاستفاده، الزام قانونی یا ضرورت فنی، دسترسی به برخی امکانات را به‌طور موقت محدود کند.", "۱۵-۴. در صورت امکان، علت تعلیق و روش پیگیری به کاربر اطلاع داده می‌شود.", "۱۵-۵. خاتمه استفاده موجب از بین رفتن تعهدات مالی معتبر ایجادشده پیش از خاتمه نخواهد شد.", "۱۵-۶. کاربر باید وضعیت سفارش‌های باز را پس از توقف بررسی کند."]}, {"t": "تغییر شرایط استفاده", "p": ["۱۶-۱. تغییرات اساسی در شرایط استفاده، نحوه محاسبه سهم کایرو یا مجوزهای دسترسی باید پیش از اجرا به کاربر اطلاع داده شوند.", "۱۶-۲. در مواردی که تغییرات موجب افزایش تعهدات کاربر یا تغییر اساسی در مجوزهای اعطاشده می‌شوند، اخذ موافقت مجدد کاربر ضروری است.", "۱۶-۳. تغییر شرایط نباید بدون مبنای معتبر قانونی و قراردادی، حقوق مالی ایجادشده طرفین را به‌صورت عطف‌به‌ماسبق تغییر دهد."]}, {"t": "حل اختلاف و قوانین حاکم", "p": ["۱۷-۱. طرفین تلاش می‌کنند اختلافات را ابتدا از طریق مذاکره و بررسی مستندات حل‌وفصل کنند.", "۱۷-۲. در صورت عدم حصول توافق، اختلاف مطابق قوانین قابل اجرا در مرجع صالح رسیدگی خواهد شد.", "۱۷-۳. هیچ‌یک از مفاد این قرارداد به معنای اسقاط حقوق قانونی آمره طرفین نیست."]}, {"t": "تأیید نهایی", "p": ["کاربر با پذیرش این قرارداد تأیید می‌کند که:", "۱. شرایط استفاده از کایرو را مطالعه کرده است.", "۲. از امکان انجام معاملات خودکار بدون تأیید جداگانه هر سفارش آگاه است.", "۳. می‌داند هیچ سودی تضمین نشده و احتمال زیان مالی وجود دارد.", "۴. از نحوه تعیین سرمایه اختصاص‌یافته به هوش مصنوعی آگاه است.", "۵. می‌داند سهم کایرو معادل ۵ درصد سود خالص مثبت و تحقق‌یافته معاملات هوش مصنوعی در هر روز است.", "۶. می‌داند معاملات دستی او مشمول سهم کایرو نیستند.", "۷. از محدودیت‌های مجوز برداشت و استفاده از آن برای دریافت سهم خدمات کایرو آگاه است.", "۸. می‌داند توقف کایرو لزوماً سفارش‌های باز را لغو نمی‌کند.", "۹. سیاست حریم خصوصی را مطالعه کرده است.", "۱۰. می‌داند حقوق قانونی غیرقابل اسقاط او محفوظ است."]}], "foot": ["تاریخ و ساعت پذیرش: ثبت‌شده در سامانه", "نسخه قرارداد: ثبت‌شده در سامانه", "شناسه پذیرش: ثبت‌شده در سامانه"]};
+  // متن «سیاست حریم خصوصی» — اگر پر شود، دکمه‌ی آن در پایین صفحه نمایش داده می‌شود. همان ساختار بالا.
+  const PRIVACY = null;
+
+  const FA = "۰۱۲۳۴۵۶۷۸۹";
+  const toFa = (n) => String(n).replace(/\d/g, d => FA[d]);
+  const E = (...a) => Utils.el(...a);
+
+  let sheet = null, keyHandler = null, prevOverflow = "";
+
+  function close(){
+    if(!sheet) return;
+    sheet.remove(); sheet = null;
+    document.body.style.overflow = prevOverflow;
+    if(keyHandler){ document.removeEventListener("keydown", keyHandler); keyHandler = null; }
+  }
+
+  function para(x){
+    if(typeof x !== "string") return E("p", { class:"warn" }, x.warn);
+    const m = x.match(/^([۰-۹]+(?:-[۰-۹]+)?\.)\s*([\s\S]*)$/);
+    return m ? E("p", {}, [E("span", { class:"q-legal-cn" }, m[1]), m[2]]) : E("p", {}, x);
+  }
+  function metaBox(lines){
+    const box = E("div", { class:"q-legal-meta" });
+    lines.forEach(l => {
+      const i = l.indexOf(":");
+      box.appendChild(i > 0 ? E("div", {}, [E("span", {}, l.slice(0, i)), E("b", {}, l.slice(i + 1).trim())]) : E("div", {}, l));
+    });
+    return box;
+  }
+  function renderDoc(doc){
+    const wrap = E("div", { class:"q-legal-doc" });
+    wrap.appendChild(E("h1", { class:"q-legal-title" }, doc.title));
+    if(doc.sub) wrap.appendChild(E("div", { class:"q-legal-sub" }, doc.sub));
+    if(doc.meta) wrap.appendChild(metaBox(doc.meta));
+    (doc.lead || []).forEach(t => wrap.appendChild(E("p", { class:"q-legal-lead" }, t)));
+    (doc.sections || []).forEach((sec, i) => {
+      const box = E("section", { class:"q-legal-sec" }, [
+        E("div", { class:"q-legal-sec-h" }, [E("span", { class:"q-legal-num" }, toFa(i + 1)), E("h3", {}, sec.t)]),
+      ]);
+      (sec.p || []).forEach(x => box.appendChild(para(x)));
+      wrap.appendChild(box);
+    });
+    if(doc.final) wrap.appendChild(E("div", { class:"q-legal-final" }, [E("h3", {}, doc.final.t), E("p", {}, doc.final.p)]));
+    if(doc.foot) wrap.appendChild(metaBox(doc.foot));
+    return wrap;
+  }
+
+  function open(view){
+    if(sheet) return;
+    let cur = view || "summary";
+    prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const titleEl = E("h2", {});
+    const scroll = E("div", { class:"q-legal-scroll" });
+    const bar = E("div", { class:"q-legal-bar" });
+    sheet = E("div", { class:"q-legal", role:"dialog", "aria-modal":"true", "aria-label":"قوانین و مقررات کایرو" }, [
+      E("div", { class:"q-legal-top" }, [E("button", { class:"q-legal-x", type:"button", "aria-label":"بستن", onClick:close }, "✕"), titleEl]),
+      scroll, bar,
+    ]);
+
+    function paint(){
+      scroll.innerHTML = ""; bar.innerHTML = "";
+      const doc = cur === "full" ? FULL : cur === "privacy" ? PRIVACY : SUMMARY;
+      titleEl.textContent = cur === "full" ? "قرارداد کامل" : cur === "privacy" ? "سیاست حریم خصوصی" : "قوانین و مقررات";
+      const holder = E("div", { class:"q-legal-doc" });
+      if(cur === "summary"){
+        holder.appendChild(E("button", { class:"btn btn-outline q-legal-switch", type:"button", onClick:() => { cur = "full"; paint(); } }, "قرارداد کامل"));
+      } else {
+        holder.appendChild(E("button", { class:"btn btn-outline q-legal-switch", type:"button", onClick:() => { cur = "summary"; paint(); } }, "بازگشت به خلاصه توافق‌نامه"));
+      }
+      scroll.appendChild(holder);
+      if(doc) holder.appendChild(renderDoc(doc));
+      else holder.appendChild(E("div", { class:"q-legal-empty" }, "این متن به‌زودی در همین‌جا قرار می‌گیرد."));
+      scroll.scrollTop = 0;
+
+      bar.appendChild(E("button", { class:"btn btn-primary", type:"button", onClick:close }, "می‌پذیرم و ادامه می‌دهم"));
+      bar.appendChild(E("button", { class:"btn btn-ghost", type:"button", onClick:close }, "انصراف"));
+      if(PRIVACY && cur !== "privacy") bar.appendChild(E("button", { class:"btn btn-outline btn-priv", type:"button", onClick:() => { cur = "privacy"; paint(); } }, "مشاهده سیاست حریم خصوصی"));
+    }
+    paint();
+    document.body.appendChild(sheet);
+    keyHandler = (e) => { if(e.key === "Escape") close(); };
+    document.addEventListener("keydown", keyHandler);
+  }
+
+  return { open, close };
+})();
 
 const PageAuthPhone = {
   mount(container){
@@ -2686,9 +3300,11 @@ const PageAuthPhone = {
       card.appendChild(btn);
 
       card.appendChild(Utils.el("div", { style:"text-align:center;margin-top:10px;" }, Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: () => Router.go("welcome") }, "بازگشت")));
-      card.appendChild(Utils.el("div", { class:"connect-foot" },
-        "با ادامه، شما قوانین و حریم خصوصی برنامه را می‌پذیرید."
-      ));
+      card.appendChild(Utils.el("div", { class:"connect-foot" }, [
+        "با ادامه، شما ",
+        Utils.el("button", { class:"q-legal-link", type:"button", onClick: () => Legal.open() }, "قوانین و مقررات"),
+        " و حریم خصوصی برنامه را می‌پذیرید.",
+      ]));
     }
 
     async function handleSend(){
@@ -2702,7 +3318,7 @@ const PageAuthPhone = {
         Router.go("auth-otp");
       }catch(e){
         status = "error";
-        errorMsg = e && e.message ? e.message : "ارسال کد با خطا مواجه شد.";
+        errorMsg = Utils.friendlyError(e, "ارسال کد با خطا مواجه شد.");
         paint();
       }
     }
@@ -2780,7 +3396,7 @@ const PageAuthOtp = {
         Router.go("auth-password");
       }catch(e){
         status = "error";
-        errorMsg = e && e.message ? e.message : "کد وارد شده نامعتبر است.";
+        errorMsg = Utils.friendlyError(e, "کد وارد شده نامعتبر است.");
         paint();
       }
     }
@@ -2790,7 +3406,7 @@ const PageAuthOtp = {
         await AppAuth.sendOtp(AuthFlow.phone);
         Toast.info("کد دوباره ارسال شد", "");
         startCountdown();
-      }catch(e){ Toast.error("ارسال مجدد انجام نشد", e && e.message ? e.message : ""); }
+      }catch(e){ Toast.error("ارسال مجدد انجام نشد", Utils.friendlyError(e)); }
     }
 
     paint();
@@ -2863,7 +3479,7 @@ const PageAuthPassword = {
         Router.go("dashboard");
       }catch(e){
         status = "error";
-        errorMsg = e && e.message ? e.message : "عملیات با خطا مواجه شد.";
+        errorMsg = Utils.friendlyError(e, "عملیات با خطا مواجه شد.");
         if(e && (e.code === "OTP_TOKEN_INVALID")){ AuthFlow.otpVerified = false; }
         paint();
       }
@@ -2885,7 +3501,7 @@ const CONNECT_GUIDE_STEPS = [
   "کلید حداکثر ۹۰ روز از تاریخ ساخت اعتبار دارد؛ بعد از انقضا کلید جدید بسازید و دوباره اینجا وارد کنید.",
 ];
 
-const NOBITEX_API_GUIDE_URL = "https://developers.wallex.ir";
+const WALLEX_API_GUIDE_URL = "https://developers.wallex.ir";
 const WALLEX_SITE_URL = "https://wallex.ir";
 
 // راهنمای گام‌به‌گام اتصال والکس (بعد از ثبت‌نام / ورود، تا وقتی کلید معتبر ثبت نشده باز می‌ماند)
@@ -2923,7 +3539,7 @@ const PageConnect = {
         E("div", { class:"cn-card" }, [E("b", {}, "۱"), E("p", {}, CONNECT_GUIDE_STEPS[0])]),
         E("div", { class:"cn-links" }, [
           E("a", { class:"btn btn-outline btn-sm", href:WALLEX_SITE_URL, target:"_blank", rel:"noopener" }, "باز کردن والکس"),
-          E("a", { class:"btn btn-ghost btn-sm", href:NOBITEX_API_GUIDE_URL, target:"_blank", rel:"noopener" }, "راهنمای رسمی API"),
+          E("a", { class:"btn btn-ghost btn-sm", href:WALLEX_API_GUIDE_URL, target:"_blank", rel:"noopener" }, "راهنمای رسمی API"),
         ]),
       ]);
       if(step === 2) return E("div", {}, [
@@ -2968,7 +3584,7 @@ const PageConnect = {
         Toast.success("به والکس متصل شدید", `کلید پذیرفته شد (کلید …${r.hint})؛ ${r.assets} دارایی در حساب دیده شد.`);
         setTimeout(() => Router.go("dashboard"), 900);
       }catch(e){
-        status = "error"; errorMsg = e && e.message ? e.message : "خطایی در اتصال رخ داد."; paint();
+        status = "error"; errorMsg = Utils.friendlyError(e, "خطایی در اتصال رخ داد."); paint();
       }
     }
 
@@ -2976,7 +3592,7 @@ const PageConnect = {
       body.innerHTML = "";
       body.appendChild(dots());
       if(State.get().connection.canStoreKey === false) body.appendChild(E("div", { class:"connect-status error", style:"margin:0 0 12px;" }, [E("span", { html: ic("alert") }), "ذخیره‌ی کلید موقتاً غیرفعال است (تنظیمات امنیتی سرور کامل نیست). لطفاً با مدیر سرویس تماس بگیرید."]));
-      if(State.get().connection.keyUnreadable) body.appendChild(E("div", { class:"connect-status error", style:"margin:0 0 12px;" }, [E("span", { html: ic("alert") }), "کلید ذخیره‌شده‌ی شما روی سرور قابل‌خواندن نیست (احتمالاً تنظیمات امنیتی سرور تغییر کرده). لطفاً کلید API را دوباره وارد کنید."]));
+      if(State.get().connection.keyUnreadable) body.appendChild(E("div", { class:"connect-status error", style:"margin:0 0 12px;" }, [E("span", { html: ic("alert") }), "کلید ذخیره‌شده‌ی شما قابل استفاده نیست. لطفاً کلید API را دوباره وارد کنید."]));
       const view = E("div", { class:"cn-view " + (dir > 0 ? "fwd" : "back") }, stepView());
       body.appendChild(view);
       const last = step === STEPS.length - 1;
@@ -3078,7 +3694,7 @@ const PageDashboard = {
 
     function renderPortfolio(){
       pfCard.innerHTML = "";
-      if(summaryS.status !== "fulfilled"){ pfCard.appendChild(UI.errorState("دریافت اطلاعات حساب ناموفق بود", summaryS.reason && summaryS.reason.message, () => PageDashboard.mount(container))); return; }
+      if(summaryS.status !== "fulfilled"){ pfCard.appendChild(UI.errorState("دریافت اطلاعات حساب ناموفق بود", Utils.friendlyError(summaryS.reason), () => PageDashboard.mount(container))); return; }
       const s = summaryS.value.data;
       const total = E("span", { class:"num" }, "0");
       pfCard.appendChild(E("div", { style:"display:flex;justify-content:space-between;align-items:flex-start;gap:8px;" }, [
@@ -3115,7 +3731,7 @@ const PageDashboard = {
       overview.innerHTML = "";
       const pick = ["btc", "eth", "usdt"].map(id => coins.find(c => c.id === id)).filter(Boolean);
       (pick.length ? pick : coins.slice(0, 3)).forEach(c => overview.appendChild(E("div", { class:"q-mini", onClick: () => Router.go(`coin/${c.id}`) }, [
-        E("div", { class:"q-h" }, [UI.coinAvatar(c.symbol, 22), E("span", {}, c.symbol.replace(/IRT|USDT$/i, "") || c.symbol)]),
+        E("div", { class:"q-h" }, [UI.coinAvatar(c.symbol, 22, c.icon || c.image || c.logo), E("span", {}, c.symbol.replace(/IRT|USDT$/i, "") || c.symbol)]),
         E("div", { class:"q-sp" }, E("canvas", { "data-key":"row_" + c.id })),
         E("div", { class:`q-p ${(c.change24h ?? 0) >= 0 ? "up" : "down"}`, style:"font-weight:800;direction:ltr;" }, Utils.formatPercent(c.change24h)),
       ])));
@@ -3127,7 +3743,7 @@ const PageDashboard = {
       State.set({ connection: { lastChecked: new Date().toISOString() } });
     }else{
       overview.remove(); list.innerHTML = "";
-      list.appendChild(UI.errorState("دریافت اطلاعات بازار ناموفق بود", marketS.reason && marketS.reason.message, () => PageDashboard.mount(container)));
+      list.appendChild(UI.errorState("دریافت اطلاعات بازار ناموفق بود", Utils.friendlyError(marketS.reason), () => PageDashboard.mount(container)));
     }
   }
 };
@@ -3181,7 +3797,7 @@ const PageMarket = {
         paintFilters(); paint();
         Api.getSparklines(allCoins.map(c => c.id)).then(sp => { allCoins.forEach(c => { c._spark = (sp.data && sp.data[c.id]) || null; }); paint(); }).catch(() => {});
       }catch(e){
-        list.innerHTML = ""; list.appendChild(UI.errorState("دریافت بازار ناموفق بود", e.message, load));
+        list.innerHTML = ""; list.appendChild(UI.errorState("دریافت بازار ناموفق بود", Utils.friendlyError(e), load));
       }
     }
     load();
@@ -3206,7 +3822,7 @@ const PageCoin = {
     root.append(top, priceBox, chartCard, statsBox, sideCol);
     top.appendChild(UI.skeletonHead());
     chartCard.appendChild(UI.skeletonChart());
-    let range = "30d", fetchedAt = null, bar = null;
+    let range = "30d", fetchedAt = null, bar = null, view = "candle";
 
     try{
       const [coinRes, histRes, walletRes, ordersRes] = await Promise.all([
@@ -3220,14 +3836,14 @@ const PageCoin = {
       mountTradeBar(coin);
     }catch(e){
       top.innerHTML = ""; chartCard.remove();
-      top.appendChild(UI.errorState("دریافت اطلاعات ارز ناموفق بود", e.message, () => PageCoin.mount(container, params)));
+      top.appendChild(UI.errorState("دریافت اطلاعات ارز ناموفق بود", Utils.friendlyError(e), () => PageCoin.mount(container, params)));
     }
 
     function head(coin, isMock){
       top.innerHTML = "";
       top.append(
         E("button", { class:"icon-btn", onClick: () => Router.go("market"), html: ic("chevR") }),
-        UI.coinAvatar(coin.symbol, 44),
+        UI.coinAvatar(coin.symbol, 44, coin.icon || coin.image || coin.logo),
         E("div", { class:"q-id" }, [E("h2", {}, [coin.name, " ", isMock ? UI.mockFlag() : null]), E("span", { class:"num" }, coin.symbol)]),
       );
       priceBox.innerHTML = "";
@@ -3250,12 +3866,21 @@ const PageCoin = {
       bar = E("div", { class:"range-tabs", style:"padding:0 6px;" }, ranges.map(([r, l]) => E("button", {
         class:`chip ${r === range ? "active" : ""}`, style:"padding:5px 13px;font-size:11.5px;",
         onClick: async () => { range = r; let h; try{ h = await Api.getCoinHistory(coinId, r); }catch(e){ h = { data:[] }; } renderChart(h, coin); } }, l)));
-      chartCard.appendChild(bar);
-      const pts = histRes.data;
+      const views = E("div", { class:"range-tabs", style:"padding:0 6px;" }, [["candle", "کندل"], ["line", "خطی"]].map(([v, l]) => E("button", {
+        class:`chip ${v === view ? "active" : ""}`, style:"padding:5px 13px;font-size:11.5px;",
+        onClick: () => { view = v; renderChart(histRes, coin); } }, l)));
+      chartCard.appendChild(E("div", { style:"display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;" }, [bar, views]));
+      const pts = (histRes.data || []).map(p => (p.v === undefined && p.c !== undefined) ? Object.assign({}, p, { v:p.c }) : p);
       if(!pts || pts.length < 2){ chartCard.appendChild(UI.empty("داده‌ی تاریخی کافی در دسترس نیست", "")); return; }
       const pct = ((pts[pts.length - 1].v - pts[0].v) / pts[0].v) * 100;
       chartCard.appendChild(E("div", { class:"chart-canvas-wrap" }, E("canvas", { id:"coinChart" })));
-      requestAnimationFrame(() => Charts.lineChart("coinChart", document.getElementById("coinChart"), pts, { color: pct >= 0 ? "#1fe08f" : "#ff5d7a", currency:"" , minimal:false }));
+      // کندل وقتی نقطه‌ی کافی (یا کندل واقعی از سرور) هست؛ وگرنه نمودار خطی
+      const canCandle = view === "candle" && (pts[0].o !== undefined || pts.length >= 12);
+      requestAnimationFrame(() => {
+        const cv = document.getElementById("coinChart");
+        if(canCandle) Charts.candleChart("coinChart", cv, pts, { currency:"" });
+        else Charts.lineChart("coinChart", cv, pts, { color: pct >= 0 ? "#1fe08f" : "#ff5d7a", currency:"", minimal:false });
+      });
     }
     function side(coin, walletRes, ordersRes){
       sideCol.innerHTML = "";
@@ -3307,7 +3932,7 @@ const PageTrade = {
       coins = mRes.data; cfg = cRes && cRes.data; assets = wRes && wRes.data;
     }catch(e){
       body.innerHTML = "";
-      body.appendChild(UI.errorState("دریافت اطلاعات بازار ناموفق بود", e.message, () => PageTrade.mount(container, params)));
+      body.appendChild(UI.errorState("دریافت اطلاعات بازار ناموفق بود", Utils.friendlyError(e), () => PageTrade.mount(container, params)));
       return;
     }
     if(!coins.find(c => c.id === st.coinId)) st.coinId = coins[0].id;
@@ -3424,7 +4049,7 @@ const PageTrade = {
           }
           msg.style.display = "none";
           try{ openPreview(await Api.previewOrder(o)); }
-          catch(err){ fail(err.message); }
+          catch(err){ fail(Utils.friendlyError(err)); }
         } }, "پیش‌نمایش سفارش"));
 
       // ستون کناری: قیمت و دفتر سفارش‌ها
@@ -3500,10 +4125,10 @@ const PageTrade = {
           sending = true; send.disabled = true; send.textContent = "در حال ارسال…";
           try{
             const r = await Api.submitOrder(pv.order, pv.clientOrderId, pv.confirmToken);
-            done = true; render({ ok:true, text:r.message, row:r.order });
+            done = true; render({ ok:true, text:Utils.friendlyText(r.message, "سفارش ثبت شد."), row:r.order });
           }catch(err){
             done = true; // هر نتیجه‌ی غیرموفق → برای تلاش دوباره باید پیش‌نمایش جدید ساخته شود
-            render({ ok:false, text:err.message });
+            render({ ok:false, text:Utils.friendlyError(err) });
           }
         } }, "تأیید و ارسال سفارش");
         modal.appendChild(Utils.el("div", { class:"modal-actions" }, [
@@ -3520,7 +4145,7 @@ const PageTrade = {
 // صفحه کیف پول
 // ===================================================================
 
-const NOBITEX_OFFICIAL_URL = "https://wallex.ir";
+const WALLEX_OFFICIAL_URL = "https://wallex.ir";
 
 const PageWallet = {
   async mount(container){
@@ -3544,7 +4169,7 @@ const PageWallet = {
       paintTop(w.isMock); paintDonut(); paintSeg(); paintBody();
     }catch(e){
       totalCard.remove(); donutCard.remove(); seg.remove(); body.innerHTML = "";
-      body.appendChild(UI.errorState("دریافت دارایی‌ها ناموفق بود", e.message, () => PageWallet.mount(container)));
+      body.appendChild(UI.errorState("دریافت دارایی‌ها ناموفق بود", Utils.friendlyError(e), () => PageWallet.mount(container)));
     }
     function paintTop(isMock){
       totalCard.innerHTML = "";
@@ -3594,7 +4219,7 @@ const PageWallet = {
       const rows = assets.filter(a => !query || a.name.includes(query) || a.symbol.toLowerCase().includes(query.toLowerCase()));
       if(!rows.length){ l.appendChild(UI.empty("نتیجه‌ای یافت نشد", "")); return; }
       rows.forEach(a => l.appendChild(E("div", { class:"q-row", onClick: () => { if(coinMap[a.coinId]) Router.go(`coin/${a.coinId}`); } }, [
-        UI.coinAvatar(a.symbol, 40),
+        UI.coinAvatar(a.symbol, 40, a.icon || a.image || a.logo),
         E("div", { class:"q-id" }, [E("div", { class:"q-nm" }, a.name), E("div", { class:"q-sy num" }, mask(a.total, v => Utils.formatNumber(v, { decimals:6 })) + " " + a.symbol)]),
         E("div", { class:"q-pr" }, tab === "pl"
           ? [E("div", { class:`p ${(a.change24h ?? 0) >= 0 ? "up" : "down"}` }, Utils.formatPercent(a.change24h)), E("div", { class:"c text-faint" }, "۲۴ساعت")]
@@ -3606,7 +4231,7 @@ const PageWallet = {
       bd.appendChild(E("div", { class:"modal" }, [E("h3", {}, "انتقال به وب‌سایت صرافی"),
         E("p", {}, "برای شارژ حساب به وب‌سایت رسمی صرافی هدایت می‌شوید. این برنامه هیچ اطلاعات بانکی یا پرداختی دریافت نمی‌کند."),
         E("div", { class:"modal-actions" }, [E("button", { class:"btn btn-outline", onClick: () => bd.remove() }, "انصراف"),
-          E("button", { class:"btn btn-primary", onClick: () => { window.open(NOBITEX_OFFICIAL_URL, "_blank", "noopener"); bd.remove(); } }, [E("span", { html: ic("externalLink") }), " رفتن به وب‌سایت"])])]));
+          E("button", { class:"btn btn-primary", onClick: () => { window.open(WALLEX_OFFICIAL_URL, "_blank", "noopener"); bd.remove(); } }, [E("span", { html: ic("externalLink") }), " رفتن به وب‌سایت"])])]));
       document.body.appendChild(bd);
     }
   }
@@ -3643,7 +4268,7 @@ const PageHistory = {
         renderTable(res.isMock);
       }catch(e){
         card.innerHTML = "";
-        card.appendChild(UI.errorState("دریافت تاریخچه ناموفق بود", e.message, load));
+        card.appendChild(UI.errorState("دریافت تاریخچه ناموفق بود", Utils.friendlyError(e), load));
       }
     }
 
@@ -3738,7 +4363,7 @@ const PageProfile = {
       renderSecurity();
     }catch(e){
       infoCard.innerHTML = "";
-      infoCard.appendChild(UI.errorState("دریافت اطلاعات پروفایل ناموفق بود", e.message, () => PageProfile.mount(container)));
+      infoCard.appendChild(UI.errorState("دریافت اطلاعات پروفایل ناموفق بود", Utils.friendlyError(e), () => PageProfile.mount(container)));
     }
 
     function renderInfo(profile, isMock){
@@ -3802,7 +4427,7 @@ const PageProfile = {
         Utils.el("div", { class:"card-title" }, "امنیت اتصال"),
         Utils.el("div", { class:"notice-box", style:"margin-top:12px;" }, [
           Utils.el("div", { html: ic("shield") }),
-          Utils.el("p", {}, "کلید API والکس فقط در Secrets سرور نگه‌داری می‌شود و هرگز به مرورگر ارسال نمی‌شود."),
+          Utils.el("p", {}, "کلید API والکس رمزنگاری‌شده روی سرور امن نگه‌داری می‌شود و هرگز به مرورگر ارسال نمی‌شود."),
         ]),
         Utils.el("button", { class:"btn btn-danger-ghost btn-sm btn-block", style:"margin-top:4px;", onClick: confirmDisconnect },
           [Utils.el("span",{html:ic("trash")}), " پایان نشست"]),
@@ -3824,7 +4449,7 @@ const PageProfile = {
               if(st.status === "connected") Toast.info("کلید برنامه حذف شد", "کلید والکس از سرور حذف شد.");
               else Toast.info("اتصال قطع شد", "کلید والکس از سرور حذف شد.");
               Router.go("connect");
-            }catch(e){ backdrop.remove(); Toast.error("قطع اتصال انجام نشد", e && e.message ? e.message : ""); }
+            }catch(e){ backdrop.remove(); Toast.error("قطع اتصال انجام نشد", Utils.friendlyError(e)); }
           }}, "قطع اتصال"),
         ]),
       ]));
@@ -3870,6 +4495,15 @@ const PageSettings = {
       card.appendChild(settingRow("اعلان وضعیت اتصال", "اطلاع از قطع یا برقراری اتصال صرافی", switchEl(cur.notifyConnection, v => update({notifyConnection:v}))));
       card.appendChild(settingRow("زبان برنامه", "در نسخه اول فقط فارسی پشتیبانی می‌شود", Utils.el("span", { class:"badge badge-gray" }, "فارسی")));
       card.appendChild(settingRow("نسخه برنامه", "", Utils.el("span", { class:"text-dim num" }, APP_VERSION)));
+      const sup = window.__SUPPORT__ || {};
+      const tg = String(sup.telegram || "").trim().replace(/^https?:\/\/t\.me\//i, "").replace(/^@/, "");
+      const mail = String(sup.email || "").trim();
+      if(tg || mail){
+        const links = [];
+        if(tg) links.push(Utils.el("a", { class:"btn btn-ghost btn-sm", href:"https://t.me/" + encodeURIComponent(tg), target:"_blank", rel:"noopener" }, "تلگرام"));
+        if(mail) links.push(Utils.el("a", { class:"btn btn-ghost btn-sm", href:"mailto:" + mail }, "ایمیل"));
+        card.appendChild(settingRow("پشتیبانی", "برای مشکل یا سؤال با ما در ارتباط باشید", Utils.el("div", { style:"display:flex;gap:6px;" }, links)));
+      }
 
       card.appendChild(Utils.el("div", { style:"margin-top:18px;" }, [
         Utils.el("button", { class:"btn btn-danger-ghost btn-block", onClick: logout },
@@ -3878,7 +4512,7 @@ const PageSettings = {
     }
 
     function settingRow(label, desc, control){
-      const ICONS = { "تم رابط کاربری":"moon", "واحد نمایش قیمت":"hash", "نحوه نمایش اعداد":"hash", "بازه به‌روزرسانی خودکار":"refresh", "اعلان تغییرات قیمت":"bell", "اعلان وضعیت اتصال":"plug", "زبان برنامه":"globe", "نسخه برنامه":"info" };
+      const ICONS = { "تم رابط کاربری":"moon", "واحد نمایش قیمت":"hash", "نحوه نمایش اعداد":"hash", "بازه به‌روزرسانی خودکار":"refresh", "اعلان تغییرات قیمت":"bell", "اعلان وضعیت اتصال":"plug", "زبان برنامه":"globe", "نسخه برنامه":"info", "پشتیبانی":"info" };
       return Utils.el("div", { class:"set-row" }, [
         Utils.el("div", { class:"q-set-ic", html: ic(ICONS[label] || "settings") }),
         Utils.el("div", { style:"flex:1;min-width:0;" }, [
@@ -3952,7 +4586,7 @@ const PageAI = {
     const irt = (v) => (v === null || v === undefined || Number.isNaN(Number(v))) ? "—" : fmt(v) + " تومان";
     const pct = (v, d = 2) => (v === null || v === undefined || Number.isNaN(Number(v))) ? "—" : Number(v).toFixed(d) + "٪";
     const badge = (cls, text) => E("span", { class:`badge badge-${cls}` }, text);
-    const errMsg = (e) => (e && e.detail && e.detail.errors ? e.detail.errors.join(" ") : (e && e.message) || "خطای نامشخص");
+    const errMsg = (e) => (e && e.detail && e.detail.errors && e.detail.errors.length ? (e.detail.errors.map(x => Utils.friendlyText(x)).filter(Boolean).join(" ") || "مقادیر واردشده معتبر نیست.") : Utils.friendlyError(e));
     const rid = () => "r" + Array.from(crypto.getRandomValues(new Uint8Array(10))).map(b => b.toString(36).padStart(2, "0")).join("");
     const ui = { tab:(PageAI.presetTab || "status"), status:null, settings:null, defaults:null, allowed:[], serverCap:null };
 
@@ -4003,7 +4637,7 @@ const PageAI = {
           ? E("button", { class:"btn btn-outline btn-sm", onClick: clearKill }, "لغو توقف اضطراری")
           : E("button", { class:"btn btn-danger-ghost btn-sm", onClick: emergency }, [E("span", { html: ic("alert") }), " توقف اضطراری"]),
       ]));
-      if(s.killed) banner.appendChild(E("div", { class:"text-faint", style:"margin-top:8px;font-size:12.5px;" }, `دلیل: ${s.killReason || "—"} — ${s.openPositionsPolicyText}`));
+      if(s.killed) banner.appendChild(E("div", { class:"text-faint", style:"margin-top:8px;font-size:12.5px;" }, `دلیل: ${Utils.friendlyText(s.killReason, "—")} — ${s.openPositionsPolicyText}`));
       if(s.mode === "live") banner.appendChild(E("div", { class:"text-red", style:"margin-top:8px;font-size:12.5px;" }, "هشدار: حالت واقعی با پول واقعی انجام می‌شود. سودآوری هیچ استراتژی‌ای تضمین نیست."));
     }
     function emergency(){
@@ -4027,12 +4661,12 @@ const PageAI = {
       const grid = E("div", { class:"ai-grid2" }); body.appendChild(grid);
       // وضعیت موتور و اتصال‌ها
       const st = E("div", { class:"card card-pad" }, [E("div", { class:"card-head" }, E("div", { class:"card-title" }, "وضعیت موتور"))]);
-      st.append(kv("اتصال به موتور", "برقرار (سرور پاسخ داد)"), kv("اتصال به صرافی (قیمت)", s.exchange.marketOk ? "برقرار" : (s.exchange.marketStale ? "قدیمی" : "قطع: " + (s.exchange.marketError || "—")), s.exchange.marketOk ? "text-green" : "text-red"),
+      st.append(kv("اتصال به موتور", "برقرار"), kv("اتصال به صرافی (قیمت)", s.exchange.marketOk ? "برقرار" : (s.exchange.marketStale ? "قدیمی" : "قطع"), s.exchange.marketOk ? "text-green" : "text-red"),
         kv("کلید حساب والکس", s.exchange.keyConfigured ? "تنظیم شده" : "تنظیم نشده"), kv("استراتژی / تایم‌فریم", `${s.engine.strategy} / ${s.engine.timeframe}`),
-        kv("آخرین تحلیل", s.engine.lastAnalysisAt ? Utils.formatDateTime(s.engine.lastAnalysisAt) : "—"), kv("آخرین تیک موتور", s.engine.lastTickAt ? Utils.timeAgo(s.engine.lastTickAt) : "—"),
+        kv("آخرین تحلیل", s.engine.lastAnalysisAt ? Utils.formatDateTime(s.engine.lastAnalysisAt) : "—"), kv("آخرین به‌روزرسانی", s.engine.lastTickAt ? Utils.timeAgo(s.engine.lastTickAt) : "—"),
         kv("زیان امروز / سقف", `${fmt(s.pnl.dailyLossIrt)} / ${fmt(ui.settings ? ui.settings.maxDailyLossIrt : 0)}`), kv("مجموع موقعیت‌ها", irt(s.pnl.exposureIrt)),
         s.pnl.paperCashIrt !== null ? kv("نقد کیف پول آزمایشی", irt(s.pnl.paperCashIrt)) : null);
-      if(s.engine.lastError) st.appendChild(E("div", { class:"text-red", style:"margin-top:10px;font-size:12.5px;" }, `آخرین خطا (${Utils.timeAgo(s.engine.lastError.at)}): ${s.engine.lastError.message}`));
+      if(s.engine.lastError) st.appendChild(E("div", { class:"text-red", style:"margin-top:10px;font-size:12.5px;" }, `آخرین بررسی با مشکل مواجه شد (${Utils.timeAgo(s.engine.lastError.at)}). اگر تکرار شد، کمی بعد دوباره تلاش کنید.`));
       st.appendChild(E("div", { class:"text-faint", style:"margin-top:10px;font-size:12px;" }, "سیاست موقعیت‌های باز پس از توقف: " + s.openPositionsPolicyText));
       // کنترل حالت
       const ctl = E("div", { class:"card card-pad" }, [E("div", { class:"card-head" }, E("div", { class:"card-title" }, "حالت فعالیت"))]);
@@ -4041,7 +4675,7 @@ const PageAI = {
         ["live","معامله‌ی واقعی","با پول واقعی. به‌صورت پیش‌فرض قفل است و تأیید صریح می‌خواهد."]].forEach(([k, t, d]) => {
         const locked = k === "live" && !s.live.serverUnlocked;
         const card = E("div", { class:`ai-mode-card ${s.mode === k ? "selected" : ""} ${locked ? "locked" : ""}`, onClick:() => chooseMode(k) }, [E("div", { style:"font-weight:700;" }, t), E("div", { class:"text-faint", style:"font-size:12px;margin-top:4px;" }, d)]);
-        if(locked) card.appendChild(E("div", { class:"text-red", style:"font-size:11.5px;margin-top:6px;" }, "قفل سرور: TRADING_ENABLED و AUTO_TRADING_ENABLED باید true باشند و کلید API/سقف سفارش تنظیم شده باشد."));
+        if(locked) card.appendChild(E("div", { class:"text-red", style:"font-size:11.5px;margin-top:6px;" }, "معامله‌ی واقعی فعلاً برای حساب شما فعال نیست."));
         modes.appendChild(card);
       });
       ctl.appendChild(modes);
@@ -4388,7 +5022,7 @@ const AIChat = (() => {
       if(open) renderFeed(last);
       updateBadge();
     }catch(e){
-      if(open && feedEl){ feedEl.innerHTML = ""; feedEl.appendChild(E("div", { class:"ai-chat-empty" }, "دریافت گزارش هوش مصنوعی ممکن نشد: " + ((e && e.message) || "خطا"))); }
+      if(open && feedEl){ feedEl.innerHTML = ""; feedEl.appendChild(E("div", { class:"ai-chat-empty" }, "دریافت گزارش هوش مصنوعی ممکن نشد: " + Utils.friendlyError(e))); }
     }
   }
 
@@ -4685,7 +5319,9 @@ const App = (() => {
   return { init };
 })();
 
-document.addEventListener("DOMContentLoaded", App.init);
+window.__qairoStart = () => { if(window.__qairoStarted) return; window.__qairoStarted = true; App.init(); };
+// اگر به هر دلیل اسپلش شروع را صدا نزد، برنامه خودش بالا بیاید
+window.addEventListener("load", () => setTimeout(() => window.__qairoStart(), 8000));
 </script>
 </body>
 </html>
