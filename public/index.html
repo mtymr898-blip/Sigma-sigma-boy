@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>QAIRO — هوش مصنوعی معاملات ارز دیجیتال</title>
 <meta name="description" content="داشبورد شخصی مدیریت و تحلیل دارایی‌های ارز دیجیتال">
-<meta name="theme-color" content="#061326">
+<meta name="theme-color" content="#0b0d0c">
 <link rel="icon" type="image/png" href="img/icon-192.png">
 <link rel="apple-touch-icon" href="img/icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -1789,6 +1789,186 @@ body{ background:
 .q-legal-bar{ flex:0 0 auto; display:flex; flex-wrap:wrap; gap:10px; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); border-top:1px solid var(--border-soft); background:var(--surface); }
 .q-legal-bar .btn{ flex:1 1 150px; }
 .q-legal-bar .btn-priv{ flex-basis:100%; }
+
+/* ===================================================================
+   تم نهایی: مشکی مات + سبز ملایم — ساده، کم‌حاشیه، با سلسله‌مراتب روشن
+   ۱) یک نقطه‌ی تمرکز در هر صفحه  ۲) یک رنگ تأکید  ۳) بدون درخشش و گرادیان
+   =================================================================== */
+:root,:root[data-theme="dark"]{
+  --bg:#0b0d0c; --bg-soft:#0f1210; --surface:#121614; --surface-raised:#161b18; --surface-2:#161b18cc; --surface-hover:#1a201c;
+  --border:#232b26; --border-soft:#1b221e; --border-strong:#2c372f;
+  --accent:#5db587; --accent-strong:#4aa073; --accent-dim:#357a56; --accent-soft:#5db5871a; --accent-soft-strong:#5db58730;
+  --blue:#7fb3c8; --blue-soft:#7fb3c81a;
+  --green:#52c28a; --green-strong:#3fa874; --green-soft:#52c28a1a;
+  --red:#e0605e; --red-strong:#c94d4b; --red-soft:#e0605e1a;
+  --amber:#d6a547; --amber-soft:#d6a5471a;
+  --text:#e9eee9; --text-dim:#a0aca4; --text-faint:#6c776f;
+  --shadow-card:none; --shadow-raised:0 12px 32px -14px #000000b0; --shadow-pop:0 24px 60px -20px #000000d0;
+  --q-bg:#0b0d0c; --q-bg2:#0f1210; --q-card:#121614; --q-card2:#161b18; --q-line:#232b26; --q-line2:#1b221e;
+  --q-blue:#5db587; --q-blue2:#7ccaa0; --q-violet:#5db587; --q-cyan:#5db587; --q-teal:#4aa073; --q-navy:#0f1210;
+  --q-up:#52c28a; --q-down:#e0605e; --q-amber:#d6a547;
+  --q-grad:#5db587; --q-grad-up:#3fa874; --q-grad-down:#c94d4b; --q-glow:none;
+}
+:root[data-theme="light"]{
+  --bg:#f4f6f3; --bg-soft:#eef1ed; --surface:#ffffff; --surface-raised:#ffffff; --surface-2:#ffffffcc; --surface-hover:#f0f3ef;
+  --border:#dde3dc; --border-soft:#e8ece6; --border-strong:#cfd7ce;
+  --accent:#2f8f5f; --accent-strong:#287a50; --accent-dim:#206442; --accent-soft:#2f8f5f1a; --accent-soft-strong:#2f8f5f2e;
+  --blue:#3f7f99; --blue-soft:#3f7f991a;
+  --green:#1f9a5f; --green-strong:#187f4e; --green-soft:#1f9a5f1a;
+  --red:#d04a48; --red-strong:#b53a38; --red-soft:#d04a481a;
+  --amber:#b9852a; --amber-soft:#b9852a1a;
+  --text:#16201a; --text-dim:#5b675f; --text-faint:#8a948c;
+  --shadow-card:none; --shadow-raised:0 12px 30px -16px #16201a40; --shadow-pop:0 24px 60px -24px #16201a55;
+  --q-bg:#f4f6f3; --q-bg2:#eef1ed; --q-card:#ffffff; --q-card2:#f0f3ef; --q-line:#dde3dc; --q-line2:#e8ece6;
+  --q-blue:#2f8f5f; --q-blue2:#2f8f5f; --q-violet:#2f8f5f; --q-cyan:#2f8f5f; --q-teal:#287a50; --q-navy:#eef1ed;
+  --q-up:#1f9a5f; --q-down:#d04a48; --q-amber:#b9852a;
+  --q-grad:#2f8f5f; --q-grad-up:#1f9a5f; --q-grad-down:#d04a48; --q-glow:none;
+}
+html,body{ background:var(--bg)!important; background-image:none!important; }
+[data-theme="dark"] body::before{ display:none!important; }
+.main{ border-inline:0!important; box-shadow:none!important; }
+
+/* کارت‌ها: سطح ساده، یک خط کناره، بدون سایه و حرکت */
+.card{ background:var(--surface)!important; border:1px solid var(--border)!important; border-radius:16px!important; box-shadow:none!important; backdrop-filter:none!important; }
+.card::before{ display:none!important; }
+@media (hover:hover){ .card:hover{ transform:none!important; border-color:var(--border)!important; box-shadow:none!important; } }
+
+/* دکمه‌ها: فقط یک دکمه‌ی پررنگ؛ بقیه کم‌رنگ */
+.btn{ border-radius:12px; font-weight:700; transition:background .2s,border-color .2s,filter .2s; }
+.btn-primary,[data-theme="dark"] .btn-primary{ background:var(--accent)!important; color:#08140d!important; border:0; box-shadow:none!important; }
+:root[data-theme="light"] .btn-primary{ color:#fff!important; }
+.btn-primary:hover{ filter:brightness(1.08); transform:none; }
+.btn-outline,.btn-ghost{ background:transparent; border:1px solid var(--border); color:var(--text); }
+.btn-outline:hover,.btn-ghost:hover{ background:var(--surface-hover); border-color:var(--border-strong); }
+.chip,.tab-btn{ background:transparent; border:1px solid transparent; color:var(--text-dim); padding:6px 12px; font-size:12px; border-radius:10px; transition:background .2s,color .2s; }
+.chip:hover,.tab-btn:hover{ transform:none; color:var(--text); background:var(--surface-hover); border-color:transparent; }
+.chip.active,.tab-btn.active{ background:var(--accent-soft-strong)!important; color:var(--accent)!important; border-color:transparent; box-shadow:none!important; }
+.q-seg{ background:var(--bg-soft); border:1px solid var(--border-soft); }
+.q-seg button.active{ background:var(--surface-hover)!important; color:var(--accent)!important; box-shadow:none!important; }
+.cn-step.on i,.cn-card b{ background:var(--accent)!important; color:#08140d!important; box-shadow:none!important; transform:none; }
+
+/* ورودی‌ها و سوییچ */
+input,select,textarea,.input{ background:var(--bg-soft); border:1px solid var(--border); }
+:root[data-theme="light"] input,:root[data-theme="light"] .input{ background:#fff; }
+input:focus,.input:focus{ border-color:var(--accent)!important; box-shadow:0 0 0 3px var(--accent-soft)!important; }
+.switch .track{ background:var(--border); }
+.switch input:checked + .track{ background:var(--accent); box-shadow:none; }
+
+/* نوار بالا: ساده، فقط لوگو + اسم + دو آیکن */
+html[data-theme] .topbar{ background:var(--bg)!important; border-bottom:1px solid var(--border-soft)!important; box-shadow:none!important; backdrop-filter:none!important; padding:10px 16px!important; }
+.icon-btn,.menu-btn{ background:transparent; border:1px solid transparent; width:38px; height:38px; border-radius:12px; }
+.icon-btn:hover,.menu-btn:hover{ transform:none; background:var(--surface-hover); border-color:transparent; box-shadow:none; }
+.q-brand i,.q-brand .fa{ display:none; }
+.q-brand b{ background:none!important; -webkit-text-fill-color:currentColor!important; color:var(--text); font-size:16px; letter-spacing:.14em; }
+.q-brand img{ width:28px; height:28px; }
+
+/* نوار پایین */
+html[data-theme] .bottom-nav{ background:var(--surface)!important; border:1px solid var(--border)!important; border-radius:20px; padding:6px 8px; backdrop-filter:none; box-shadow:0 12px 30px -14px #000000a0; }
+.bottom-nav .bn-item{ color:var(--text-faint); }
+.bottom-nav .bn-item.active{ color:var(--accent); }
+.bottom-nav .bn-item.active .ic{ transform:none; filter:none; color:var(--accent); }
+.bottom-nav .bn-item.active::after{ background:var(--accent); width:14px; margin-left:-7px; }
+.bn-center .bn-orb{ box-shadow:0 0 0 4px var(--surface),0 0 0 5px var(--border)!important; animation:none!important; }
+
+/* منوی کناری */
+.sidebar{ background:var(--surface)!important; backdrop-filter:none; box-shadow:-20px 0 50px -30px #000; }
+.brand-sub{ display:none; }
+.nav-item.active{ background:var(--accent-soft); border-color:transparent; color:var(--accent); box-shadow:none; }
+.nav-item.active::before{ background:var(--accent); box-shadow:none; }
+.sidebar-scrim{ background:#000000a0; backdrop-filter:none; }
+
+/* لیست‌ها: یک کارت، ردیف‌ها با خط جداکننده (نه کارتِ جدا برای هر ردیف) */
+.q-list{ background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; gap:0; }
+.q-row{ background:transparent!important; border:0!important; border-bottom:1px solid var(--border-soft)!important; border-radius:0!important; box-shadow:none!important; transform:none!important; padding:12px 14px; }
+.q-row:last-child{ border-bottom:0!important; }
+.q-row:hover{ background:var(--surface-hover)!important; }
+.q-list > .btn,.q-list > .state-box{ margin:10px; }
+.q-set-group{ background:var(--surface); border:1px solid var(--border); border-radius:16px; overflow:hidden; gap:0; }
+.set-row{ background:transparent!important; border:0!important; border-bottom:1px solid var(--border-soft)!important; border-radius:0!important; transform:none!important; box-shadow:none!important; }
+.set-row:last-child{ border-bottom:0!important; }
+.set-row:hover{ background:var(--surface-hover)!important; }
+.q-set-ic{ background:var(--accent-soft)!important; color:var(--accent)!important; border-radius:10px; }
+.tbl{ border-spacing:0; }
+.tbl tbody tr{ background:transparent!important; border:0; transform:none!important; box-shadow:none; }
+.tbl tbody td{ border-bottom:1px solid var(--border-soft); border-radius:0!important; }
+.tbl tbody tr:last-child td{ border-bottom:0; }
+.tbl tbody tr:hover{ background:var(--surface-hover)!important; }
+
+/* کارت‌های کوچک و آمار */
+.q-mini,.q-tool,.kpi-card,.cn-card,.cn-point{ background:var(--surface)!important; border:1px solid var(--border)!important; box-shadow:none!important; border-radius:14px; }
+.q-mini:hover,.q-tool:hover,.kpi-card:hover{ transform:none!important; box-shadow:none!important; border-color:var(--border-strong)!important; }
+.q-stats{ gap:0; background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; }
+.q-stat{ background:transparent!important; border:0!important; border-inline-start:1px solid var(--border-soft)!important; border-radius:0; }
+.q-stat:first-child{ border-inline-start:0!important; }
+.q-portfolio .q-stats{ background:transparent; border:0; border-top:1px solid var(--border-soft); border-radius:0; margin-top:14px; padding-top:6px; }
+.kpi-ic,.cn-pi{ background:var(--accent-soft)!important; color:var(--accent)!important; }
+
+/* سلسله‌مراتب: عنوان بخش کوچک و کم‌رنگ، عدد اصلی بزرگ و پررنگ */
+.q-section{ margin:24px 2px 10px; }
+.q-section h3{ font-size:12.5px; font-weight:700; color:var(--text-dim); }
+.q-section a,.q-section button{ color:var(--accent); font-size:12px; font-weight:600; }
+.q-portfolio{ margin-top:6px; padding:20px 18px 14px; }
+.q-hero-top{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.q-portfolio .q-lbl{ font-size:12.5px; color:var(--text-dim); }
+.q-portfolio .q-total{ font-size:clamp(30px,9vw,40px); font-weight:800; letter-spacing:-.02em; line-height:1.3; margin-top:4px; }
+.q-portfolio .q-total small{ font-size:13px; font-weight:600; color:var(--text-faint); }
+.q-spark-wrap{ height:84px!important; margin:8px -4px 0!important; }
+.q-ranges{ display:flex; gap:4px; margin-top:6px; }
+.q-hero-stats{ display:flex; justify-content:space-between; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-soft); }
+.q-hero-stats > div{ flex:1; min-width:0; }
+.q-hero-stats small{ display:block; font-size:11px; color:var(--text-faint); }
+.q-hero-stats b{ font-size:13px; font-weight:700; color:var(--text); }
+.q-actions{ display:grid; grid-template-columns:1.4fr 1fr; gap:10px; margin-top:12px; }
+.q-actions .btn{ height:48px; font-size:14.5px; }
+.q-ai-strip{ display:flex; align-items:center; gap:12px; padding:14px 16px; margin-top:12px; cursor:pointer; }
+.q-ai-strip .q-dot{ width:8px; height:8px; border-radius:50%; background:var(--text-faint); flex:none; }
+.q-ai-strip.on .q-dot{ background:var(--accent); }
+.q-ai-strip.kill .q-dot{ background:var(--red); }
+.q-ai-txt{ flex:1; min-width:0; }
+.q-ai-title{ font-size:13px; font-weight:700; }
+.q-ai-sub{ font-size:12px; color:var(--text-dim); line-height:1.8; }
+.q-ai-strip .chev{ color:var(--text-faint); display:flex; }
+.q-ai-strip .chev .ic{ width:16px; height:16px; }
+.q-bigprice{ font-size:clamp(30px,9vw,40px); letter-spacing:-.02em; }
+.page-head h1{ font-size:20px; }
+.page-head .sub{ color:var(--text-faint); }
+
+/* وضعیت‌ها و نشان‌ها بدون درخشش */
+.q-live::before{ box-shadow:none; animation:none; }
+.q-live{ background:var(--accent-soft); color:var(--accent); }
+.q-live.off{ background:var(--surface-hover); color:var(--text-faint); }
+.coin-ic{ background:var(--surface-hover)!important; color:var(--accent)!important; box-shadow:none!important; }
+.coin-ic:has(.coin-img){ background:transparent!important; }
+.skel{ background:linear-gradient(90deg,var(--surface-hover) 0%,var(--border) 50%,var(--surface-hover) 100%); background-size:200% 100%; }
+.modal,.dropdown-sheet{ background:var(--surface-raised)!important; border:1px solid var(--border)!important; border-radius:20px; }
+.modal-backdrop,.dropdown-sheet-backdrop{ background:#000000b0; backdrop-filter:none; }
+.toast{ background:var(--surface-raised)!important; border:1px solid var(--border); }
+.q-trade-bar .q-buy{ background:var(--green-strong); box-shadow:none; }
+.q-trade-bar .q-sell{ background:var(--red-strong); box-shadow:none; }
+.q-buy{ background:var(--green-strong)!important; box-shadow:none!important; } .q-sell{ background:var(--red-strong)!important; box-shadow:none!important; }
+.q-buy:hover,.q-sell:hover{ transform:none; filter:brightness(1.08); }
+
+/* ورود، اتصال و خوش‌آمد: بی‌نور و سبز ملایم */
+.connect-shell,.welcome-shell{ background:var(--bg)!important; }
+.connect-shell::before,.connect-shell::after,.welcome-shell::before,.welcome-shell::after{ display:none!important; }
+.connect-card{ background:var(--surface)!important; border:1px solid var(--border)!important; box-shadow:none!important; backdrop-filter:none!important; }
+.q-wordmark{ background:none!important; -webkit-text-fill-color:currentColor!important; color:var(--text); }
+.q-orb .o2{ border-color:var(--accent-dim); border-top-color:transparent; border-left-color:transparent; }
+.q-orb .o3{ border-color:var(--border-strong); }
+.q-orb .q-logo{ filter:none!important; animation:none!important; }
+.hv-sphere{ background:radial-gradient(circle at 34% 28%,#cfe9da 0%,#7ccaa0 18%,#3f8a63 46%,#1f4d37 74%,#0f2419 100%)!important; box-shadow:0 0 0 1px #ffffff14 inset,0 0 40px #5db58733!important; animation:none!important; }
+.hv-sphere .hv-shine{ opacity:.35; }
+.hv-sphere img{ box-shadow:none!important; }
+.q-heart .hv-web{ color:var(--accent); opacity:.25; animation:none!important; }
+.q-heart .hr{ border-color:var(--accent-dim)!important; animation-duration:3s; }
+.wl-logo{ filter:none!important; animation:none!important; }
+.btn-outline.wl-btn{ border-color:var(--border); color:var(--text); background:transparent; }
+.btn-outline.wl-btn:hover{ background:var(--surface-hover); border-color:var(--border-strong); }
+
+/* حرکت: فقط یک محو شدن کوتاه، نه ورودهای پله‌ای و تکان‌دار */
+@keyframes q-fade{ from{ opacity:0; } to{ opacity:1; } }
+.q-stagger > *,.q-row,.q-tool,.q-mini,.set-row,.nx-page-enter{ animation:q-fade .25s ease both!important; animation-delay:0s!important; }
+.nx-piece,.nx-child,.nx-row-reveal,.nx-nav-reveal,.nx-nav-stagger{ animation-duration:.22s!important; animation-delay:0s!important; }
 </style>
 </head>
 <body>
@@ -3623,57 +3803,39 @@ const PageDashboard = {
     const E = Utils.el;
     const root = E("div", { class:"q-stagger" });
     container.appendChild(root);
-    const phone = State.get().account.phone;
 
-    root.appendChild(E("div", { class:"q-hello" }, [E("div", {}, [
-      E("h2", {}, "سلام! 👋"),
-      E("p", {}, phone ? `حساب ${Utils.maskPhone(phone)} · خلاصه‌ی امروز شما` : "خلاصه‌ی امروز شما"),
-    ])]));
-
-    // --- هسته‌ی هوش مصنوعی (داده‌ی واقعی موتور) ---
-    const MODE_FA = { suggest:"تحلیل و پیشنهاد", paper:"معامله‌ی آزمایشی", live:"معامله‌ی واقعی" };
-    const live = E("span", { class:"q-live off" }, "در حال بررسی");
-    const status = E("div", { class:"q-status" }, "در حال دریافت وضعیت موتور…");
-    const aiCard = E("div", { class:"q-ai-core", role:"button", tabindex:"0", onClick: () => Router.go("ai") }, [
-      Q.orb(false),
-      E("div", { class:"q-body" }, [
-        E("div", { style:"display:flex;align-items:center;justify-content:space-between;gap:8px;" }, [E("h3", {}, "QAIRO AI CORE"), live]),
-        E("small", {}, "هسته‌ی هوش مصنوعی معاملاتی"),
-        status,
-        E("button", { class:"q-cta" }, "مشاهده تحلیل هوشمند"),
-      ]),
-    ]);
-    root.appendChild(aiCard);
-    Api.aiGet("/status").then(st => {
-      const buys = Object.values(st.analysis || {}).filter(a => a.signal === "buy").length;
-      live.className = "q-live" + (st.killed ? " kill" : st.running ? "" : " off");
-      live.textContent = st.killed ? "توقف اضطراری" : st.running ? "فعال" : "متوقف";
-      status.textContent = st.mode === "suggest"
-        ? (buys ? `الان ${buys} پیشنهاد خرید فعال دارم؛ جزئیات در گزارش هوش مصنوعی است.` : "فعلاً پیشنهاد خریدی ندارم؛ بازار را زیر نظر دارم.")
-        : `حالت «${MODE_FA[st.mode]}»؛ ${st.counts.open} موقعیت باز.`;
-    }).catch(() => { live.textContent = "نامشخص"; status.textContent = "وضعیت موتور در دسترس نیست."; });
-
-    // --- ارزش دارایی‌ها ---
+    // ۱) تمرکز اصلی صفحه: ارزش کل دارایی‌ها
     const pfCard = E("div", { class:"card q-portfolio" }, UI.skeletonChart(130));
     root.appendChild(pfCard);
-    const kpiWrap = E("div", { class:"q-tri" }, [UI.skeletonCard(), UI.skeletonCard(), UI.skeletonCard()]);
-    root.appendChild(kpiWrap);
 
-    root.appendChild(Q.section("وضعیت کلی بازار", "همه بازار", () => Router.go("market")));
-    const overview = E("div", { class:"q-tri" }, [UI.skeletonCard(), UI.skeletonCard(), UI.skeletonCard()]);
-    root.appendChild(overview);
-
-    root.appendChild(Q.section("ابزارهای هوشمند"));
+    // ۲) دو اقدام اصلی: یکی پررنگ، یکی کم‌رنگ
     const goAI = (tab) => () => { PageAI.presetTab = tab; Router.go("ai"); };
-    const tools = [
-      ["signals", "سیگنال‌ها", goAI("signals")],
-      ["target", "تحلیل هوشمند", goAI("status")],
-      ["swap", "خرید و فروش", () => Router.go("trade")],
-      ["history", "تاریخچه", () => Router.go("history")],
-    ];
-    root.appendChild(E("div", { class:"q-tools" }, tools.map(([i, l, fn]) => E("div", { class:"q-tool", role:"button", tabindex:"0", onClick:fn }, [E("div", { class:"q-ti", html: ic(i) }), E("span", {}, l)]))));
+    root.appendChild(E("div", { class:"q-actions" }, [
+      E("button", { class:"btn btn-primary", onClick: () => Router.go("trade") }, "خرید و فروش"),
+      E("button", { class:"btn btn-outline", onClick: goAI("signals") }, "سیگنال‌ها"),
+    ]));
 
-    root.appendChild(Q.section("رصد سریع بازار", "مشاهده همه", () => Router.go("market")));
+    // ۳) وضعیت هوش مصنوعی در یک خط (داده‌ی واقعی موتور)
+    const MODE_FA = { suggest:"تحلیل و پیشنهاد", paper:"معامله‌ی آزمایشی", live:"معامله‌ی واقعی" };
+    const status = E("div", { class:"q-ai-sub" }, "در حال دریافت وضعیت…");
+    const aiRow = E("div", { class:"card q-ai-strip", role:"button", tabindex:"0", onClick: () => Router.go("ai") }, [
+      E("span", { class:"q-dot" }),
+      E("div", { class:"q-ai-txt" }, [E("div", { class:"q-ai-title" }, "هوش مصنوعی"), status]),
+      E("span", { class:"chev", html: ic("chevronLeft") }),
+    ]);
+    root.appendChild(aiRow);
+    Api.aiGet("/status").then(st => {
+      aiRow.classList.toggle("on", !!st.running && !st.killed);
+      aiRow.classList.toggle("kill", !!st.killed);
+      const buys = Object.values(st.analysis || {}).filter(a => a.signal === "buy").length;
+      status.textContent = st.killed ? "توقف اضطراری فعال است."
+        : st.mode === "suggest"
+          ? (buys ? `الان ${buys} پیشنهاد خرید فعال دارم.` : "فعلاً پیشنهاد خریدی ندارم؛ بازار را زیر نظر دارم.")
+          : `حالت «${MODE_FA[st.mode]}»؛ ${st.counts.open} موقعیت باز.${st.running ? "" : " (متوقف)"}`;
+    }).catch(() => { status.textContent = "وضعیت در دسترس نیست."; });
+
+    // ۴) بازار: فهرست کوتاه
+    root.appendChild(Q.section("بازار", "همه", () => Router.go("market")));
     const list = E("div", { class:"q-list" }, UI.skeletonRows(4));
     root.appendChild(list);
 
@@ -3682,67 +3844,55 @@ const PageDashboard = {
       Api.getPortfolioSummary(), Api.getPortfolioHistory(range), Api.getMarketList(),
     ]);
 
-    if(summaryS.status === "fulfilled"){
-      const s = summaryS.value.data;
-      kpiWrap.innerHTML = "";
-      [["wallet", "قابل‌استفاده", Utils.formatPrice(s.availableValueIrt, "")], ["market", "دارایی‌ها", Utils.formatNumber(s.assetCount)], ["history", "سفارش باز", Utils.formatNumber(s.openOrders)]]
-        .forEach(([i, l, v]) => kpiWrap.appendChild(E("div", { class:"q-mini", style:"cursor:default;" }, [
-          E("div", { class:"q-h", html: ic(i) + `<span>${l}</span>` }), E("div", { class:"q-p num", style:"font-weight:800;" }, v)])));
-    }else{
-      kpiWrap.remove();
-    }
-
     function renderPortfolio(){
       pfCard.innerHTML = "";
       if(summaryS.status !== "fulfilled"){ pfCard.appendChild(UI.errorState("دریافت اطلاعات حساب ناموفق بود", Utils.friendlyError(summaryS.reason), () => PageDashboard.mount(container))); return; }
       const s = summaryS.value.data;
       const total = E("span", { class:"num" }, "0");
-      pfCard.appendChild(E("div", { style:"display:flex;justify-content:space-between;align-items:flex-start;gap:8px;" }, [
-        E("div", {}, [
-          E("div", { class:"q-lbl" }, ["ارزش کل دارایی‌های من ", summaryS.value.isMock ? UI.mockFlag() : null]),
-          E("div", { class:"q-total" }, [total, E("small", {}, State.get().settings.priceUnit === "usdt" ? "تتر" : "تومان")]),
-        ]),
-        (s.change24hPercent !== undefined && s.change24hPercent !== null) ? E("span", { class:`q-chg ${s.change24hPercent >= 0 ? "up" : "down"}`, style:"padding-top:6px;" }, Utils.formatPercent(s.change24hPercent)) : null,
+      const hasChg = s.change24hPercent !== undefined && s.change24hPercent !== null;
+      pfCard.appendChild(E("div", { class:"q-hero-top" }, [
+        E("div", { class:"q-lbl" }, ["ارزش دارایی‌ها ", summaryS.value.isMock ? UI.mockFlag() : null]),
+        hasChg ? E("span", { class:`q-chg ${s.change24hPercent >= 0 ? "up" : "down"}` }, Utils.formatPercent(s.change24hPercent)) : null,
       ]));
+      pfCard.appendChild(E("div", { class:"q-total" }, [total, E("small", {}, State.get().settings.priceUnit === "usdt" ? "تتر" : "تومان")]));
       Q.countUp(total, s.totalValueIrt, (v) => Utils.formatPrice(v, "").trim());
       pfCard.appendChild(E("div", { class:"q-spark-wrap chart-canvas-wrap" }, E("canvas", { id:"portfolioChart" })));
-      const ranges = [["24h", "۲۴ ساعت"], ["7d", "۷ روز"], ["30d", "۳۰ روز"], ["90d", "۹۰ روز"]];
+      const ranges = [["24h", "۲۴ ساعت"], ["7d", "۷ روز"], ["30d", "۳۰ روز"]];
       const bar = E("div", { class:"q-ranges" }, ranges.map(([r, l]) => E("button", {
-        class:`chip ${r === range ? "active" : ""}`, style:"padding:5px 12px;font-size:11.5px;",
+        class:`chip ${r === range ? "active" : ""}`,
         onClick: async (ev) => {
           range = r; bar.querySelectorAll(".chip").forEach(c => c.classList.remove("active")); ev.currentTarget.classList.add("active");
           let h; try{ h = await Api.getPortfolioHistory(range); }catch(e){ h = { data:[] }; }
           drawChart(h);
         } }, l)));
       pfCard.appendChild(bar);
+      // آمار فرعی: کم‌رنگ و در یک ردیف
+      pfCard.appendChild(E("div", { class:"q-hero-stats" }, [
+        ["قابل‌استفاده", Utils.formatPrice(s.availableValueIrt, "")],
+        ["دارایی‌ها", Utils.formatNumber(s.assetCount)],
+        ["سفارش باز", Utils.formatNumber(s.openOrders)],
+      ].map(([l, v]) => E("div", {}, [E("small", {}, l), E("b", { class:"num" }, v)]))));
       if(historyS.status === "fulfilled") drawChart(historyS.value);
     }
     function drawChart(h){
       const pts = h && h.data;
       const cv = document.getElementById("portfolioChart");
       if(!cv) return;
-      if(!pts || pts.length < 2){ Charts.destroy("portfolioChart"); const w = cv.parentElement; w.innerHTML = ""; w.appendChild(E("div", { class:"text-faint", style:"text-align:center;padding:34px 8px;font-size:12px;" }, "داده‌ی تاریخی کافی هنوز ذخیره نشده است.")); return; }
-      requestAnimationFrame(() => Charts.lineChart("portfolioChart", cv, pts, { currency:"تومان", minimal:true, color:"#00E5FF" }));
+      if(!pts || pts.length < 2){ Charts.destroy("portfolioChart"); const w = cv.parentElement; w.innerHTML = ""; w.appendChild(E("div", { class:"text-faint", style:"text-align:center;padding:34px 8px;font-size:12px;" }, "داده‌ی کافی برای نمودار نیست")); return; }
+      requestAnimationFrame(() => Charts.lineChart("portfolioChart", cv, pts, { currency:"تومان", minimal:true }));
     }
     renderPortfolio();
 
     if(marketS.status === "fulfilled"){
       const coins = marketS.value.data;
-      overview.innerHTML = "";
-      const pick = ["btc", "eth", "usdt"].map(id => coins.find(c => c.id === id)).filter(Boolean);
-      (pick.length ? pick : coins.slice(0, 3)).forEach(c => overview.appendChild(E("div", { class:"q-mini", onClick: () => Router.go(`coin/${c.id}`) }, [
-        E("div", { class:"q-h" }, [UI.coinAvatar(c.symbol, 22, c.icon || c.image || c.logo), E("span", {}, c.symbol.replace(/IRT|USDT$/i, "") || c.symbol)]),
-        E("div", { class:"q-sp" }, E("canvas", { "data-key":"row_" + c.id })),
-        E("div", { class:`q-p ${(c.change24h ?? 0) >= 0 ? "up" : "down"}`, style:"font-weight:800;direction:ltr;" }, Utils.formatPercent(c.change24h)),
-      ])));
       list.innerHTML = "";
-      const top = [...coins].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h)).slice(0, 6);
+      const top = [...coins].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h)).slice(0, 5);
       top.forEach(c => list.appendChild(Q.coinRow(c)));
       if(!top.length) list.appendChild(UI.empty("بازاری یافت نشد", ""));
-      Q.paintSparks(root, [...new Map([...(pick.length ? pick : coins.slice(0, 3)), ...top].map(c => [c.id, c])).values()]);
+      Q.paintSparks(root, top);
       State.set({ connection: { lastChecked: new Date().toISOString() } });
     }else{
-      overview.remove(); list.innerHTML = "";
+      list.innerHTML = "";
       list.appendChild(UI.errorState("دریافت اطلاعات بازار ناموفق بود", Utils.friendlyError(marketS.reason), () => PageDashboard.mount(container)));
     }
   }
@@ -4194,7 +4344,7 @@ const PageWallet = {
       const total = priced.reduce((s, a) => s + a.valueIrt, 0);
       const top = priced.slice(0, 4), rest = priced.slice(4).reduce((s, a) => s + a.valueIrt, 0);
       const items = top.map(a => ({ l:a.symbol, v:a.valueIrt })); if(rest > 0) items.push({ l:"سایر", v:rest });
-      const colors = ["#00E5FF", "#1e88e5", "#5eead4", "#1fe08f", "#ffc24d"];
+      const colors = ["#5db587", "#357a56", "#8fd1ae", "#c9a95a", "#6f7d74"];
       const cv = E("canvas");
       donutCard.append(E("div", { class:"q-donut" }, [cv, E("div", { class:"mid" }, [E("span", {}, "توزیع"), E("span", {}, "دارایی‌ها")])]),
         E("div", { class:"q-legend" }, items.map((it, i) => E("div", {}, [E("i", { style:`background:${colors[i]}` }), E("span", {}, it.l), E("b", {}, ((it.v / total) * 100).toFixed(0) + "%")]))));
@@ -5090,7 +5240,6 @@ const App = (() => {
       Utils.el("div", { class:"brand-mark" }, Utils.el("img", { src:"img/logo.png", alt:"QAIRO" })),
       Utils.el("div", {}, [
         Utils.el("div", { class:"brand-name" }, "QAIRO"),
-        Utils.el("div", { class:"brand-sub" }, "Smarter Decisions. Better Future."),
       ]),
     ]));
 
@@ -5125,8 +5274,6 @@ const App = (() => {
       ]),
       Utils.el("div", { class:"topbar-right" }, [
         Utils.el("span", { id:"connBadge" }),
-        Utils.el("span", { class:"text-faint", id:"lastUpdate", style:"font-size:11.5px;white-space:nowrap;" }),
-        Utils.el("button", { class:"icon-btn", title:"به‌روزرسانی اطلاعات", html: ic("refresh"), onClick: refreshCurrentPage, id:"refreshBtn" }),
         Utils.el("button", { class:"icon-btn", title:"پروفایل", html: ic("profile"), onClick: () => Router.go("profile") }),
       ]),
     ]);
