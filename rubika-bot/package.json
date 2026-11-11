@@ -1,0 +1,13 @@
+{
+  "name": "qairo-rubika-bot",
+  "version": "1.0.0",
+  "description": "ربات روبیکا برای ارسال کد ورود (OTP) QAIRO — مستقل از سایت، بدون وابستگی npm",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node --env-file=.env src/index.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "engines": { "node": ">=20.6" }
+}
