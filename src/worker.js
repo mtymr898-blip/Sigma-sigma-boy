@@ -22,6 +22,7 @@
 
 import { createTrading } from "./trading.js";
 import { createAuth } from "./auth.js";
+import { createRubika } from "./rubika.js";
 import { seal, open as openSealed, fromB64u, deriveUserSecret, vaultAadFor, vaultSecretsFor, isStrongSecret } from "./vault.js";
 
 const WALLEX_BASE = "https://api.wallex.ir";
@@ -172,6 +173,12 @@ export class DashboardStore {
       // ذخیره‌ی عمومی کلید/مقدار برای موتور معاملاتی (تنظیمات، سیگنال‌ها، معاملات، رخدادها)
       case "/kv/get": return out({ value: (await s.get("kv:" + ns + body.key)) ?? null });
       case "/kv/put": await s.put("kv:" + ns + body.key, body.value); return out({ ok: true });
+      // مقایسه-و-جایگزینی اتمیک (مصرف یک‌بارمصرف کد اتصال روبیکا و ثبت chat_id): فقط اگر مقدار فعلی == expect
+      case "/kv/cas": {
+        const k = "kv:" + ns + body.key; const cur = (await s.get(k)) ?? null;
+        if (JSON.stringify(cur) !== JSON.stringify(body.expect ?? null)) return out({ swapped: false });
+        await s.put(k, body.value ?? null); return out({ swapped: true });
+      }
       // فهرست اتمیک کاربرانی که کلید والکس دارند (برای موتور پس‌زمینه و نمونه‌برداری)
       case "/idx/add": { const k = "idx:" + body.name; const a = (await s.get(k)) || []; if (!a.includes(body.id)) { a.push(body.id); await s.put(k, a); } return out({ ok: true }); }
       case "/idx/remove": { const k = "idx:" + body.name; const a = ((await s.get(k)) || []).filter((x) => x !== body.id); await s.put(k, a); return out({ ok: true }); }
@@ -643,6 +650,7 @@ async function fetchOhlc(env, coinId, tf, days) {
 const kvApi = (env) => ({
   get: async (key) => (await store(env, "/kv/get", { key })).value,
   put: async (key, value) => { await store(env, "/kv/put", { key, value }); },
+  cas: async (key, expect, value) => (await store(env, "/kv/cas", { key, expect, value })).swapped === true,
 });
 const tradingByEnv = new WeakMap(); // یک موتور مستقل برای هر کاربر
 function getTrading(env) {
@@ -663,11 +671,20 @@ function getTrading(env) {
   return api;
 }
 
+// ---------- اتصال روبیکا (ارسال کد ورود از طریق ربات؛ جزئیات در src/rubika.js) ----------
+const rlApi = (env) => ({ check: (key, max, windowMs) => store(env, "/rl/check", { key, max, windowMs }), hit: (key, windowMs) => store(env, "/rl/fail", { key, windowMs }), clear: (key) => store(env, "/rl/clear", { key }) });
+const rubikaSingles = new WeakMap();
+function getRubika(env) {
+  let r = rubikaSingles.get(env); if (r) return r;
+  r = createRubika({ env, HttpError, kv: kvApi(env), rl: rlApi(env), hmac: hmacB64u, safeEqual, uidOf: (phone) => uidOf(env, phone) });
+  rubikaSingles.set(env, r); return r;
+}
+
 // ---------- احراز هویت حساب (شماره موبایل) ----------
 const authSingles = new WeakMap();
 function getAuth(env) {
   let a = authSingles.get(env); if (a) return a;
-  a = createAuth({ env, HttpError, kv: kvApi(env), hmac: hmacB64u, b64u, fromB64u, safeEqual, sleep, issueSession,
+  a = createAuth({ env, HttpError, kv: kvApi(env), hmac: hmacB64u, b64u, fromB64u, safeEqual, sleep, issueSession, rubika: getRubika(env),
     rl: { check: (key, max, windowMs) => store(env, "/rl/check", { key, max, windowMs }), hit: (key, windowMs) => store(env, "/rl/fail", { key, windowMs }), clear: (key) => store(env, "/rl/clear", { key }) } });
   authSingles.set(env, a); return a;
 }
@@ -691,12 +708,29 @@ async function route(request, env, ctx, url) {
     throw new HttpError(404, "NOT_FOUND", "مسیر یافت نشد.");
   }
 
+  // ---- endpointهای داخلی ربات روبیکا (فقط با راز مشترک و فقط از خود سرور؛ از اینترنت عمومی پاسخ 404 می‌دهند) ----
+  if (p.startsWith("/api/internal/rubika/")) {
+    if (m !== "POST") throw new HttpError(405, "METHOD_NOT_ALLOWED", "روش درخواست مجاز نیست.");
+    requireConfig(env); const rb = getRubika(env); await rb.assertInternal(request.headers); const b = await readJson(request);
+    if (p === "/api/internal/rubika/consume") return ok(await rb.consume(b.code, b.chatId));
+    if (p === "/api/internal/rubika/verify-chat") return ok(await rb.verifyChat(b.chatId));
+    if (p === "/api/internal/rubika/chat-stopped") return ok(await rb.chatStopped(b.chatId));
+    throw new HttpError(404, "NOT_FOUND", "مسیر یافت نشد.");
+  }
+
   // ورود با رمز ثابت عمداً و برای همیشه حذف شده؛ پاسخ صریح برای کلاینت‌های قدیمی (هرگز نشست صادر نمی‌کند)
   if (p === "/api/session") throw new HttpError(403, "PASSCODE_LOGIN_DISABLED", "ورود با رمز ثابت حذف شده است؛ با شماره موبایل و کد پیامکی وارد شوید.");
   if (p === "/api/health" && m === "GET") return ok({ status: "ok" }); // عمداً بدون جزئیات و بدون نیاز به نشست
 
+  const rootEnv = env; // env سراسری (بدون فضای کاربر) برای داده‌های اتصال روبیکا
   const uid = await requireSession(request, env);
   env = userEnv(env, uid); // از اینجا به بعد، env فقط متعلق به همین کاربر است
+
+  // ---- اتصال حساب روبیکا (فقط کاربر واردشده؛ همه چیز بر اساس uid نشست) ----
+  if (p === "/api/rubika/status" && m === "GET") return ok(await getRubika(rootEnv).status(uid));
+  if (p === "/api/rubika/link/start" && m === "POST") return ok(await getRubika(rootEnv).startLink(uid, request.headers.get("CF-Connecting-IP") || "unknown"));
+  if (p === "/api/rubika/disconnect" && m === "POST") return ok(await getRubika(rootEnv).disconnect(uid));
+
   await ensureKey(env);
 
   if (p === "/api/connect" && m === "POST") {
