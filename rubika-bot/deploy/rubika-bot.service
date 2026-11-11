@@ -1,0 +1,30 @@
+[Unit]
+Description=QAIRO Rubika OTP bot
+After=network-online.target dashboard.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dashboard
+Group=dashboard
+WorkingDirectory=/opt/dashboard/rubika-bot
+EnvironmentFile=/opt/dashboard/rubika-bot/.env
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+SyslogIdentifier=rubika-bot
+
+# امن‌سازی (ربات فقط به پوشه‌ی data نیاز به نوشتن دارد)
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ReadWritePaths=/opt/dashboard/rubika-bot/data
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
