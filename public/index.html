@@ -2642,6 +2642,10 @@ const Api = (() => {
     await request("/api/disconnect", { method:"POST", body:{} });
     return checkConnection();
   }
+  // اتصال حساب روبیکا (کد ورود از طریق ربات روبیکا)
+  const rubikaStatus = () => request("/api/rubika/status").then(j => j.data);
+  const rubikaStart = () => request("/api/rubika/link/start", { method:"POST", body:{} }).then(j => j.data);
+  const rubikaDisconnect = () => request("/api/rubika/disconnect", { method:"POST", body:{} }).then(j => j.data);
   // خروج از حساب برنامه (پایان نشست)
   async function disconnect(){
     clearSession();
@@ -2711,7 +2715,7 @@ const Api = (() => {
   const aiGet  = (path) => request("/api/trading" + path).then(j => j.data);
   const aiCall = (method, path, body) => request("/api/trading" + path, { method, body: body === undefined ? {} : body }).then(j => j.data);
 
-  const api = { aiGet, aiCall, authPost, setSession, restore, connect, disconnect, disconnectExchange, checkConnection, getMarketList, getCoin, getCoinHistory, getSparklines, getOrderbook,
+  const api = { aiGet, aiCall, authPost, setSession, restore, connect, disconnect, disconnectExchange, rubikaStatus, rubikaStart, rubikaDisconnect, checkConnection, getMarketList, getCoin, getCoinHistory, getSparklines, getOrderbook,
     getPortfolioSummary, getPortfolioHistory, getWalletAssets, getOpenOrders, getProfile, getTransactions,
     getTradeConfig, previewOrder, submitOrder, getOrderStatus };
   return api;
@@ -3652,7 +3656,7 @@ const PageAuthPhone = {
       try{
         await AppAuth.sendOtp(phone);
         status = "idle"; paint();
-        Toast.success("کد ارسال شد", "کد تایید به شماره شما پیامک شد.");
+        Toast.success("کد ارسال شد", "کد تایید پیامک شد؛ اگر حساب روبیکا را متصل کرده‌اید، در ربات روبیکا ارسال می‌شود.");
         Router.go("auth-otp");
       }catch(e){
         status = "error";
@@ -4936,6 +4940,55 @@ const PageSettings = {
     const card = Utils.el("div", { class:"q-set-group q-stagger" });
     container.appendChild(card);
 
+    // ---- اتصال حساب روبیکا: وضعیت‌ها = متصل نیست / در انتظار اتصال / متصل / قطع اتصال ----
+    const rubikaBox = Utils.el("div", {});
+    const rb = { st:null, start:null, busy:false, confirmDisc:false };
+    const RB_BADGE = { not_connected:["badge-gray","حساب روبیکا متصل نیست"], pending:["badge-amber","در انتظار اتصال"], connected:["badge-green","حساب روبیکا متصل است"], disconnected:["badge-gray","قطع اتصال"] };
+    async function rbLoad(){ try{ rb.st = await Api.rubikaStatus(); if(rb.st.status !== "pending") rb.start = null; }catch(e){ if(!rb.st) rb.st = { available:false }; } rbPaint(); }
+    async function rbAct(fn, okTitle){
+      if(rb.busy) return; rb.busy = true; rb.confirmDisc = false; rbPaint();
+      try{ const r = await fn(); if(r && r.code){ rb.start = r; rb.st = { available:true, status:"pending", botUsername:r.botUsername, pendingExpiresAt:r.expiresAt }; } else { rb.start = null; await rbLoad(); } if(okTitle) Toast.success(okTitle); }
+      catch(e){ Toast.error("عملیات انجام نشد", Utils.friendlyError(e)); }
+      rb.busy = false; rbPaint();
+    }
+    function rbPaint(){
+      rubikaBox.innerHTML = "";
+      const st = rb.st; if(!st || st.available === false) return; // در سرور فعال نیست یا هنوز بارگذاری نشده
+      const kind = RB_BADGE[st.status] ? st.status : "not_connected";
+      const btn = (label, cls, onClick) => Utils.el("button", { class:"btn btn-sm " + cls, disabled: rb.busy ? "disabled" : null, onClick }, label);
+      const actions = [Utils.el("span", { class:"badge " + RB_BADGE[kind][0] }, RB_BADGE[kind][1])];
+      if(kind === "connected"){
+        actions.push(rb.confirmDisc
+          ? btn("تأیید قطع اتصال", "btn-danger-ghost", () => rbAct(Api.rubikaDisconnect, "اتصال روبیکا قطع شد"))
+          : btn("قطع اتصال", "btn-ghost", () => { rb.confirmDisc = true; rbPaint(); setTimeout(() => { if(rb.confirmDisc){ rb.confirmDisc = false; rbPaint(); } }, 5000); }));
+      } else if(kind === "pending"){
+        actions.push(btn("کد جدید", "btn-ghost", () => rbAct(Api.rubikaStart)), btn("لغو", "btn-ghost", () => rbAct(Api.rubikaDisconnect)));
+      } else {
+        actions.push(btn("اتصال", "btn-primary", () => rbAct(Api.rubikaStart)));
+      }
+      const desc = kind === "connected" ? "کد ورود به‌جای پیامک در ربات روبیکا برایتان ارسال می‌شود"
+        : kind === "pending" ? "ربات را در روبیکا Start کنید یا کد اتصال را برای آن بفرستید"
+        : kind === "disconnected" ? (st.disconnectReason === "bot_stopped" ? "اتصال قطع شد (ربات در روبیکا متوقف شد)" : st.disconnectReason === "delivery_failed" ? "اتصال قطع شد (ارسال پیام به این چت ممکن نبود)" : "اتصال قطع شد؛ کد ورود دوباره با پیامک می‌آید")
+        : "کد ورود از طریق ربات روبیکا دریافت کنید";
+      rubikaBox.appendChild(settingRow("اتصال حساب روبیکا", desc, Utils.el("div", { style:"display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end;" }, actions)));
+      if(kind === "pending"){
+        const sx = rb.start;
+        const copyBtn = sx && Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: () => { try{ navigator.clipboard.writeText(sx.code.replace(/-/g, "")); Toast.success("کپی شد"); }catch(_){} } }, "کپی کد");
+        const openLink = sx && sx.link && Utils.el("a", { class:"btn btn-primary btn-sm", href:sx.link, target:"_blank", rel:"noopener" }, "باز کردن ربات روبیکا");
+        const until = st.pendingExpiresAt ? new Date(st.pendingExpiresAt).toLocaleTimeString("fa-IR", { hour:"2-digit", minute:"2-digit" }) : "";
+        rubikaBox.appendChild(Utils.el("div", { class:"notice-box", style:"margin:6px 0 10px;display:block;" }, [
+          sx ? Utils.el("div", {}, [
+            Utils.el("div", { style:"font-size:12px;opacity:.8;margin-bottom:4px;" }, "کد اتصال (یک‌بارمصرف):"),
+            Utils.el("div", { class:"num", style:"direction:ltr;text-align:center;font-size:20px;font-weight:700;letter-spacing:2px;margin:6px 0 10px;user-select:all;" }, sx.code),
+            Utils.el("div", { style:"display:flex;gap:6px;flex-wrap:wrap;justify-content:center;" }, [openLink, copyBtn]),
+          ]) : Utils.el("div", {}, "کد اتصال قبلاً نمایش داده شده؛ برای دریافت کد تازه «کد جدید» را بزنید."),
+          Utils.el("p", { style:"margin:10px 0 0;font-size:12px;opacity:.8;" }, "اگر لینک ربات، کد را خودکار نفرستاد، همین کد را در چت ربات ارسال کنید." + (until ? " اعتبار کد تا ساعت " + until + "." : "")),
+        ]));
+      }
+    }
+    rbLoad();
+    const rbTimer = setInterval(() => { if(!rubikaBox.isConnected){ clearInterval(rbTimer); return; } if(rb.st && rb.st.status === "pending" && !rb.busy) rbLoad(); }, 4000);
+
     function update(patch){
       State.set({ settings: patch });
       ThemeManager.apply();
@@ -4952,6 +5005,7 @@ const PageSettings = {
       card.appendChild(settingRow("بازه به‌روزرسانی خودکار", "فاصله زمانی دریافت اطلاعات جدید", select([30,60,120,300], cur.refreshInterval, {30:"۳۰ ثانیه",60:"۱ دقیقه",120:"۲ دقیقه",300:"۵ دقیقه"}, v => update({refreshInterval:Number(v)}), "بازه به‌روزرسانی خودکار") ));
       card.appendChild(settingRow("اعلان تغییرات قیمت", "دریافت اعلان برای نوسانات مهم بازار", switchEl(cur.notifyPriceAlerts, v => update({notifyPriceAlerts:v}))));
       card.appendChild(settingRow("اعلان وضعیت اتصال", "اطلاع از قطع یا برقراری اتصال صرافی", switchEl(cur.notifyConnection, v => update({notifyConnection:v}))));
+      card.appendChild(rubikaBox);
       card.appendChild(settingRow("زبان برنامه", "در نسخه اول فقط فارسی پشتیبانی می‌شود", Utils.el("span", { class:"badge badge-gray" }, "فارسی")));
       card.appendChild(settingRow("نسخه برنامه", "", Utils.el("span", { class:"text-dim num" }, APP_VERSION)));
       const sup = window.__SUPPORT__ || {};
@@ -4971,7 +5025,7 @@ const PageSettings = {
     }
 
     function settingRow(label, desc, control){
-      const ICONS = { "تم رابط کاربری":"moon", "واحد نمایش قیمت":"hash", "نحوه نمایش اعداد":"hash", "بازه به‌روزرسانی خودکار":"refresh", "اعلان تغییرات قیمت":"bell", "اعلان وضعیت اتصال":"plug", "زبان برنامه":"globe", "نسخه برنامه":"info", "پشتیبانی":"info" };
+      const ICONS = { "تم رابط کاربری":"moon", "واحد نمایش قیمت":"hash", "نحوه نمایش اعداد":"hash", "بازه به‌روزرسانی خودکار":"refresh", "اعلان تغییرات قیمت":"bell", "اعلان وضعیت اتصال":"plug", "اتصال حساب روبیکا":"plug", "زبان برنامه":"globe", "نسخه برنامه":"info", "پشتیبانی":"info" };
       return Utils.el("div", { class:"set-row" }, [
         Utils.el("div", { class:"q-set-ic", html: ic(ICONS[label] || "settings") }),
         Utils.el("div", { style:"flex:1;min-width:0;" }, [
