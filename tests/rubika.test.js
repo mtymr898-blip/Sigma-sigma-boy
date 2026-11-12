@@ -248,3 +248,70 @@ test("cooldown سیستم فعلی دست‌نخورده: درخواست دوم 
   await assert.rejects(() => t.auth.otpSend("09127777777", "9.9.9.9"), (e) => e.code === "OTP_COOLDOWN");
   assert.equal(n, 1);
 });
+
+// ===================== اتصال روبیکا از صفحه‌ی ورود (دروازه‌ی otpToken) =====================
+// نکته: مالکیت شماره فقط با otpToken (کد تأییدشده) اثبات می‌شود و برای حساب موجود، رمز عبور هم لازم است.
+async function gateSetup(env) {
+  const t = authSetup({ rubikaEnv: env || {}, botFetch: async () => ok({ ok: true }) });
+  const phone = "09128888888", ip = "7.7.7.7";
+  const otpFor = async (ph) => { // ورود با کد: کد را از پیامک جعلی نمی‌خوانیم؛ رکورد otp را مستقیم با کد معلوم می‌نویسیم
+    t.clock.t += 61_000; let code = null;
+    const orig = t.auth; await orig.otpSend(ph, ip);
+    // کد در kv هش شده؛ برای تست، رکورد را با یک کد شناخته‌شده جایگزین می‌کنیم (همان فرمت auth.js)
+    const rec = await t.kv.get("auth:otp:" + ph); code = "123456";
+    rec.h = await hmac(SECRET, `otp:${ph}:${rec.salt}:${code}`); await t.kv.put("auth:otp:" + ph, rec);
+    return (await orig.otpVerify(ph, code, ip)).otpToken;
+  };
+  return { ...t, phone, ip, otpFor, uid: await uidOf(phone) };
+}
+
+test("دروازه: بدون otpToken یا با توکن اشتباه، اتصال/وضعیت رد می‌شود (۵)", async () => {
+  const g = await gateSetup();
+  await assert.rejects(() => g.auth.rubikaGate(g.phone, null, g.ip), (e) => e.code === "OTP_TOKEN_INVALID");
+  await assert.rejects(() => g.auth.rubikaGateStart(g.phone, "bogus", "", g.ip), (e) => e.code === "OTP_TOKEN_INVALID");
+  assert.equal(await g.kv.get("rubika:link:" + g.uid), null, "هیچ اتصالی نباید ساخته شده باشد");
+});
+
+test("دروازه: توکن شماره‌ی A برای شماره‌ی B کار نمی‌کند (۹: اتصال به شماره‌ی دیگری ممکن نیست)", async () => {
+  const g = await gateSetup(); const tokenA = await g.otpFor("09121230001");
+  await assert.rejects(() => g.auth.rubikaGateStart("09121230002", tokenA, "", g.ip), (e) => e.code === "OTP_TOKEN_INVALID");
+  const ok1 = await g.auth.rubikaGateStart("09121230001", tokenA, "", g.ip); assert.equal(ok1.hasAccount, false);
+});
+
+test("دروازه: شماره‌ی بدون حساب با otpToken معتبر شروع می‌شود؛ کد به uid همان شماره بسته است", async () => {
+  const g = await gateSetup(); const tok = await g.otpFor(g.phone);
+  const gate = await g.auth.rubikaGateStart(g.phone, tok, undefined, g.ip); assert.equal(gate.hasAccount, false);
+  const s = await g.rubika.startLink(await uidOf(gate.phone), g.ip);
+  assert.equal((await g.rubika.status(g.uid)).status, "pending");
+  assert.deepEqual(await g.rubika.consume(s.code, "b0chatLOGIN1"), { linked: true });
+  assert.equal((await g.rubika.status(g.uid)).status, "connected");
+  // otpToken مصرف نشده؛ ورود/ثبت‌نام بعدی هنوز ممکن است
+  const reg = await g.auth.register(g.phone, tok, "Zx9!kLm-Qw2e", g.ip); assert.ok(reg);
+});
+
+test("دروازه: حساب موجود ← بدون رمز یا با رمز اشتباه رد؛ با رمز درست قبول؛ شمارنده‌ی رمز مشترک با ورود", async () => {
+  const g = await gateSetup(); let tok = await g.otpFor(g.phone); await g.auth.register(g.phone, tok, "Zx9!kLm-Qw2e", g.ip);
+  tok = await g.otpFor(g.phone); // ورود دوباره
+  await assert.rejects(() => g.auth.rubikaGateStart(g.phone, tok, "", g.ip), (e) => e.code === "PASSWORD_REQUIRED");
+  await assert.rejects(() => g.auth.rubikaGateStart(g.phone, tok, "wrong-pass-1", g.ip), (e) => e.code === "BAD_PASSWORD");
+  assert.equal(await g.kv.get("rubika:link:" + g.uid), null);
+  const gate = await g.auth.rubikaGateStart(g.phone, tok, "Zx9!kLm-Qw2e", g.ip); assert.equal(gate.hasAccount, true);
+  for (let i = 0; i < 4; i++) await assert.rejects(() => g.auth.rubikaGateStart(g.phone, tok, "bad-pass-" + i, g.ip), (e) => e.code === "BAD_PASSWORD");
+  await assert.rejects(() => g.auth.rubikaGateStart(g.phone, tok, "Zx9!kLm-Qw2e", g.ip), (e) => e.code === "TOO_MANY_REQUESTS" || e.status === 429, "بعد از ۵ رمز غلط حتی رمز درست هم قفل است");
+});
+
+test("دروازه: وضعیت‌گیری فقط با otpToken (بدون رمز) و سقف نرخ دارد", async () => {
+  const g = await gateSetup(); const tok = await g.otpFor(g.phone);
+  const gate = await g.auth.rubikaGate(g.phone, tok, g.ip); assert.equal(gate.phone, g.phone);
+  assert.equal((await g.rubika.status(g.uid)).status, "not_connected");
+  let blocked = null; for (let i = 0; i < 460 && !blocked; i++) { try { await g.auth.rubikaGate(g.phone, tok, g.ip); } catch (e) { blocked = e; } }
+  assert.ok(blocked && blocked.status === 429, "سقف ۴۵۰ درخواست/۱۵ دقیقه");
+});
+
+test("حساب متصل‌شده از صفحه‌ی ورود: شروع دوباره رد می‌شود (ALREADY_CONNECTED) و OTP بعدی به روبیکا می‌رود", async () => {
+  let delivered = null; const t = authSetup({ botFetch: async (u, init) => { delivered = JSON.parse(init.body); return ok({ ok: true }); } });
+  const phone = "09129990000", uid = await uidOf(phone);
+  await t.rubika.consume((await t.rubika.startLink(uid, "ip")).code, "b0chatLOGIN2");
+  await assert.rejects(() => t.rubika.startLink(uid, "ip"), (e) => e.code === "ALREADY_CONNECTED");
+  t.clock.t += 61_000; await t.auth.otpSend(phone, "9.9.9.9"); assert.equal(delivered.chatId, "b0chatLOGIN2"); assert.equal(t.smsCalls.length, 0);
+});
