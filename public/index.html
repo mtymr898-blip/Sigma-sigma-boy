@@ -2045,6 +2045,28 @@ img[src$="img/logo.png"],.bn-orb img{ filter:hue-rotate(40deg) saturate(1.05)!im
 .wl-b-l b{ letter-spacing:.12em; margin-right:-.12em; }
 .wl-b-r .fa{ font-family:"Vazirmatn","Inter",sans-serif; direction:rtl; }
 .wl-sep{ display:block; width:2px; height:30px; border-radius:1px; background:var(--q-blue2); opacity:.7; font-style:normal; }
+
+/* ---- اتصال روبیکا در صفحه‌ی ورود (RTL، واکنش‌گرا، هماهنگ با تم روشن/تیره) ---- */
+.rbl{ margin-top:16px; padding:14px; border-radius:18px; background:var(--surface-raised); border:1px solid var(--border); animation:q-in .4s var(--ease-pop) both; text-align:right; }
+.rbl.ok{ background:var(--accent-soft); border-color:var(--accent); }
+.rbl-head{ display:flex; align-items:flex-start; gap:12px; }
+.rbl-ic{ width:38px; height:38px; flex:none; border-radius:13px; display:flex; align-items:center; justify-content:center; background:var(--accent-soft-strong); color:var(--accent-text); }
+.rbl-ic .ic{ width:19px; height:19px; }
+.rbl-title{ font-size:13.5px; font-weight:700; color:var(--text); line-height:1.7; }
+.rbl-sub{ font-size:12px; color:var(--text-dim); line-height:1.9; margin-top:1px; }
+.rbl-steps{ list-style:none; margin:12px 0 0; padding:0; display:grid; gap:7px; }
+.rbl-steps li{ display:flex; gap:9px; align-items:flex-start; font-size:12px; line-height:1.85; color:var(--text-dim); }
+.rbl-steps b{ flex:none; width:20px; height:20px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px; background:var(--accent-soft-strong); color:var(--accent-text); margin-top:1px; }
+.rbl-code{ direction:ltr; text-align:center; margin-top:12px; padding:11px 8px; border-radius:14px; background:var(--accent-soft); color:var(--text); font-weight:800; font-size:21px; letter-spacing:3px; user-select:all; -webkit-user-select:all; font-variant-numeric:tabular-nums; word-break:break-all; }
+.rbl-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+.rbl-actions .btn{ flex:1 1 130px; justify-content:center; text-decoration:none; }
+.rbl-wait{ display:flex; align-items:center; gap:9px; margin-top:12px; font-size:12px; color:var(--text-dim); line-height:1.8; }
+.rbl-dot{ width:8px; height:8px; flex:none; border-radius:50%; background:var(--accent); animation:rbl-pulse 1.4s ease-in-out infinite; }
+@keyframes rbl-pulse{ 0%,100%{ opacity:.35; transform:scale(.8); } 50%{ opacity:1; transform:scale(1.15); } }
+.rbl-err{ display:flex; align-items:flex-start; gap:6px; margin-top:10px; font-size:11.5px; line-height:1.8; color:var(--red); }
+.rbl-err .ic{ width:14px; height:14px; flex:none; margin-top:3px; }
+@media (max-width:420px){ .rbl{ padding:12px; } .rbl-code{ font-size:18px; letter-spacing:2px; } .rbl-actions .btn{ flex-basis:100%; } }
+@media (prefers-reduced-motion:reduce){ .rbl,.rbl-dot{ animation:none; } }
 </style>
 </head>
 <body>
@@ -3764,6 +3786,91 @@ const PageAuthPassword = {
     let mode = AuthFlow.hasAccount ? "login" : "register";
     const card = authShellStart(container);
 
+    // ---- اتصال حساب روبیکا (اختیاری) ----
+    // مالکیت شماره همین‌جا با otpToken اثبات شده است؛ برای شماره‌ای که حساب دارد، رمز عبور هم همراه درخواست می‌رود.
+    // وضعیت هر ۲٫۵ ثانیه (و به‌محض برگشت به تب) از سرور گرفته می‌شود؛ بدون نیاز به بارگذاری مجدد صفحه.
+    const E = Utils.el;
+    const rb = { st:null, start:null, busy:false, err:"", tokenGone:false, first:null };
+    const rbBox = E("div", {});
+    const rbPost = (path, extra) => Api.authPost(path, Object.assign({ phone: AuthFlow.phone, otpToken: AuthFlow.otpToken }, extra || {}));
+    const rbBot = () => "\u2066@" + ((rb.st && rb.st.botUsername) || "Qairobot") + "\u2069"; // ایزوله‌ی LTR تا @ در متن راست‌به‌چپ جابه‌جا نشود
+    async function rbLoad(){
+      if(!AuthFlow.otpToken || rb.tokenGone) return;
+      try{
+        const st = await rbPost("/api/auth/rubika/status");
+        if(rb.first === null) rb.first = st.status;
+        rb.st = st; if(st.status !== "pending") rb.start = null; rb.err = "";
+      }catch(e){
+        if(e && e.code === "OTP_TOKEN_INVALID") rb.tokenGone = true;
+        else if(!rb.st) rb.st = { available:false };
+      }
+      rbPaint();
+    }
+    async function rbStart(){
+      if(rb.busy) return;
+      const pwEl = card.querySelector("#pwInput"); const pw = pwEl ? pwEl.value : "";
+      if(mode === "login" && !pw){ rb.err = "برای اتصال روبیکا به حساب موجود، ابتدا رمز عبور را در کادر بالا وارد کنید."; rbPaint(); if(pwEl) pwEl.focus(); return; }
+      rb.busy = true; rb.err = ""; rbPaint();
+      try{
+        const r = await rbPost("/api/auth/rubika/start", mode === "login" ? { password: pw } : {});
+        rb.start = r; rb.st = { available:true, status:"pending", botUsername:r.botUsername, pendingExpiresAt:r.expiresAt };
+      }catch(e){
+        if(e && e.code === "ALREADY_CONNECTED"){ rb.busy = false; await rbLoad(); return; }
+        if(e && e.code === "OTP_TOKEN_INVALID") rb.tokenGone = true;
+        else rb.err = Utils.friendlyError(e, "شروع اتصال روبیکا انجام نشد.");
+      }
+      rb.busy = false; rbPaint();
+    }
+    function rbReveal(){ // در موبایل کارت زیر فرم است؛ بعد از شروع/اتصال به آن اسکرول می‌کنیم تا کد و دکمه‌ها دیده شوند
+      requestAnimationFrame(() => { try{ rbBox.scrollIntoView({ block:"nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }catch(_){} });
+    }
+    function rbPaint(){
+      const prevKind = rbBox.dataset.kind || "";
+      rbBox.innerHTML = "";
+      const st = rb.st; if(!st || st.available === false) return;
+      rbBox.dataset.kind = st.status;
+      if(prevKind !== st.status && (st.status === "pending" || st.status === "connected")) rbReveal();
+      const head = (icon, title, sub) => E("div", { class:"rbl-head" }, [E("span", { class:"rbl-ic", html: ic(icon) }), E("div", { style:"min-width:0;flex:1;" }, [E("div", { class:"rbl-title" }, title), sub ? E("div", { class:"rbl-sub" }, sub) : null])]);
+      const err = rb.err ? E("div", { class:"rbl-err" }, [E("span", { html: ic("alert") }), E("span", {}, rb.err)]) : null;
+      if(st.status === "connected"){
+        const already = rb.first === "connected";
+        rbBox.appendChild(E("div", { class:"rbl ok" }, [head("check", already ? "کد ورود شما در روبیکا ارسال می‌شود" : "حساب روبیکا متصل شد ✓", already ? "حساب روبیکای شما قبلاً متصل شده است." : "از این پس کد ورود در ربات " + rbBot() + " برایتان ارسال می‌شود، نه پیامک.")]));
+        return;
+      }
+      if(st.status === "pending" || rb.start){
+        if(rb.tokenGone){ rbBox.appendChild(E("div", { class:"rbl" }, [head("clock", "اعتبار تأیید شماره تمام شد", "اگر اتصال را انجام داده‌اید، بعد از ورود وضعیت آن را در «تنظیمات» می‌بینید.")])); return; }
+        const sx = rb.start;
+        const until = st.pendingExpiresAt ? new Date(st.pendingExpiresAt).toLocaleTimeString("fa-IR", { hour:"2-digit", minute:"2-digit" }) : "";
+        const copyBtn = sx && E("button", { type:"button", class:"btn btn-ghost btn-sm", onClick: () => { try{ navigator.clipboard.writeText(sx.code.replace(/-/g, "")); Toast.success("کد کپی شد"); }catch(_){} } }, [E("span", { html: ic("copy") }), " کپی کد"]);
+        const openBtn = sx && sx.link && E("a", { class:"btn btn-primary btn-sm", href: sx.link, target:"_blank", rel:"noopener noreferrer" }, [E("span", { html: ic("externalLink") }), " باز کردن ربات"]);
+        rbBox.appendChild(E("div", { class:"rbl" }, [
+          head("plug", "اتصال حساب روبیکا", "این مراحل را انجام دهید؛ همین‌جا خودکار متصل می‌شوید."),
+          E("ul", { class:"rbl-steps" }, [
+            E("li", {}, [E("b", {}, "۱"), E("span", {}, sx && sx.link ? "روی «باز کردن ربات» بزنید و در روبیکا Start کنید." : "ربات " + rbBot() + " را در روبیکا باز کنید و Start بزنید.")]),
+            E("li", {}, [E("b", {}, "۲"), E("span", {}, "اگر ربات اتصال را تأیید نکرد، کد زیر را در چت ربات بفرستید.")]),
+          ]),
+          sx ? E("div", { class:"rbl-code" }, sx.code) : E("div", { class:"rbl-sub", style:"margin-top:10px;" }, "کد اتصال قبلاً نمایش داده شده؛ برای کد تازه «کد جدید» را بزنید."),
+          E("div", { class:"rbl-actions" }, [openBtn, copyBtn, E("button", { type:"button", class:"btn btn-ghost btn-sm", disabled: rb.busy ? "true" : false, onClick: rbStart }, "کد جدید")]),
+          E("div", { class:"rbl-wait" }, [E("span", { class:"rbl-dot" }), E("span", {}, "در انتظار اتصال…" + (until ? " (کد تا ساعت " + until + " معتبر است)" : ""))]),
+          err,
+        ]));
+        return;
+      }
+      // متصل نیست / قطع شده
+      rbBox.appendChild(E("div", { class:"rbl" }, [
+        head("plug", "کد ورود را در روبیکا بگیرید", "به‌جای پیامک، دفعات بعد کد ورود را در ربات " + rbBot() + " دریافت کنید. اتصال فقط چند ثانیه طول می‌کشد." + (mode === "login" ? " برای امنیت، رمز عبور حساب را در کادر بالا وارد کنید." : "")),
+        E("div", { class:"rbl-actions" }, [E("button", { type:"button", class:"btn btn-primary btn-sm", disabled: rb.busy ? "true" : false, onClick: rbStart }, rb.busy ? [E("span", { class:"spin" }), " در حال آماده‌سازی…"] : [E("span", { html: ic("plug") }), " اتصال حساب روبیکا"])]),
+        err,
+      ]));
+    }
+    const rbOnVisible = () => { if(!document.hidden && rb.st && rb.st.status === "pending" && !rb.busy) rbLoad(); };
+    document.addEventListener("visibilitychange", rbOnVisible);
+    const rbTimer = setInterval(() => {
+      if(!card.isConnected || !AuthFlow.otpToken){ clearInterval(rbTimer); document.removeEventListener("visibilitychange", rbOnVisible); return; }
+      if(rb.st && rb.st.status === "pending" && !rb.busy && !document.hidden) rbLoad();
+    }, 2500);
+    rbLoad();
+
     function paint(){
       while(card.children.length > 1) card.removeChild(card.lastChild);
       const needConfirm = mode !== "login";
@@ -3797,6 +3904,7 @@ const PageAuthPassword = {
         class:"btn btn-primary btn-block", style:"margin-top:16px;height:44px;",
         disabled: status === "loading" ? "true" : false, onClick: handleSubmit,
       }, status === "loading" ? [Utils.el("span",{class:"spin"}), mode === "login" ? "در حال ورود…" : "در حال ذخیره…"] : (mode === "register" ? "ثبت‌نام و ورود" : mode === "login" ? "ورود" : "تغییر رمز و ورود")));
+      if(mode !== "reset") card.appendChild(rbBox);
       if(mode === "login" && AuthFlow.resetAllowed){
         card.appendChild(Utils.el("div", { style:"text-align:center;margin-top:12px;" }, [
           Utils.el("button", { class:"btn btn-ghost btn-sm", onClick: () => { mode = "reset"; status = "idle"; errorMsg = ""; paint(); } }, "رمز عبور را فراموش کرده‌ام"),
