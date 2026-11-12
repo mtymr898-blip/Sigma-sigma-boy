@@ -705,6 +705,9 @@ async function route(request, env, ctx, url) {
     if (p === "/api/auth/register") return ok(await a.register(b.phone, b.otpToken, b.password, ip));
     if (p === "/api/auth/login") return ok(await a.login(b.phone, b.otpToken, b.password, ip));
     if (p === "/api/auth/reset") return ok(await a.reset(b.phone, b.otpToken, b.password, ip));
+    // اتصال روبیکا از صفحه‌ی ورود: مالکیت شماره با otpToken (و برای حساب موجود، رمز) اثبات می‌شود؛ بقیه‌ی منطق همان src/rubika.js است
+    if (p === "/api/auth/rubika/status") { const g = await a.rubikaGate(b.phone, b.otpToken, ip); return ok({ ...(await getRubika(env).status(await uidOf(env, g.phone))), hasAccount: g.hasAccount }); }
+    if (p === "/api/auth/rubika/start") { const g = await a.rubikaGateStart(b.phone, b.otpToken, b.password, ip); return ok({ ...(await getRubika(env).startLink(await uidOf(env, g.phone), ip)), hasAccount: g.hasAccount }); }
     throw new HttpError(404, "NOT_FOUND", "مسیر یافت نشد.");
   }
 

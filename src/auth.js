@@ -186,5 +186,26 @@ export function createAuth(d) {
     checkPasswordPolicy(password, phone); user.pw = await makeHash(password, c.iter); user.passwordChangedAt = new Date(now()).toISOString(); user.lastLoginAt = user.passwordChangedAt;
     await kv.put(`auth:user:${phone}`, user); await rl.clear(`pw:${phone}`); await kv.put(`auth:ot:${phone}`, null); return session(phone);
   }
-  return { otpSend, otpVerify, register, login, reset };
+  // ---------- دروازه‌ی اتصال روبیکا از صفحه‌ی ورود (قبل از داشتن نشست) ----------
+  // مالکیت شماره با otpToken (کد تأییدشده‌ی همین شماره) اثبات می‌شود؛ توکن اینجا مصرف نمی‌شود چون برای ورود/ثبت‌نام لازم است.
+  // اگر برای شماره حساب وجود دارد، «رمز عبور» هم لازم است: کسی که فقط به پیامک شماره دسترسی دارد (مثلاً سیم‌سواپ) نباید
+  // بتواند کانال دریافت کد حساب را برای همیشه به روبیکای خودش منتقل کند. شمارنده‌های رمز با login مشترک است.
+  async function rubikaGate(phoneRaw, otpToken, ip) {
+    const c = cfg(); const phone = normalizePhone(phoneRaw);
+    if (!phone || !permitted(c, phone)) throw bad(401, "OTP_TOKEN_INVALID", "اعتبار تأیید شماره تمام شده؛ دوباره کد بگیرید.");
+    await limit(`rbg:${phone}`, 450, 15 * 60000); await limit(`rbg-ip:${ip}`, 1500, 15 * 60000); // وضعیت‌گیری دوره‌ای هم از این مسیر می‌گذرد
+    await checkOtpToken(phone, otpToken);
+    const user = await kv.get(`auth:user:${phone}`);
+    return { phone, hasAccount: !!user, user };
+  }
+  async function rubikaGateStart(phoneRaw, otpToken, password, ip) {
+    const g = await rubikaGate(phoneRaw, otpToken, ip);
+    if (!g.hasAccount) return { phone: g.phone, hasAccount: false };
+    await blockedOnly(`pw:${g.phone}`, 5, 15 * 60000); await blockedOnly(`pwip:${ip}`, 20, 15 * 60000);
+    await limit(`rbs:${g.phone}`, 10, 15 * 60000); // سقف تعداد بررسی رمز (حتی موفق) برای جلوگیری از فشار روی PBKDF2
+    if (!password) throw bad(400, "PASSWORD_REQUIRED", "برای اتصال روبیکا به حساب موجود، رمز عبور را وارد کنید.");
+    if (!(await verifyHash(String(password), g.user.pw))) { await rl.hit(`pw:${g.phone}`, 15 * 60000); await rl.hit(`pwip:${ip}`, 15 * 60000); await d.sleep(400); throw bad(401, "BAD_PASSWORD", "رمز عبور نادرست است."); }
+    return { phone: g.phone, hasAccount: true };
+  }
+  return { otpSend, otpVerify, register, login, reset, rubikaGate, rubikaGateStart };
 }
