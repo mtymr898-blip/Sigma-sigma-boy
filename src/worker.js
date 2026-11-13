@@ -38,6 +38,20 @@ const COINS = [
   { id: "ton", name: "تون‌کوین" },
 ];
 const coinById = (id) => COINS.find((c) => c.id === id);
+// COINS «فهرست منتخب» است: موتور تحلیل/معامله‌ی خودکار فقط روی همین‌ها کار می‌کند (ارزهای کم‌حجم برای سفارش خودکار پرریسک‌اند).
+// بازار، نمودار، دفتر سفارش و ثبت سفارش دستی روی «همه‌ی جفت‌ارزهای تومانی والکس» کار می‌کنند (فهرست زنده از /v1/markets).
+// نام فارسی فقط برای نمایش است؛ ارز بدون نام در این جدول با نماد انگلیسی نمایش داده می‌شود.
+const EXTRA_NAMES = {
+  ltc: "لایت‌کوین", dot: "پولکادات", link: "چین‌لینک", matic: "پلیگان", avax: "آوالانچ", shib: "شیبا اینو", uni: "یونی‌سواپ",
+  atom: "کازماس", etc: "اتریوم کلاسیک", bch: "بیت‌کوین کش", xlm: "استلار", near: "نیر", apt: "آپتوس", arb: "آربیتروم", op: "آپتیمیزم",
+  fil: "فایل‌کوین", icp: "اینترنت کامپیوتر", algo: "آلگوراند", vet: "وی‌چین", sand: "سندباکس", mana: "دیسنترالند", axs: "اکسی اینفینیتی",
+  aave: "آوه", mkr: "میکر", crv: "کرو", sushi: "سوشی‌سواپ", comp: "کامپاوند", snx: "سینتتیکس", grt: "گراف", ftm: "فانتوم",
+  hbar: "هدرا", egld: "الروند", xtz: "تزوس", eos: "ایاس", neo: "نئو", dash: "دش", zec: "زی‌کش", xmr: "مونرو", cake: "پنکیک‌سواپ",
+  gala: "گالا", usdc: "یو‌اس‌دی‌کوین", dai: "دای", pepe: "پپه", floki: "فلوکی", ens: "ENS", ldo: "لیدو", inj: "اینجکتیو", sui: "سویی",
+};
+const COIN_ID_RE = /^[a-z0-9]{1,15}$/;
+const coinName = (id) => (coinById(id) || {}).name || EXTRA_NAMES[id] || id.toUpperCase();
+const tmnIdFromSymbol = (s) => { const m = /^([A-Z0-9]{1,15})TMN$/.exec(String(s)); return m ? m[1].toLowerCase() : null; };
 
 class HttpError extends Error {
   constructor(status, code, message, extra = {}) { super(message); this.status = status; this.code = code; this.extra = extra; }
@@ -364,14 +378,33 @@ function normMarket(m) {
 const tmnSymbol = (id) => `${id.toUpperCase()}TMN`;
 async function getMarketCoins(env) {
   const { sym, stale, t, reason } = await getMarketsForDisplay(env); const sources = new Set();
-  const data = [];
-  for (const c of COINS) {
-    const n = normMarket(sym[tmnSymbol(c.id)]); if (!n) continue; sources.add(n.source);
-    data.push({ id: c.id, name: c.name, symbol: `${c.id.toUpperCase()}/IRT`, price: n.price, change24h: n.change, high24h: n.high, low24h: n.low, volume24h: n.volume, bestBuy: n.bestBuy, bestSell: n.bestSell });
-  }
+  const seen = new Set(); const head = [], extra = [];
+  const add = (id, name, into) => {
+    const n = normMarket(sym[tmnSymbol(id)]); if (!n || seen.has(id)) return; seen.add(id); sources.add(n.source);
+    into.push({ id, name, symbol: `${id.toUpperCase()}/IRT`, price: n.price, change24h: n.change, high24h: n.high, low24h: n.low, volume24h: n.volume, bestBuy: n.bestBuy, bestSell: n.bestSell });
+  };
+  for (const c of COINS) add(c.id, c.name, head); // اول ارزهای منتخب (ترتیب ثابت)
+  for (const k of Object.keys(sym)) { const id = tmnIdFromSymbol(k); if (id) add(id, coinName(id), extra); } // بعد همه‌ی جفت‌ارزهای تومانیِ دیگر
+  extra.sort((a, b) => (Number.isFinite(b.volume24h) ? b.volume24h : -1) - (Number.isFinite(a.volume24h) ? a.volume24h : -1));
+  const data = [...head, ...extra];
   if (!data.length) throw unexpected("v1/markets (هیچ جفت‌ارز تومانی معتبر نبود)");
-  return { data, stale, t, reason, missing: COINS.filter((c) => !data.find((d) => d.id === c.id)).map((c) => c.id),
+  return { data, stale, t, reason, missing: COINS.filter((c) => !seen.has(c.id)).map((c) => c.id), total: data.length,
     priceSources: [...sources], note: "حجم ۲۴ساعته از فیلد حجم تومانی والکس؛ در نبود آن تخمین (حجم پایه × قیمت). اگر منبع قیمت mid باشد، قیمت میانگین خرید و فروش است." };
+}
+// ارز معتبر = جفت تومانیِ موجود در فهرست زنده‌ی والکس (یا ارز منتخب). برای اعتبارسنجی ورودی‌ها؛ از کش ۱۵ثانیه‌ای بازار استفاده می‌کند.
+async function resolveCoin(env, rawId) {
+  const id = String(rawId || "").toLowerCase(); if (!COIN_ID_RE.test(id)) return null;
+  const c = coinById(id); if (c) return c;
+  const { sym } = await getMarketsForDisplay(env);
+  return sym[tmnSymbol(id)] ? { id, name: coinName(id) } : null;
+}
+async function knownCoinIds(env) { // ارزهای دارای جفت تومانی در والکس (منتخب‌ها اول)؛ اگر بازار در دسترس نبود فقط منتخب‌ها
+  try {
+    const { sym } = await getMarketsForDisplay(env);
+    const live = new Set(Object.keys(sym).map(tmnIdFromSymbol).filter(Boolean));
+    const ids = new Set(COINS.map((c) => c.id).filter((id) => live.has(id))); for (const id of live) ids.add(id);
+    return ids;
+  } catch (_) { return new Set(COINS.map((c) => c.id)); }
 }
 const RANGE_DAYS = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 };
 let dailyResolutionOk = null; // UNVERIFIED: آیا resolution=D پذیرفته می‌شود؟
@@ -385,8 +418,8 @@ async function fetchCandles(env, symbol, resolution, from, to) {
   if (j.s !== "ok" || !Array.isArray(j.t) || !Array.isArray(j.c) || j.t.length !== j.c.length) throw unexpected("v1/udf/history");
   return j.t.map((t, i) => ({ t: new Date(t * 1000).toISOString(), v: Number(num(j.c[i]).toFixed(2)) })).filter((p) => Number.isFinite(p.v));
 }
-function getHistory(env, id, days) {
-  if (!coinById(id)) throw new HttpError(404, "UNKNOWN_COIN", "ارز ناشناخته است.");
+async function getHistory(env, id, days) {
+  if (!(await resolveCoin(env, id))) throw new HttpError(404, "UNKNOWN_COIN", "ارز ناشناخته است.");
   return memo(`hist:${id}:${days}`, 10 * 60000, async () => {
     const to = Math.floor(Date.now() / 1000), from = to - days * 86400, symbol = tmnSymbol(id);
     if (days <= 7) return fetchCandles(env, symbol, "60", from, to);
@@ -399,7 +432,7 @@ function getHistory(env, id, days) {
 }
 // نمونه‌ی مستند: GET /v1/depth?symbol=BTCUSDT → {result:{ask:[{price,quantity}], bid:[...]}}
 async function getOrderbook(env, id) {
-  if (!coinById(id)) throw new HttpError(404, "UNKNOWN_COIN", "ارز ناشناخته است.");
+  if (!(await resolveCoin(env, id))) throw new HttpError(404, "UNKNOWN_COIN", "ارز ناشناخته است.");
   return memo(`ob:${id}`, 3000, async () => {
     const j = await wallex(env, "/v1/depth", { query: { symbol: tmnSymbol(id) } });
     const side = (a) => {
@@ -444,7 +477,7 @@ async function buildAssets(env) {
   const assets = held.map((w) => {
     if (w.cur === "tmn") return { coinId: "irt", name: "تومان", symbol: "IRT", total: w.total, available: w.available, locked: w.locked, change24h: null, priceIrt: 1, valueIrt: w.total };
     const p = prices[w.cur];
-    return { coinId: w.cur, name: (coinById(w.cur) || {}).name || w.fa || w.cur.toUpperCase(), symbol: w.cur.toUpperCase(), total: w.total, available: w.available, locked: w.locked,
+    return { coinId: w.cur, name: (coinById(w.cur) || {}).name || EXTRA_NAMES[w.cur] || w.fa || w.cur.toUpperCase(), symbol: w.cur.toUpperCase(), total: w.total, available: w.available, locked: w.locked,
       change24h: p ? p.change24h : null, priceIrt: p ? p.priceIrt : null, valueIrt: p ? w.total * p.priceIrt : null };
   });
   assets.sort((a, b) => (b.valueIrt ?? -1) - (a.valueIrt ?? -1));
@@ -518,9 +551,9 @@ function tradingState(env) {
   const cap = Number(env.MAX_ORDER_VALUE_IRT); if (!(cap > 0)) reasons.push("NO_CAP");
   return { enabled: reasons.length === 0, reasons, cap: cap > 0 ? cap : null };
 }
-function parseOrder(o) {
+async function parseOrder(env, o) {
   const bad = (m) => new HttpError(400, "INVALID_ORDER", m);
-  const coin = coinById(String((o && o.coinId) || "").toLowerCase()); if (!coin) throw bad("ارز نامعتبر است.");
+  const coin = await resolveCoin(env, o && o.coinId); if (!coin) throw bad("ارز نامعتبر است.");
   const side = o.side; if (!["buy", "sell"].includes(side)) throw bad("جهت سفارش باید خرید یا فروش باشد.");
   const execution = o.execution; if (!["limit", "market"].includes(execution)) throw bad("نوع سفارش باید محدود یا بازار باشد.");
   const amount = Number(o.amount); if (!(amount > 0) || !Number.isFinite(amount)) throw bad("مقدار نامعتبر است.");
@@ -560,7 +593,7 @@ const canon = (o) => JSON.stringify([o.coinId, o.side, o.execution, o.amount, o.
 async function confirmSig(env, clientOrderId, exp, order) { return hmacB64u(env.SESSION_SECRET, `c.${env.__uid}.${clientOrderId}.${exp}.${canon(order)}`); }
 
 async function tradePreview(env, body) {
-  const order = parseOrder(body.order);
+  const order = await parseOrder(env, body.order);
   const ev = await evaluateOrder(env, order); const ts = tradingState(env);
   const res = { order, summary: { market: `${order.coinId.toUpperCase()}/IRT`, side: order.side, execution: order.execution, amount: order.amount, price: order.price, estimateIrt: ev.estimateIrt, marketPriceIrt: ev.marketPriceIrt },
     warnings: ev.warnings, tradingEnabled: ts.enabled, disabledReasons: ts.reasons };
@@ -574,7 +607,7 @@ async function tradePreview(env, body) {
 async function tradeSubmit(env, body) {
   const ts = tradingState(env);
   if (!ts.enabled) throw new HttpError(403, "TRADING_DISABLED", "ثبت سفارش واقعی در سرور غیرفعال است.", { public: { reasons: ts.reasons } });
-  const order = parseOrder(body.order);
+  const order = await parseOrder(env, body.order);
   const id = String(body.clientOrderId || ""); const [exp, sig] = String(body.confirmToken || "").split(".");
   if (!/^[A-Za-z0-9]{8,40}$/.test(id) || !exp || !sig || !(Number(exp) > Date.now() / 1000) || !safeEqual(await confirmSig(env, id, exp, order), sig))
     throw new HttpError(400, "CONFIRM_INVALID", "تأیید سفارش نامعتبر یا منقضی است؛ پیش‌نمایش را دوباره بسازید.");
@@ -769,14 +802,14 @@ async function route(request, env, ctx, url) {
     return ok(await getTrading(env).handle(m, sub, url.searchParams, body));
   }
   if (p === "/api/session/check" && m === "GET") { const v = vaultOf(env); return ok({ authenticated: true, exchangeKeyConfigured: !!v.key, serverIp: env.PUBLIC_SERVER_IP || null, keySource: v.source, keyHint: v.key ? v.hint : null, keyConnectedAt: v.savedAt, keyUnreadable: v.corrupt && !v.key, keyUnreadableReason: v.corrupt && !v.key ? v.corruptReason : null, vaultStatus: v.corrupt && !v.key ? "unreadable" : v.key && v.secretUsed && v.secretUsed !== "current" ? "needs_rotation" : "ok", canStoreKey: isStrongSecret(env.VAULT_SECRET), tradingEnabled: tradingState(env).enabled }); }
-  if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing, priceSources: r.priceSources, note: r.note, stale: r.stale, staleReason: r.stale ? r.reason : undefined }, r.t); }
+  if (p === "/api/market" && m === "GET") { const r = await getMarketCoins(env); return ok(r.data, { missing: r.missing, total: r.total, priceSources: r.priceSources, note: r.note, stale: r.stale, staleReason: r.stale ? r.reason : undefined }, r.t); }
   let mt;
   if ((mt = p.match(/^\/api\/history\/([a-z0-9]+)$/)) && m === "GET") {
     const range = url.searchParams.get("range") || "30d"; if (!RANGE_DAYS[range]) throw new HttpError(400, "BAD_RANGE", "بازه نامعتبر است.");
     return ok(await getHistory(env, mt[1], RANGE_DAYS[range]), { range });
   }
   if (p === "/api/sparklines" && m === "GET") {
-    const ids = (url.searchParams.get("ids") || "").split(",").filter((x) => coinById(x)).slice(0, 12);
+    const known = await knownCoinIds(env); const ids = (url.searchParams.get("ids") || "").split(",").filter((x) => known.has(x)).slice(0, 12);
     const out = await memo(`spark:${ids.join(",")}`, 30 * 60000, async () => {
       const res = {};
       for (const id of ids) { // ترتیبی؛ با اولین خطا متوقف می‌شود تا موج درخواست ساخته نشود
@@ -799,7 +832,7 @@ async function route(request, env, ctx, url) {
   if (p === "/api/orders/open" && m === "GET") return ok((await fetchOpenOrders(env)).map((o) => orderToRow(o, true)));
   if (p === "/api/orders/history" && m === "GET") return ok((await fetchOpenOrders(env)).map((o) => orderToRow(o, true)), { note: "مستندات والکس endpoint تاریخچه‌ی سفارش‌ها را مشخص نکرده؛ فقط سفارش‌های باز نمایش داده می‌شوند." });
   if (p === "/api/profile" && m === "GET") { await assertKey(env); return ok(normalizeProfile(await memo(um(env, "profile"), 60000, () => wallex(env, "/v1/account/profile", { auth: true }))));  }
-  if (p === "/api/trade/config" && m === "GET") { const ts = tradingState(env); return ok({ tradingEnabled: ts.enabled, reasons: ts.reasons, maxOrderValueIrt: ts.cap, markets: COINS.map((c) => ({ id: c.id, name: c.name })) }); }
+  if (p === "/api/trade/config" && m === "GET") { const ts = tradingState(env); return ok({ tradingEnabled: ts.enabled, reasons: ts.reasons, maxOrderValueIrt: ts.cap, markets: [...(await knownCoinIds(env))].map((id) => ({ id, name: coinName(id) })) }); }
   if (p === "/api/trade/preview" && m === "POST") return ok(await tradePreview(env, await readJson(request)));
   if (p === "/api/trade/submit" && m === "POST") return ok(await tradeSubmit(env, await readJson(request)));
   if (p === "/api/trade/status" && m === "POST") {
