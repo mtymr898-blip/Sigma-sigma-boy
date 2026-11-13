@@ -3309,20 +3309,33 @@ const UI = (() => {
       });
       const sheet = Utils.el("div", { class:"dropdown-sheet" });
       if(title) sheet.appendChild(Utils.el("div", { class:"dropdown-sheet-title" }, title));
-      options.forEach(opt => {
-        const isSel = String(opt.value) === String(current);
-        const row = Utils.el("div", { class:`dropdown-option ${isSel ? "selected" : ""}` }, [
-          Utils.el("span", {}, opt.label),
-          Utils.el("span", { class:"radio" }),
-        ]);
-        row.addEventListener("click", () => {
-          current = opt.value;
-          triggerLabel.textContent = opt.label;
-          close();
-          onChange(opt.value);
+      // فهرست‌های بلند (مثل همه‌ی بازارها) جست‌وجو دارند؛ فهرست‌های کوتاه مثل قبل
+      const rowsHost = Utils.el("div", {});
+      function renderRows(q){
+        rowsHost.innerHTML = "";
+        const needle = String(q || "").trim().toLowerCase();
+        const shown = needle ? options.filter(o => String(o.label).toLowerCase().includes(needle)) : options;
+        if(!shown.length){ rowsHost.appendChild(Utils.el("div", { class:"dropdown-option", style:"justify-content:center;opacity:.7;" }, "نتیجه‌ای یافت نشد")); return; }
+        shown.forEach(opt => {
+          const isSel = String(opt.value) === String(current);
+          const row = Utils.el("div", { class:`dropdown-option ${isSel ? "selected" : ""}` }, [
+            Utils.el("span", {}, opt.label),
+            Utils.el("span", { class:"radio" }),
+          ]);
+          row.addEventListener("click", () => {
+            current = opt.value;
+            triggerLabel.textContent = opt.label;
+            close();
+            onChange(opt.value);
+          });
+          rowsHost.appendChild(row);
         });
-        sheet.appendChild(row);
-      });
+      }
+      if(options.length > 12){
+        sheet.appendChild(Utils.el("div", { style:"padding:0 12px 8px;" }, Utils.el("input", { class:"input", type:"search", placeholder:"جست‌وجوی نام یا نماد…", autocomplete:"off", style:"width:100%;", onInput: Utils.debounce((e) => renderRows(e.target.value), 120) })));
+      }
+      renderRows("");
+      sheet.appendChild(rowsHost);
       backdrop.appendChild(sheet);
       document.body.appendChild(backdrop);
       function close(){ trigger.classList.remove("open"); backdrop.remove(); }
@@ -4307,7 +4320,9 @@ const PageDashboard = {
     if(marketS.status === "fulfilled"){
       const coins = marketS.value.data;
       list.innerHTML = "";
-      const top = [...coins].sort((a, b) => Math.abs(b.change24h) - Math.abs(a.change24h)).slice(0, 5);
+      // بین پرحجم‌ترین‌ها (با «همه‌ی ارزها»، ارزهای کم‌حجم تغییرهای نمایشی عجیب دارند)
+      const top = [...coins].sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0)).slice(0, 30)
+        .sort((a, b) => Math.abs(b.change24h || 0) - Math.abs(a.change24h || 0)).slice(0, 5);
       top.forEach(c => list.appendChild(Q.coinRow(c)));
       if(!top.length) list.appendChild(UI.empty("بازاری یافت نشد", ""));
       Q.paintSparks(root, top);
@@ -4346,9 +4361,17 @@ const PageMarket = {
       let r = allCoins.filter(c => !query || c.name.includes(query) || c.symbol.toLowerCase().includes(query.toLowerCase()));
       if(mode === "up") r = r.filter(c => c.change24h > 0).sort((a, b) => b.change24h - a.change24h);
       else if(mode === "down") r = r.filter(c => c.change24h < 0).sort((a, b) => a.change24h - b.change24h);
-      else if(mode === "irt") r = r.filter(c => c.symbol.includes("IRT")).sort((a, b) => b.volume24h - a.volume24h);
-      else r = r.sort((a, b) => b.volume24h - a.volume24h);
+      else if(mode === "irt") r = r.filter(c => c.symbol.includes("IRT")).sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0));
+      else r = r.sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0));
       return r;
+    }
+    // با «همه‌ی ارزها» فقط برای ردیف‌های دیده‌شده نمودار کوچک می‌گیریم (هر بار حداکثر ۱۲ تا؛ سقف سرور)
+    const sparkAsked = new Set();
+    function loadSparks(shown){
+      const need = shown.filter(c => !c._spark && !sparkAsked.has(c.id)).slice(0, 12);
+      if(!need.length) return;
+      need.forEach(c => sparkAsked.add(c.id));
+      Api.getSparklines(need.map(c => c.id)).then(sp => { need.forEach(c => { c._spark = (sp.data && sp.data[c.id]) || null; }); paint(); }).catch(() => {});
     }
     function paint(){
       list.innerHTML = "";
@@ -4356,6 +4379,7 @@ const PageMarket = {
       if(!r.length){ list.appendChild(UI.empty("نتیجه‌ای یافت نشد", "عبارت جست‌وجو یا فیلتر را تغییر دهید.")); return; }
       const shown = r.slice(0, visible);
       shown.forEach(c => list.appendChild(Q.coinRow(c)));
+      loadSparks(shown);
       if(visible < r.length) list.appendChild(E("button", { class:"btn btn-outline btn-block", onClick: () => { visible += pageSize; paint(); } }, "نمایش موارد بیشتر"));
       requestAnimationFrame(() => {
         shown.forEach(c => { const cv = list.querySelector(`canvas[data-key="row_${c.id}"]`); if(cv && c._spark) Charts.sparkline(cv, c._spark, (c.change24h ?? 0) >= 0); });
@@ -4366,7 +4390,6 @@ const PageMarket = {
         const res = await Api.getMarketList();
         allCoins = res.data.map(c => ({ ...c, _spark:null }));
         paintFilters(); paint();
-        Api.getSparklines(allCoins.map(c => c.id)).then(sp => { allCoins.forEach(c => { c._spark = (sp.data && sp.data[c.id]) || null; }); paint(); }).catch(() => {});
       }catch(e){
         list.innerHTML = ""; list.appendChild(UI.errorState("دریافت بازار ناموفق بود", Utils.friendlyError(e), load));
       }
