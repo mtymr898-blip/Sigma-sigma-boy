@@ -381,7 +381,8 @@ async function getMarketCoins(env) {
   const seen = new Set(); const head = [], extra = [];
   const add = (id, name, into) => {
     const n = normMarket(sym[tmnSymbol(id)]); if (!n || seen.has(id)) return; seen.add(id); sources.add(n.source);
-    into.push({ id, name, symbol: `${id.toUpperCase()}/IRT`, price: n.price, change24h: n.change, high24h: n.high, low24h: n.low, volume24h: n.volume, bestBuy: n.bestBuy, bestSell: n.bestSell });
+    const raw = sym[tmnSymbol(id)]; const sd = num(raw && raw.stepSize), td = num(raw && raw.tickSize); // تعداد رقم اعشار مجاز مقدار/قیمت (برای محاسبه‌ی خودکار در فرم سفارش)
+    into.push({ id, name, symbol: `${id.toUpperCase()}/IRT`, stepDecimals: Number.isFinite(sd) ? sd : null, tickDecimals: Number.isFinite(td) ? td : null, price: n.price, change24h: n.change, high24h: n.high, low24h: n.low, volume24h: n.volume, bestBuy: n.bestBuy, bestSell: n.bestSell });
   };
   for (const c of COINS) add(c.id, c.name, head); // اول ارزهای منتخب (ترتیب ثابت)
   for (const k of Object.keys(sym)) { const id = tmnIdFromSymbol(k); if (id) add(id, coinName(id), extra); } // بعد همه‌ی جفت‌ارزهای تومانیِ دیگر
@@ -468,9 +469,16 @@ async function getPrices(env, curs) {
   }
   return out;
 }
+// موجودی همیشه زنده از والکس گرفته می‌شود (بدون کش با TTL). فقط درخواست‌های هم‌زمانِ در حال انجام یکی می‌شوند تا موجی از درخواست ساخته نشود.
+const balInflight = new Map();
+function liveBalances(env) {
+  const k = um(env, "balances"); const cur = balInflight.get(k); if (cur) return cur;
+  const p = wallex(env, "/v1/account/balances", { auth: true }).then(normalizeBalances).finally(() => balInflight.delete(k));
+  balInflight.set(k, p); return p;
+}
 async function buildAssets(env) {
   await assertKey(env);
-  const bal = normalizeBalances(await memo(um(env, "balances"), 5000, () => wallex(env, "/v1/account/balances", { auth: true })));
+  const bal = await liveBalances(env);
   const held = bal.filter((w) => w.total > 0 || w.locked > 0);
   const curs = held.map((w) => w.cur).filter((c) => c !== "tmn");
   const prices = curs.length ? await getPrices(env, curs) : {};
@@ -592,9 +600,19 @@ async function evaluateOrder(env, order, { skipCap = false } = {}) {
 const canon = (o) => JSON.stringify([o.coinId, o.side, o.execution, o.amount, o.price]);
 async function confirmSig(env, clientOrderId, exp, order) { return hmacB64u(env.SESSION_SECRET, `c.${env.__uid}.${clientOrderId}.${exp}.${canon(order)}`); }
 
+// موجودی زنده‌ی والکس برای سفارش دستی (خرید: تومان، فروش: همان ارز). اگر دریافت نشد null: در آن حالت خود والکس سفارش ناکافی را رد می‌کند.
+async function liveAvailableFor(env, order) {
+  try { const w = (await liveBalances(env)).find((x) => x.cur === (order.side === "buy" ? "tmn" : order.coinId)); return w ? w.available : 0; } catch (_) { return null; }
+}
+const insufficientMsg = (order, avail, estimate) => (order.side === "buy"
+  ? `موجودی تومانی شما (${Math.floor(avail).toLocaleString("en-US")} تومان) از مبلغ سفارش (${Math.ceil(estimate).toLocaleString("en-US")} تومان) کمتر است.`
+  : `موجودی ${order.coinId.toUpperCase()} شما (${avail}) از مقدار سفارش (${order.amount}) کمتر است.`);
+const needOf = (order, estimate) => (order.side === "buy" ? estimate : Number(order.amount));
 async function tradePreview(env, body) {
   const order = await parseOrder(env, body.order);
   const ev = await evaluateOrder(env, order); const ts = tradingState(env);
+  const avail = await liveAvailableFor(env, order);
+  if (avail !== null && avail < needOf(order, ev.estimateIrt)) ev.warnings.push(insufficientMsg(order, avail, ev.estimateIrt));
   const res = { order, summary: { market: `${order.coinId.toUpperCase()}/IRT`, side: order.side, execution: order.execution, amount: order.amount, price: order.price, estimateIrt: ev.estimateIrt, marketPriceIrt: ev.marketPriceIrt },
     warnings: ev.warnings, tradingEnabled: ts.enabled, disabledReasons: ts.reasons };
   if (ts.enabled) {
@@ -611,6 +629,8 @@ async function tradeSubmit(env, body) {
   const id = String(body.clientOrderId || ""); const [exp, sig] = String(body.confirmToken || "").split(".");
   if (!/^[A-Za-z0-9]{8,40}$/.test(id) || !exp || !sig || !(Number(exp) > Date.now() / 1000) || !safeEqual(await confirmSig(env, id, exp, order), sig))
     throw new HttpError(400, "CONFIRM_INVALID", "تأیید سفارش نامعتبر یا منقضی است؛ پیش‌نمایش را دوباره بسازید.");
+  const ev = await evaluateOrder(env, order); const avail = await liveAvailableFor(env, order); // موجودی زنده درست پیش از ارسال
+  if (avail !== null && avail < needOf(order, ev.estimateIrt)) throw new HttpError(400, "INSUFFICIENT_BALANCE", insufficientMsg(order, avail, ev.estimateIrt));
   return executeOrder(env, order, id);
 }
 // مسیر مشترک ثبت سفارش واقعی (دستی و خودکار). skipCap فقط برای خروج‌های خودکار (کاهش ریسک) استفاده می‌شود
@@ -692,7 +712,7 @@ function getTrading(env) {
     env, HttpError, hasStore: !!env.STORE, hasApiKey: () => !!currentKey(env), kv: kvApi(env), coins: COINS, tmnSymbol, priceOf, num, decimalStr,
     tradingState: () => tradingState(env), getMarkets: () => getMarketsForDisplay(env),
     fetchOhlc: (coinId, tf, days) => fetchOhlc(env, coinId, tf, days),
-    getBalances: async () => { await assertKey(env); return normalizeBalances(await memo(um(env, "balances"), 5000, () => wallex(env, "/v1/account/balances", { auth: true }))); },
+    getBalances: async () => { await assertKey(env); return liveBalances(env); },
     // سفارش واقعی خودکار (فقط بازار). همه‌ی بررسی‌های مسیر دستی + claim یکتا + استعلام وضعیت اعمال می‌شود.
     placeLiveOrder: async ({ coinId, side, amount, id, isExit }) => {
       const order = { coinId, side, execution: "market", amount: decimalStr(Number(amount), 8), price: null };

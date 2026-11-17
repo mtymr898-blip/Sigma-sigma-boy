@@ -1,10 +1,10 @@
 // ===================================================================
 // src/trading.js — هماهنگ‌کننده‌ی موتور معاملاتی
 // -------------------------------------------------------------------
-// سه حالت مستقل:
-//   suggest = تحلیل و پیشنهاد (پیش‌فرض؛ هیچ سفارشی ارسال/شبیه‌سازی نمی‌شود)
-//   paper   = معامله‌ی آزمایشی (معاملات فرضی روی قیمت‌های واقعی بازار؛ بدون ارسال سفارش)
-//   live    = معامله‌ی واقعی (به‌صورت پیش‌فرض قفل؛ نیازمند تنظیم سرور + تأیید صریح کاربر)
+// دو حالت مستقل:
+//   suggest = تحلیل و پیشنهاد (پیش‌فرض؛ هیچ سفارشی ارسال نمی‌شود)
+//   live    = معامله‌ی واقعی (نیازمند تنظیم سرور + تأیید صریح هر کاربر)
+// حالت «معامله‌ی آزمایشی (Paper)» حذف شده است؛ داده‌ی قدیمی آن هنگام راه‌اندازی پاک می‌شود (recoverOnce).
 // هر ورود به معامله از دروازه‌ی evaluateRisk (engine.js) می‌گذرد. حد سود/ضرر نرم‌افزاری است
 // (سرور قیمت را پایش می‌کند؛ سفارش شرطی روی صرافی ثبت نمی‌شود) — محدودیت‌ها در docs/TRADING.md آمده است.
 // ===================================================================
@@ -94,7 +94,6 @@ export function createTrading(deps) {
     const drawdownPct = s.capitalIrt + peak > 0 ? Math.max(0, ((peak - total) / (s.capitalIrt + peak)) * 100) : 0;
     return { exposure: sum(occupying, (x) => Number(x.entry.costIrt)), openCount: mt.filter((x) => ["open", "closing", "pending_entry"].includes(x.status) && x.kind !== "dca").length,
       dailyLoss: Math.max(0, -realizedToday), realizedToday, realizedTotal, unrealized: unreal, total, peak, drawdownPct,
-      paperCash: s.capitalIrt + realizedTotal - sum(occupying, (x) => Number(x.entry.costIrt) + Number(x.entry.feeIrt)),
       hasUnknown: mt.some((x) => x.status === "needs_review" || x.status === "pending_entry") };
   }
 
@@ -107,7 +106,7 @@ export function createTrading(deps) {
   const liveError = (e) => (e && e.code === "UNKNOWN_OUTCOME" ? "unknown" : "definitive");
   const errMsg = (e) => (e && (e.message || e.code)) || "خطای نامشخص";
 
-  // ---------- باز کردن موقعیت (Paper یا Live) ----------
+  // ---------- باز کردن موقعیت (واقعی) ----------
   async function openPosition(a, ctx) {
     const { mk, settings: s, ctl, trades } = ctx; const mode = ctl.mode;
     const fail = (failures) => ({ ok: false, failures });
@@ -118,12 +117,9 @@ export function createTrading(deps) {
     const estimate = Number(qtyStr) * unit;
     const tradeId = "t" + hashId([mode, a.kind, a.coinId, a.seed].join("|"));
     const rc = computeRisk(ctx);
-    let balance;
-    if (mode === "paper") balance = { availableIrt: rc.paperCash };
-    else {
-      try { const w = (await getBalances()).find((x) => x.cur === "tmn"); balance = { availableIrt: w ? w.available : 0 }; }
-      catch (e) { return fail([{ code: "NO_ACCOUNT", message: "دریافت موجودی حساب ممکن نشد: " + errMsg(e) }]); }
-    }
+    let balance; // موجودی همیشه زنده از والکس (بدون کش)
+    try { const w = (await getBalances()).find((x) => x.cur === "tmn"); balance = { availableIrt: w ? w.available : 0 }; }
+    catch (e) { return fail([{ code: "NO_ACCOUNT", message: "دریافت موجودی حساب ممکن نشد: " + errMsg(e) }]); }
     const gate = liveGate(ctl);
     const risk = evaluateRisk({ kind: "entry", mode, settings: s, coinId: a.coinId, liveUnlocked: gate.serverUnlocked && gate.confirmed, keyConfigured: hasKey(),
       killed: ctl.killed, running: a.ignoreRunning ? true : ctl.running, price: { value: info.price, stale: info.stale, ageSec: info.ageSec },
@@ -142,12 +138,6 @@ export function createTrading(deps) {
       signalId: a.signalId || null, reasonIn: a.reason || "", stop, takeProfit, atr: a.atr ?? null, trailing: !!a.trailing, trailingPct: a.trailingPct ?? null, highWater: unit,
       entry: null, exit: null, pnlIrt: null, pnlPct: null, closedAt: null, warnings: [], attempts: 0, exitFailures: 0 };
 
-    if (mode === "paper") {
-      const c = Number(qtyStr) * unit;
-      trade.entry = { expectedPrice: info.ask, price: unit, qty: qtyStr, costIrt: round(c), feeIrt: round(c * feeRate(s)), orderId: null, clientOrderId: null, verified: true, priceSource: "simulated_from_real_quote", feeSource: "assumed" };
-      trades.push(trade); await save(K.trades, trades.slice(-CAP.trades));
-      return { ok: true, trade };
-    }
     // --- واقعی: اول رکورد pending ذخیره می‌شود تا اگر فرایند وسط ارسال بمیرد، سفارش «نامشخص» دیده شود نه «فراموش‌شده» ---
     const clientId = "ae" + hashId(tradeId + "|entry");
     const c0 = Number(qtyStr) * info.ask;
@@ -195,11 +185,6 @@ export function createTrading(deps) {
     const info = marketInfo(mk, t.coinId);
     if (!info) return { ok: false, failures: [{ code: "NO_PRICE", message: "قیمت بازار در دسترس نیست." }] };
     const qty = Number(t.entry.qty); const dp = stepDp(info);
-    if (t.mode === "paper") {
-      const px = info.bid * (1 - slip(s)); const pr = qty * px;
-      finalize(t, reason, { expectedPrice: info.bid, price: px, proceedsIrt: round(pr), feeIrt: round(pr * feeRate(s)), orderId: null, clientOrderId: null, priceSource: "simulated_from_real_quote", feeSource: "assumed" });
-      await save(K.trades, trades); return { ok: true };
-    }
     let avail = 0;
     try { const w = (await getBalances()).find((x) => x.cur === t.coinId); avail = w ? w.available : 0; }
     catch (e) { return softExitFail(t, ctx, [{ code: "NO_ACCOUNT", message: "دریافت موجودی ناموفق: " + errMsg(e) }]); }
@@ -316,7 +301,7 @@ export function createTrading(deps) {
       if (!s.autoBuy) { sg.status = "skipped"; sg.statusNote = "خرید خودکار غیرفعال است."; return; }
       if (a.score < s.minScore) { sg.status = "skipped"; sg.statusNote = `امتیاز ${a.score} کمتر از آستانه‌ی ${s.minScore} است.`; return; }
       const r = await openPosition({ kind: "strategy", coinId: sg.coinId, amountIrt: s.maxOrderIrt, atr: a.indicators.atr, trailing: s.trailingStop, signalId: sg.id, reason: a.reasons.join(" | "), seed: sg.key }, ctx);
-      if (r.ok) { sg.status = "executed"; sg.tradeId = r.trade.id; sg.statusNote = ctl.mode === "paper" ? "معامله‌ی آزمایشی باز شد." : "سفارش واقعی ثبت و تأیید شد."; }
+      if (r.ok) { sg.status = "executed"; sg.tradeId = r.trade.id; sg.statusNote = "سفارش واقعی ثبت و تأیید شد."; }
       else { sg.status = "blocked"; sg.statusNote = r.failures.map((f) => f.message).join(" | "); await addEvent("risk_block", `${sg.symbol}: ${sg.statusNote}`); }
     } else {
       const tr = trades.find((x) => x.mode === ctl.mode && x.coinId === sg.coinId && x.status === "open" && x.kind === "strategy");
@@ -332,7 +317,13 @@ export function createTrading(deps) {
   let booted = false, tickRunning = false, lastTickAt = null;
   async function recoverOnce() {
     if (booted) return; booted = true;
-    const trades = await load(K.trades, []); let changed = false;
+    // حالت آزمایشی (Paper) حذف شده: معاملات/سیگنال‌های قدیمی آن پاک می‌شود و اگر حالت فعلی «paper» بود به «تحلیل و پیشنهاد» برمی‌گردد
+    let trades = await load(K.trades, []); const hadPaperTrades = trades.some((x) => x.mode === "paper"); if (hadPaperTrades) { trades = trades.filter((x) => x.mode !== "paper"); await save(K.trades, trades); }
+    const sigs0 = await load(K.signals, []); const hadPaperSignals = sigs0.some((x) => x.mode === "paper"); if (hadPaperSignals) await save(K.signals, sigs0.filter((x) => x.mode !== "paper"));
+    const ctl0 = await getCtl();
+    if (ctl0.mode === "paper") await patchCtl((c) => { c.mode = "suggest"; c.running = true; c.liveConfirmedAt = null; });
+    if (hadPaperTrades || hadPaperSignals || ctl0.mode === "paper") await addEvent("paper_removed", "حالت معامله‌ی آزمایشی حذف شد؛ داده‌ی قدیمی آن پاک شد.");
+    let changed = false;
     for (const t of trades) if (t.status === "pending_entry" || t.status === "closing") {
       t.status = "needs_review"; t.warnings = [...(t.warnings || []), "سرور هنگام ارسال سفارش متوقف شد؛ وضعیت واقعی سفارش نامشخص است."]; changed = true;
     }
@@ -340,7 +331,7 @@ export function createTrading(deps) {
     if (changed) { await save(K.trades, trades); await addEvent("needs_review", "پس از راه‌اندازی مجدد، سفارش‌هایی با وضعیت نامشخص یافت شد؛ موتور متوقف ماند."); }
     if (changed || (ctl.mode !== "suggest" && ctl.running)) {
       await patchCtl((c) => { c.running = false; });
-      if (!changed) await addEvent("restart_pause", "پس از راه‌اندازی مجدد سرور، موتور (Paper/Live) متوقف شد؛ برای ادامه باید دستی شروع شود.");
+      if (!changed) await addEvent("restart_pause", "پس از راه‌اندازی مجدد سرور، موتور (حالت واقعی) متوقف شد؛ برای ادامه باید دستی شروع شود.");
     }
   }
   async function tick(opts = {}) {
@@ -409,7 +400,7 @@ export function createTrading(deps) {
     const trades = await load(K.trades, []); const signals = await load(K.signals, []); const events = await load(K.events, []);
     const tfMs = TF_MS[s.timeframe]; const msgs = []; const seen = new Set();
     const push = (m) => { if (seen.has(m.id)) return; seen.add(m.id); msgs.push({ important: false, severity: "info", lines: [], ...m }); };
-    const modeFa = ctl.mode === "live" ? "واقعی" : "آزمایشی";
+    const modeFa = "واقعی";
     if (ctl.mode === "suggest") {
       for (const a of Object.values(state.analysis || {})) {
         const sym = a.symbol || `${a.coinId.toUpperCase()}/IRT`;
@@ -463,7 +454,7 @@ export function createTrading(deps) {
       openPositionsPolicy: s.onStop,
       openPositionsPolicyText: s.onStop === "manage" ? "پس از توقف/توقف اضطراری، حد سود و ضرر موقعیت‌های باز همچنان پایش می‌شود (هیچ موقعیتی ناگهانی بسته نمی‌شود)." : "پس از توقف هیچ اقدامی روی موقعیت‌های باز انجام نمی‌شود (حد سود/ضرر هم پایش نمی‌شود).",
       counts: { open: mt.filter((x) => x.status === "open" || x.status === "holding").length, needsReview: trades.filter((x) => x.status === "needs_review").length },
-      pnl: { realizedTodayIrt: round(rc.realizedToday), realizedTotalIrt: round(rc.realizedTotal), unrealizedIrt: round(rc.unrealized), totalIrt: round(rc.total), drawdownPct: rc.drawdownPct, dailyLossIrt: round(rc.dailyLoss), exposureIrt: round(rc.exposure), paperCashIrt: ctl.mode === "paper" ? round(rc.paperCash) : null },
+      pnl: { realizedTodayIrt: round(rc.realizedToday), realizedTotalIrt: round(rc.realizedTotal), unrealizedIrt: round(rc.unrealized), totalIrt: round(rc.total), drawdownPct: rc.drawdownPct, dailyLossIrt: round(rc.dailyLoss), exposureIrt: round(rc.exposure) },
       analysis: state.analysis || {}, limits: { maxOrderIrt: s.maxOrderIrt, serverCapIrt: tradingState().cap } };
   }
 
@@ -511,7 +502,7 @@ export function createTrading(deps) {
         if (mode) all = all.filter((x) => x.mode === mode); if (status) all = all.filter((x) => x.status === status);
         return { items: all.slice(0, limitN), total: all.length };
       }
-      case "GET /performance": { const trades = await load(K.trades, []); return { paper: perf(trades, "paper"), live: perf(trades, "live") }; }
+      case "GET /performance": { const trades = await load(K.trades, []); return { live: perf(trades, "live") }; }
       case "GET /events": { const ev = await load(K.events, []); return { items: ev.slice(-100).reverse() }; }
       case "POST /analyze": { limit("analyze", 10); return { result: await tick({ forceAnalysis: true }), status: await buildStatus() }; }
       case "POST /mode": return setMode(body);
@@ -534,7 +525,7 @@ export function createTrading(deps) {
 
   async function setMode(body) {
     limit("ctl", 20);
-    const mode = body && body.mode; if (!["suggest", "paper", "live"].includes(mode)) throw bad(400, "INVALID_MODE", "حالت باید suggest، paper یا live باشد.");
+    const mode = body && body.mode; if (!["suggest", "live"].includes(mode)) throw bad(400, "INVALID_MODE", "حالت باید suggest یا live باشد.");
     const trades = await load(K.trades, []); const ctl = await getCtl();
     const blocking = trades.filter((x) => x.mode !== mode && LIVE_OPEN.includes(x.status));
     if (blocking.length) throw bad(409, "OPEN_POSITIONS_OTHER_MODE", `${blocking.length} موقعیت باز یا نامشخص در حالت «${blocking[0].mode}» وجود دارد؛ ابتدا آن‌ها را ببندید/بررسی کنید.`);
@@ -576,7 +567,7 @@ export function createTrading(deps) {
     limit("manual", 10);
     return withLock(async () => {
       const ctx = await makeCtx(); const { ctl, settings: s } = ctx;
-      if (ctl.mode === "suggest") throw bad(409, "MODE_SUGGEST", "در حالت تحلیل و پیشنهاد سفارشی باز نمی‌شود؛ حالت آزمایشی یا واقعی را فعال کنید.");
+      if (ctl.mode === "suggest") throw bad(409, "MODE_SUGGEST", "در حالت تحلیل و پیشنهاد سفارشی باز نمی‌شود؛ حالت واقعی را فعال کنید.");
       if (ctl.mode === "live" && !ctl.running) throw bad(409, "ENGINE_NOT_RUNNING", "در حالت واقعی ابتدا موتور را شروع کنید.");
       if (!ctl.running && s.onStop !== "manage") throw bad(409, "NOT_MANAGED", "با سیاست freeze و موتور متوقف، حد سود/ضرر پایش نمی‌شود؛ ابتدا موتور را شروع کنید.");
       const coinId = String((body && body.coinId) || "").toLowerCase(); if (!allowedCoins.includes(coinId)) throw bad(400, "INVALID", "ارز نامعتبر است.");
@@ -631,7 +622,7 @@ export function createTrading(deps) {
           nextRunAt: prev && prev.intervalHours === intervalHours ? prev.nextRunAt : t + intervalHours * 3600000 });
       }
       await save(K.dca, plans); await addEvent("dca_changed", `${plans.length} برنامه‌ی خرید دوره‌ای ذخیره شد.`);
-      return { plans, note: "خرید دوره‌ای فقط در حالت آزمایشی/واقعی و با موتور در حال اجرا انجام می‌شود و از همان دروازه‌ی ریسک می‌گذرد." };
+      return { plans, note: "خرید دوره‌ای فقط در حالت واقعی و با موتور در حال اجرا انجام می‌شود و از همان دروازه‌ی ریسک می‌گذرد." };
     });
   }
 
