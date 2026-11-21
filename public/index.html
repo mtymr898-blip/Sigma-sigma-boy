@@ -2628,12 +2628,14 @@ const Api = (() => {
     if(err.code === "SESSION_INVALID") return false;
     return KEY_ERR_RE.test(String(err.code || "")) || err.status === 401 || err.status === 403;
   }
+  // درخواست‌هایی که به حساب صرافی کاربر (با کلید خودش) می‌روند؛ خطای ۵xx پایدار در این‌ها یعنی کلید کار نمی‌کند
+  const KEY_PRIVATE_RE = /^\/api\/(wallets|portfolio|orders|profile|trade)/;
   function markKeyInvalid(){
     State.set({ connection: { status:"disconnected", exchangeName:null, connectedAt:null, keyInvalid:true } });
     window.dispatchEvent(new Event("hashchange")); // مسیریاب را به صفحه‌ی وارد کردن کلید می‌برد
   }
 
-  async function request(path, { method = "GET", body, auth = true } = {}){
+  async function request(path, { method = "GET", body, auth = true, _retry = false } = {}){
     const headers = { Accept: "application/json" };
     if(body !== undefined) headers["Content-Type"] = "application/json";
     if(auth && sessionToken) headers.Authorization = "Bearer " + sessionToken;
@@ -2658,6 +2660,13 @@ const Api = (() => {
         State.set({ account: { loggedIn:false, phone:null }, connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null } });
         window.dispatchEvent(new Event("hashchange")); // مسیریاب را به صفحه ورود برمی‌گرداند
       } else if(auth && sessionToken && State.get().connection.status === "connected" && isKeyError(err, path)){
+        markKeyInvalid();
+      } else if(auth && sessionToken && State.get().connection.status === "connected" && res.status >= 500 && method === "GET" && KEY_PRIVATE_RE.test(path)){
+        // احتمال کلید منقضی/باطل: یک بار دوباره امتحان می‌کنیم؛ اگر باز هم جواب نداد، کلید جدید می‌خواهیم
+        if(!_retry){
+          await new Promise(r => setTimeout(r, 1500));
+          return request(path, { method, body, auth, _retry:true });
+        }
         markKeyInvalid();
       }
       throw err;
