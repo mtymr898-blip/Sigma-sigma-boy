@@ -2620,6 +2620,19 @@ const Api = (() => {
     State.set({ account: { loggedIn:true, phone:s.phone || null } });
   }
 
+  // خطاهایی که یعنی کلید صرافی پیدا نشد / منقضی شده / صرافی آن را نمی‌پذیرد
+  const KEY_ERR_RE = /KEY_(INVALID|EXPIRED|MISSING|NOT_FOUND|UNREADABLE|REJECTED|REVOKED)|EXCHANGE_(AUTH|KEY|UNAUTHORIZED|FORBIDDEN|INVALID)|INVALID_API_KEY|API_KEY/i;
+  const KEY_EXEMPT_RE = /^\/api\/(connect|disconnect|session\/check|rubika)/;
+  function isKeyError(err, path){
+    if(KEY_EXEMPT_RE.test(path)) return false;
+    if(err.code === "SESSION_INVALID") return false;
+    return KEY_ERR_RE.test(String(err.code || "")) || err.status === 401 || err.status === 403;
+  }
+  function markKeyInvalid(){
+    State.set({ connection: { status:"disconnected", exchangeName:null, connectedAt:null, keyInvalid:true } });
+    window.dispatchEvent(new Event("hashchange")); // مسیریاب را به صفحه‌ی وارد کردن کلید می‌برد
+  }
+
   async function request(path, { method = "GET", body, auth = true } = {}){
     const headers = { Accept: "application/json" };
     if(body !== undefined) headers["Content-Type"] = "application/json";
@@ -2644,6 +2657,8 @@ const Api = (() => {
         clearSession();
         State.set({ account: { loggedIn:false, phone:null }, connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null } });
         window.dispatchEvent(new Event("hashchange")); // مسیریاب را به صفحه ورود برمی‌گرداند
+      } else if(auth && sessionToken && State.get().connection.status === "connected" && isKeyError(err, path)){
+        markKeyInvalid();
       }
       throw err;
     }
@@ -2657,7 +2672,7 @@ const Api = (() => {
   // اتصال واقعی به صرافی: کلید فقط یک‌بار به سرور می‌رود؛ سرور با یک درخواست واقعی به صرافی آن را آزمایش و رمزنگاری‌شده ذخیره می‌کند
   async function connect(apiKey){
     const json = await request("/api/connect", { method:"POST", body:{ apiKey } });
-    State.set({ connection: { status:"connected", exchangeName:"صرافی متصل", connectedAt:new Date().toISOString(), lastChecked:new Date().toISOString() } });
+    State.set({ connection: { status:"connected", exchangeName:"صرافی متصل", connectedAt:new Date().toISOString(), lastChecked:new Date().toISOString(), keyInvalid:false, keyUnreadable:false } });
     return json.data;
   }
   async function disconnectExchange(){
@@ -2674,15 +2689,19 @@ const Api = (() => {
     State.set({ connection: { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:null } });
     return { ok:true };
   }
-  async function checkConnection(){
+  async function checkConnection(verifyKey = false){
     if(!sessionToken) return State.get().connection;
     try{
       const j = await request("/api/session/check");
       const now = new Date().toISOString();
       State.set({ connection: j.data.exchangeKeyConfigured
-        ? { status:"connected", exchangeName:"صرافی متصل", connectedAt:j.data.keyConnectedAt || State.get().connection.connectedAt || now, lastChecked:now, serverIp:j.data.serverIp || null, canStoreKey:j.data.canStoreKey !== false }
+        ? { status:"connected", exchangeName:"صرافی متصل", connectedAt:j.data.keyConnectedAt || State.get().connection.connectedAt || now, lastChecked:now, serverIp:j.data.serverIp || null, canStoreKey:j.data.canStoreKey !== false, keyInvalid:false, keyUnreadable:false }
         : { status:"disconnected", exchangeName:null, connectedAt:null, lastChecked:now, serverIp:j.data.serverIp || null, keyUnreadable:!!j.data.keyUnreadable, canStoreKey:j.data.canStoreKey !== false } });
     }catch(e){ /* در قطعی شبکه، زمان آخرین بررسی موفق تغییر نمی‌کند */ }
+    // کلید روی سرور هست؛ با یک درخواست واقعی مطمئن می‌شویم هنوز کار می‌کند (منقضی/باطل‌شده نباشد)
+    if(verifyKey && State.get().connection.status === "connected"){
+      try{ await request("/api/wallets"); }catch(e){ /* خطای کلید داخل request() به صفحه‌ی وارد کردن کلید می‌برد */ }
+    }
     return State.get().connection;
   }
   async function restore(){
@@ -2691,7 +2710,7 @@ const Api = (() => {
       const sv = JSON.parse(raw);
       if(!sv.token || !(sv.expiresAt > Date.now())){ clearSession(); return false; }
       sessionToken = sv.token; State.set({ account: { loggedIn:true, phone:sv.phone || null } });
-      await checkConnection(); return State.get().account.loggedIn;
+      await checkConnection(true); return State.get().account.loggedIn;
     }catch(e){ clearSession(); return false; }
   }
 
@@ -3937,7 +3956,7 @@ const PageAuthPassword = {
         if(mode === "register") await AppAuth.createAccount(pw);
         else if(mode === "login") await AppAuth.login(pw);
         else await AppAuth.resetPassword(pw);
-        await Api.checkConnection(); // اگر کلید صرافی قبلاً روی سرور ذخیره/تنظیم شده باشد، مستقیم به داشبورد می‌رویم
+        await Api.checkConnection(true); // اگر کلید صرافی ذخیره شده باشد آزمایش می‌شود؛ اگر کار نکرد، دوباره کلید خواسته می‌شود
         Toast.success(mode === "register" ? "خوش آمدید" : "ورود موفق", mode === "register" ? "حساب شما ساخته شد." : "با موفقیت وارد شدید.");
         Router.go("dashboard");
       }catch(e){
@@ -3972,7 +3991,8 @@ const PageConnect = {
   mount(container){
     const E = Utils.el;
     const STEPS = ["شروع", "ساخت کلید", "امنیت کلید", "اتصال"];
-    let step = 0, dir = 1, showKey = false;
+    const needsNewKey = !!(State.get().connection.keyInvalid || State.get().connection.keyUnreadable);
+    let step = needsNewKey ? STEPS.length - 1 : 0, dir = 1, showKey = false;
     let status = "idle"; // idle | loading | success | error
     let errorMsg = "";
     let draft = "";
@@ -4055,6 +4075,7 @@ const PageConnect = {
       body.innerHTML = "";
       body.appendChild(dots());
       if(State.get().connection.canStoreKey === false) body.appendChild(E("div", { class:"connect-status error", style:"margin:0 0 12px;" }, [E("span", { html: ic("alert") }), "ذخیره‌ی کلید موقتاً غیرفعال است (تنظیمات امنیتی سرور کامل نیست). لطفاً با مدیر سرویس تماس بگیرید."]));
+      if(State.get().connection.keyInvalid && !State.get().connection.keyUnreadable) body.appendChild(E("div", { class:"connect-status error", style:"margin:0 0 12px;" }, [E("span", { html: ic("alert") }), "کلید API شما منقضی شده، حذف شده یا از طرف صرافی پاسخ نمی‌دهد. لطفاً کلید API جدید وارد کنید."]));
       if(State.get().connection.keyUnreadable) body.appendChild(E("div", { class:"connect-status error", style:"margin:0 0 12px;" }, [E("span", { html: ic("alert") }), "کلید ذخیره‌شده‌ی شما قابل استفاده نیست. لطفاً کلید API را دوباره وارد کنید."]));
       const view = E("div", { class:"cn-view " + (dir > 0 ? "fwd" : "back") }, stepView());
       body.appendChild(view);
